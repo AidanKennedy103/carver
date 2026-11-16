@@ -2,7 +2,7 @@
 // macro sliders that always add up, and a lock to fix one macro in grams.
 
 import { h, fill, icon, sheet, toast } from './ui.js';
-import { ymd, logFood, updateLog, deleteLog } from './store.js';
+import { state, ymd, dayTotals, logFood, updateLog, deleteLog } from './store.js';
 import { MACROS } from './foods.js';
 import { MEALS, mealNow, MACRO_COLOR, r0 } from './food-util.js';
 
@@ -74,7 +74,18 @@ export function quickAdd({ date = ymd(), meal = null, entry = null } = {}) {
         h('span.slider-g', gramIn[m.k], h('span', '\u00a0g'), h('span.slider-pct'), lockBtn[m.k])),
       input);
   }));
-  const presetRow = h('div.chips.tight', PRESETS.map((p) => h('button.chip', { onclick: () => { st.lock = null; st.p = p.p; st.c = p.c; st.f = p.f; syncSliders(); update(); } }, p.name)));
+  // "Fits my day": split these calories like the protein, carbs and fat you still have left today
+  const fitsDay = () => {
+    const g = state.goals, t = dayTotals(entry?.date || date);
+    const left = { p: Math.max(0, g.p - t.p) * 4, c: Math.max(0, g.c - t.c) * 4, f: Math.max(0, g.f - t.f) * 9 };
+    const sum = left.p + left.c + left.f;
+    if (!sum) { toast('You’ve already hit all your macros today'); return null; }
+    return { name: 'Fits my day', p: (left.p / sum) * 100, c: (left.c / sum) * 100, f: (left.f / sum) * 100 };
+  };
+  const apply = (p) => { if (!p) return; st.lock = null; st.p = p.p; st.c = p.c; st.f = p.f; syncSliders(); update(); };
+  const presetRow = h('div.chips.tight',
+    h('button.chip.gold-chip', { onclick: () => apply(fitsDay()) }, 'Fits my day'),
+    PRESETS.map((p) => h('button.chip', { onclick: () => apply(p) }, p.name)));
   const bal = h('div.split-bar');
   const lockNote = h('p.fine.lock-note');
 
