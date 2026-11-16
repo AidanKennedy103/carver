@@ -4,6 +4,8 @@
 // Nutrient keys: kcal, p (protein g), c (carbs g), f (fat g), fib, sug, sat (g),
 // chol, na, k, ca, fe, mg, zn (mg), va, vd, b12, fol (µg), vc (mg).
 
+import { MORE_FOODS } from './foods-more.js';
+
 export const MACROS = [
   { k: 'p', name: 'Protein', unit: 'g', kcal: 4 },
   { k: 'c', name: 'Carbs', unit: 'g', kcal: 4 },
@@ -30,12 +32,12 @@ export const MICROS = [
 ];
 export const NUTRIENT_KEYS = ['kcal', 'p', 'c', 'f', ...MICROS.map((m) => m.k)];
 
-export const CATEGORIES = ['Fruit', 'Vegetables', 'Protein', 'Dairy & eggs', 'Grains', 'Nuts & fats', 'Meals', 'Snacks', 'Drinks'];
+export const CATEGORIES = ['Fruit', 'Vegetables', 'Protein', 'Dairy & eggs', 'Grains', 'Nuts & fats', 'Sauces & extras', 'Meals', 'Snacks', 'Drinks'];
 
 // F(id, name, icon (emoji, or 'svg:name' for one of the drawings in food-icons.js), category, servings [[label, grams]], per-100 g nutrients)
 const F = (id, name, icon, cat, servings, n) => ({ id, name, icon, cat, servings: servings.map(([label, g]) => ({ label, g })), n });
 
-export const FOODS = [
+const BASE_FOODS = [
   // Fruit
   F('apple', 'Apple', '🍎', 'Fruit', [['1 medium', 182]], { kcal: 52, p: 0.3, c: 13.8, f: 0.2, fib: 2.4, sug: 10.4, k: 107, vc: 4.6, ca: 6, mg: 5, va: 3, fol: 3, fe: 0.1 }),
   F('banana', 'Banana', '🍌', 'Fruit', [['1 medium', 118]], { kcal: 89, p: 1.1, c: 22.8, f: 0.3, fib: 2.6, sug: 12.2, k: 358, vc: 8.7, mg: 27, ca: 5, fol: 20, fe: 0.3, va: 3 }),
@@ -205,3 +207,8 @@ export const FOODS = [
   F('light-beer', 'Light beer', '🍺', 'Drinks', [['1 can', 355]], { kcal: 29, p: 0.2, c: 1.6, f: 0 }),
   F('spirits', 'Spirits (vodka, whisky…)', '🥃', 'Drinks', [['1 shot', 42]], { kcal: 231, p: 0, c: 0, f: 0 }),
 ];
+
+export const FOODS = [...BASE_FOODS, ...MORE_FOODS];
+
+/** Everyday basics (chicken breast, eggs, rice…): search lists these first among equal matches. */
+export const STAPLES = new Set(BASE_FOODS.filter((f) => !['Meals', 'Snacks', 'Drinks'].includes(f.cat)).map((f) => f.id));

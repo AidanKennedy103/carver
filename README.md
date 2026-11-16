@@ -45,7 +45,7 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 - **Quick add**: type "dinner 1000 calories" (or "chipotle bowl 850", "1200 cal lunch"). It picks the meal and fills in the calories. Three linked sliders split the calories into protein, carbs and fat and always add up to 100%. **Lock a macro** by typing its grams (or tapping its lock): it stays fixed when the calories change, and the other two share what's left. Presets: **Fits my day** (splits the calories like the macros you still have left today), Balanced, High protein, Low carb.
 - **Diary** for any day, by meal (breakfast, lunch, dinner, snacks). Macros come first, each with a bar toward its goal.
 - **Micronutrients page:** your energy split, plus vitamins and minerals against adult targets. Things to stay under (sodium, saturated fat, cholesterol) turn red when you go over.
-- **149 starter foods with emoji icons and real serving sizes**, a Recent list, category filters, and **Create food**. Search matches every word you type, so "greek yog" finds Greek yogurt.
+- **About 480 starter foods with icons and real serving sizes**: meats and fish, protein supplements, takeout and meal-prep meals, sauces and dressings, coffee drinks and more, a Recent list, category filters, and **Create food**. Search matches every word you type, so "greek yog" finds Greek yogurt.
 - **Search online:** if a food isn't in Carver, tap "Search online" to look it up in Open Food Facts by name (products sold in Canada first). Foods you pick are kept in My foods.
 - **Water:** a card on Nutrition with +250, +500 and +750 ml buttons and a glass-by-glass bar. Set your daily target in Goals. Water can also be a ring on Home (tap its row to add 250 ml).
 - **Log it again:** tap an entry on an earlier day to add it to today.
@@ -118,6 +118,7 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 | `js/volume.js` | Weekly sets per muscle group (program and logged) |
 | `js/workout.js`, `js/session.js`, `js/block.js`, `js/picker.js`, `js/exercises.js` | Workout page, live workout, sets, exercise picker, exercise library |
 | `js/nutrition.js` | The food diary page and meal shortcuts |
+| `js/foods.js`, `js/foods-more.js` | The starter food list (per 100 g) and nutrient targets |
 | `js/foodpicker.js`, `js/quickadd.js`, `js/recipes.js` | Finding foods and amounts, favorites, creating and editing foods; quick add; recipes |
 | `js/food-icons.js` | Drawn icons for foods with no good emoji |
 | `js/about.js` | About & privacy screen |

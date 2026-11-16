@@ -2,7 +2,7 @@
 // picker, quick add, recipes and reports live in their own files.
 
 import { h, fill, icon, push, toast, actionSheet, confirmBox, promptBox, navBar } from './ui.js';
-import { state, commit, uid, ymd, addDays, dayStart, weekStart, dayLog, dayTotals, food, logFood, deleteLog, waterOn, addWater } from './store.js';
+import { state, commit, uid, ymd, addDays, dayStart, dayLog, dayTotals, food, logFood, deleteLog, waterOn, addWater } from './store.js';
 import { MACROS } from './foods.js';
 import { COLORS } from './charts.js';
 import { openGoals } from './goals.js';
@@ -114,11 +114,10 @@ const sumOf = (list, k) => list.reduce((n, e) => n + (e.n?.[k] || 0), 0);
 
 // ---------- The week at a glance ----------
 
-/** Monday to Sunday around the day you're viewing: calories against your goal, tap to jump. */
+/** Seven days with the one you're viewing in the middle: calories against your goal, tap to jump. */
 function weekStrip(key, go) {
   const g = state.goals.kcal;
-  const mon = ymd(weekStart(dayStart(key)));
-  const days = Array.from({ length: 7 }, (_, i) => addDays(mon, i));
+  const days = Array.from({ length: 7 }, (_, i) => addDays(key, i - 3));
   const today = ymd();
   return h('div.week-strip', days.map((k) => {
     const t = dayTotals(k);

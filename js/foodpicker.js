@@ -7,7 +7,7 @@
 import { h, fill, icon, sheet, toast, actionSheet, confirmBox } from './ui.js';
 import { state, commit, uid, ymd, allFoods, food, nutrientsFor, logFood, updateLog, deleteLog, recentFoods, sharedFoods } from './store.js';
 import { enabled as cloudOn, account, shareFood } from './cloud.js';
-import { MACROS, MICROS, CATEGORIES } from './foods.js';
+import { MACROS, MICROS, CATEGORIES, STAPLES } from './foods.js';
 import { scanBarcode, searchOFF, keepFood } from './barcode.js';
 import { MEALS, mealNow, mealName, MACRO_COLOR, r0, r1, num } from './food-util.js';
 import { foodIcon } from './food-icons.js';
@@ -34,11 +34,15 @@ function useCount() {
 function score(f, words, q) {
   const name = f.name.toLowerCase(), all = `${name} ${(f.brand || '').toLowerCase()}`;
   if (!words.every((w) => all.includes(w))) return null;
-  let s = name.startsWith(q) ? 0 : name.split(/[\s,(]+/).some((w) => w.startsWith(words[0])) ? 1 : 2;
+  const parts = name.split(/[\s,()]+/);
+  // Best: the name starts with it, or has it as a whole word ("beef" → Ground beef). Then a word starting with it.
+  let s = name.startsWith(q) || parts.includes(words[0]) ? 0 : parts.some((w) => w.startsWith(words[0])) ? 1 : 2;
   if (isFav(f.id)) s -= 0.6;
   if (isMine(f)) s -= 0.3;
+  if (STAPLES.has(f.id)) s -= 0.1;                                          // "chicken": chicken breast before chicken wrap
+  else if (f.cat === 'Meals' || f.cat === 'Sauces & extras') s += 0.15;
   s -= Math.min(0.5, (useCount().get(f.id) || 0) * 0.05);   // foods you log often come first
-  return s + name.length / 200;   // shorter names first among equals ("Egg" before "Egg white")
+  return s + name.split(',')[0].length / 200;   // shorter names first among equals ("Egg" before "Egg white")
 }
 
 // ---------- Search and add ----------
