@@ -11,7 +11,7 @@ import { rings, COLORS } from './charts.js';
 import { openGoals, logCustom, customAmount } from './goals.js';
 import { quickAdd } from './nutrition.js';
 import { logWeightSheet } from './body.js';
-import { takeProgressPhoto } from './fitness.js';
+import { takeProgressPhoto } from './progress.js';
 import { monthlyPrompts } from './monthly.js';
 
 function greeting() {

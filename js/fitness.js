@@ -1,166 +1,300 @@
-// Fitness: body weight, progress photos, and your monthly goals and recaps.
+// Fitness: runs, walks, rides and other cardio. Imported from Apple Health (a
+// Shortcut copies them, you paste) or added by hand. Gym workouts live in Workout.
 
-import { h, fill, icon, push, pop, navBar, toast, actionSheet, confirmBox, fmtDate } from './ui.js';
-import { state, toDisplay, unit } from './store.js';
-import { lineChart } from './charts.js';
-import { weights, latestWeight, trend, change, logWeightSheet, importSheet, weightRow } from './body.js';
-import { photos, addPhoto, deletePhoto, loadInto } from './photos.js';
-import { monthlySection } from './monthly.js';
+import { h, fill, icon, navBar, sheet, toast, actionSheet, confirmBox, fmtDate, fmtNum, fmtDurationWords } from './ui.js';
+import { state, commit, uid, unit, weekStart } from './store.js';
+import { barChart, COLORS } from './charts.js';
+import { latestWeight } from './body.js';
 
-const fmtW = (kg) => `${toDisplay(kg)} ${unit()}`;
-const signed = (kg) => { const v = +toDisplay(Math.abs(kg)); return `${kg > 0 ? '+' : kg < 0 ? '−' : ''}${v} ${unit()}`; };
+export const ACTIVITY_TYPES = [
+  { id: 'run', name: 'Run', icon: '🏃', met: 9.8, words: ['run', 'running', 'jog'] },
+  { id: 'walk', name: 'Walk', icon: '🚶', met: 3.5, words: ['walk', 'walking'] },
+  { id: 'cycle', name: 'Ride', icon: '🚴', met: 7.5, words: ['cycl', 'bike', 'biking', 'ride', 'spin'] },
+  { id: 'hike', name: 'Hike', icon: '🥾', met: 6, words: ['hike', 'hiking'] },
+  { id: 'swim', name: 'Swim', icon: '🏊', met: 7, words: ['swim'] },
+  { id: 'row', name: 'Row', icon: '🚣', met: 7, words: ['row'] },
+  { id: 'elliptical', name: 'Elliptical', icon: '〰️', met: 5, words: ['elliptical', 'stair', 'step'] },
+  { id: 'hiit', name: 'HIIT', icon: '🔥', met: 8, words: ['hiit', 'interval', 'cross', 'functional', 'circuit'] },
+  { id: 'sport', name: 'Sport', icon: '⚽', met: 7, words: ['soccer', 'basketball', 'tennis', 'hockey', 'football', 'volleyball', 'pickleball', 'badminton', 'squash', 'golf', 'climb', 'skat', 'ski', 'snowboard', 'box', 'martial'] },
+  { id: 'yoga', name: 'Yoga', icon: '🧘', met: 2.5, words: ['yoga', 'pilates', 'stretch', 'flexibility', 'cooldown', 'mind'] },
+  { id: 'other', name: 'Other', icon: '⭐', met: 5, words: [] },
+];
+const STRENGTH = /strength|weight ?lift|weights|core training/i;   // logged in the Workout tab instead
+export const activityType = (id) => ACTIVITY_TYPES.find((t) => t.id === id) || ACTIVITY_TYPES[ACTIVITY_TYPES.length - 1];
 
-/** Opens the camera / photo library and saves the picture as a progress photo. */
-export function takeProgressPhoto() {
-  const input = h('input', { type: 'file', accept: 'image/*', hidden: true });
-  input.addEventListener('change', async () => {
-    const f = input.files[0];
-    input.remove();
-    if (!f) return;
-    try { toast('Saving photo…'); await addPhoto(f); toast('Progress photo saved'); }
-    catch { toast('Could not save that photo'); }
+const MI = 1609.344;
+const metric = () => unit() === 'kg';
+const distUnit = () => (metric() ? 'km' : 'mi');
+const fmtDist = (m) => `${(m / (metric() ? 1000 : MI)).toFixed(m >= 100000 ? 0 : 1)} ${distUnit()}`;
+const paceText = (a) => {
+  if (!a.dist || !['run', 'walk', 'hike'].includes(a.type)) return '';
+  const secs = a.dur / 1000 / (a.dist / (metric() ? 1000 : MI));
+  return `${Math.floor(secs / 60)}:${String(Math.round(secs % 60)).padStart(2, '0')} /${distUnit()}`;
+};
+
+/** Calories for an activity: what Health recorded, or an estimate from its type, your weight and time. */
+export function activityKcal(a) {
+  if (a.kcal) return a.kcal;
+  const kg = latestWeight()?.kg || 75;
+  return (activityType(a.type).met - 1) * kg * (a.dur / 36e5);   // minus resting, so it's only the extra burn
+}
+
+export const activities = () => state.activities;   // newest first
+
+export function saveActivity(a) {
+  commit((s) => {
+    const i = s.activities.findIndex((x) => x.id === a.id);
+    if (i >= 0) s.activities[i] = a; else s.activities.push(a);
+    s.activities.sort((x, y) => y.start - x.start);
   });
-  document.body.append(input);
-  input.click();
+}
+function addImported(list) {
+  let added = 0;
+  commit((s) => {
+    for (const a of list) {
+      const dup = s.activities.some((x) => Math.abs(x.start - a.start) < 5 * 6e4 && x.type === a.type);
+      if (dup) continue;
+      s.activities.push({ id: uid(), source: 'health', ...a });
+      added++;
+    }
+    s.activities.sort((x, y) => y.start - x.start);
+  });
+  return added;
+}
+
+// ---------- Reading pasted text ----------
+
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+/** Finds a date in text: ISO, "2026/11/14", "Nov 14, 2026 at 7:30 AM" or "11/14/2026 7:30". Returns { ts, match }. */
+export function findDate(text) {
+  let m = text.match(/(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{1,2}):(\d{2})(?::\d{2})?(?:[.,]\d+)?(Z|[+-]\d{2}:?\d{2})?)?/);
+  if (m) {
+    const t = m[6] ? Date.parse(m[0].replace(' ', 'T')) : new Date(+m[1], m[2] - 1, +m[3], +(m[4] || 12), +(m[5] || 0)).getTime();
+    if (!isNaN(t)) return { ts: t, match: m[0] };
+  }
+  m = text.match(/([A-Za-z]{3,9})\.? (\d{1,2}),? (\d{4})(?:,? (?:at )?(\d{1,2}):(\d{2})(?::\d{2})? ?([AaPp]\.?[Mm]\.?)?)?/);
+  if (m && MONTHS.includes(m[1].slice(0, 3).toLowerCase())) {
+    let hr = +(m[4] || 12);
+    if (m[6]) { const pm = /p/i.test(m[6]); if (pm && hr < 12) hr += 12; if (!pm && hr === 12) hr = 0; }
+    return { ts: new Date(+m[3], MONTHS.indexOf(m[1].slice(0, 3).toLowerCase()), +m[2], hr, +(m[5] || 0)).getTime(), match: m[0] };
+  }
+  m = text.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})(?:,? (\d{1,2}):(\d{2}))?/) || null;
+  if (m) return { ts: new Date(+m[1], m[2] - 1, +m[3], +(m[4] || 12), +(m[5] || 0)).getTime(), match: m[0] };
+  m = text.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:,? (\d{1,2}):(\d{2}) ?([AaPp][Mm])?)?/);
+  if (m) {
+    let hr = +(m[4] || 12);
+    if (m[6]) { const pm = /p/i.test(m[6]); if (pm && hr < 12) hr += 12; if (!pm && hr === 12) hr = 0; }
+    const y = +m[3] < 100 ? 2000 + +m[3] : +m[3];
+    return { ts: new Date(y, m[1] - 1, +m[2], hr, +(m[5] || 0)).getTime(), match: m[0] };
+  }
+  return null;
+}
+
+function typeFrom(text) {
+  const t = text.toLowerCase();
+  for (const ty of ACTIVITY_TYPES) if (ty.words.some((w) => t.includes(w))) return ty.id;
+  return null;
+}
+
+/**
+ * Pull activities out of pasted text, one per line, e.g.
+ *   "Running | 2026-11-14 07:30 | 32 min | 5.2 km | 410 kcal"
+ *   "Walking, Nov 13, 2026 at 6:10 PM, 0:45:10, 3.1 mi, 190 cal"
+ * Also takes JSON from export apps (type/start/duration/distance/energy fields).
+ * Strength workouts are skipped: log those in the Workout tab.
+ */
+export function parseActivities(text) {
+  const out = [];
+  let skipped = 0;
+  const trimmed = text.trim();
+  if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+    try {
+      let data = JSON.parse(trimmed);
+      if (!Array.isArray(data)) data = data.workouts || data.data?.workouts || [data];
+      for (const w of data) {
+        const name = String(w.type || w.name || w.workoutActivityType || w.activityType || '');
+        if (STRENGTH.test(name)) { skipped++; continue; }
+        const when = String(w.start || w.startDate || w.date || '');
+        const start = Date.parse(when.replace(/^(\S+) (\S+) ([+-]\d{4})$/, '$1T$2$3')) || findDate(when)?.ts;
+        let dur = +(w.duration ?? w.durationSeconds ?? 0);
+        if (w.durationMinutes) dur = w.durationMinutes * 60;
+        if (!start || !dur) continue;
+        const dRaw = w.distance?.qty ?? w.distance ?? w.totalDistance;
+        const dU = String(w.distance?.units || w.distanceUnit || 'km').toLowerCase();
+        const dist = dRaw ? +dRaw * (dU.startsWith('mi') ? MI : dU === 'm' ? 1 : 1000) : null;
+        const eRaw = w.activeEnergy?.qty ?? w.activeEnergyBurned ?? w.energy ?? w.calories ?? w.totalEnergyBurned;
+        const kcal = eRaw ? +(eRaw.qty ?? eRaw) * (String(w.activeEnergy?.units || '').toLowerCase() === 'kj' ? 0.239 : 1) : null;
+        out.push({ type: typeFrom(name) || 'other', name: name || null, start, dur: dur * 1000, dist, kcal: kcal ? Math.round(kcal) : null });
+      }
+      return { list: out, skipped };
+    } catch { /* not JSON after all: read it as lines */ }
+  }
+
+  for (const raw of text.split(/\n+/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (STRENGTH.test(line)) { skipped++; continue; }
+    const d = findDate(line);
+    if (!d) continue;
+    let rest = line.replace(d.match, ' ');
+    let dur = 0;
+    let m = rest.match(/\b(\d{1,2}):(\d{2}):(\d{2})\b/);
+    if (m) { dur = (+m[1] * 3600 + +m[2] * 60 + +m[3]) * 1000; rest = rest.replace(m[0], ' '); }
+    else {
+      const hrs = rest.match(/(\d+(?:[.,]\d+)?)\s*(?:h|hr|hrs|hours?)\b/i);
+      const mins = rest.match(/(\d+(?:[.,]\d+)?)\s*(?:m|min|mins|minutes?)\b(?!i)/i);
+      const secs = rest.match(/(\d+(?:[.,]\d+)?)\s*(?:s|sec|secs|seconds?)\b/i);
+      if (hrs) dur += parseFloat(hrs[1].replace(',', '.')) * 36e5;
+      if (mins) dur += parseFloat(mins[1].replace(',', '.')) * 6e4;
+      if (secs && !hrs && !mins) dur += parseFloat(secs[1].replace(',', '.')) * 1000;
+      for (const x of [hrs, mins, secs]) if (x) rest = rest.replace(x[0], ' ');
+    }
+    if (!dur) continue;
+    let dist = null;
+    m = rest.match(/(\d+(?:[.,]\d+)?)\s*(km|kilometers?|kilometres?|mi|miles?|m|meters?|metres?)\b/i);
+    if (m) {
+      const v = parseFloat(m[1].replace(',', '.'));
+      dist = /^k/i.test(m[2]) ? v * 1000 : /^mi/i.test(m[2]) ? v * MI : v;
+      rest = rest.replace(m[0], ' ');
+    }
+    m = rest.match(/(\d+(?:[.,]\d+)?)\s*(kcal|cal|calories|kj)\b/i);
+    const kcal = m ? Math.round(parseFloat(m[1].replace(',', '.')) * (/kj/i.test(m[2]) ? 0.239 : 1)) : null;
+    out.push({ type: typeFrom(line) || 'other', start: d.ts, dur, dist, kcal });
+  }
+  return { list: out, skipped };
+}
+
+// ---------- Add / edit / import ----------
+
+const pad = (n) => String(n).padStart(2, '0');
+const localInput = (ts) => { const d = new Date(ts); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+
+export function activitySheet(existing = null) {
+  const a = existing ? { ...existing } : { id: uid(), type: 'run', start: Date.now() - 30 * 6e4, dur: 30 * 6e4, dist: null, kcal: null, source: 'manual' };
+  const chips = h('div.chips.tight');
+  const drawChips = () => fill(chips, ACTIVITY_TYPES.map((t) => h('button.chip' + (a.type === t.id ? '.on' : ''), { onclick: () => { a.type = t.id; drawChips(); } }, `${t.icon} ${t.name}`)));
+  drawChips();
+  const when = h('input.field', { type: 'datetime-local', value: localInput(a.start), 'aria-label': 'Start time' });
+  const mins = h('input.field.goal-input', { inputmode: 'decimal', value: a.dur ? Math.round(a.dur / 6e4) : '', 'aria-label': 'Minutes' });
+  const dist = h('input.field.goal-input', { inputmode: 'decimal', value: a.dist ? (a.dist / (metric() ? 1000 : MI)).toFixed(2).replace(/\.?0+$/, '') : '', placeholder: 'optional', 'aria-label': `Distance in ${distUnit()}` });
+  const kcal = h('input.field.goal-input', { inputmode: 'numeric', value: a.kcal || '', placeholder: 'estimate', 'aria-label': 'Calories' });
+  const row = (label, input, u) => h('label.goal-row', h('span', label), h('span.goal-field', input, h('span.goal-unit', u)));
+  const save = () => {
+    const n = (el) => parseFloat(el.value.replace(',', '.'));
+    if (!(n(mins) > 0)) { toast('Enter how many minutes'); return; }
+    const t = Date.parse(when.value);
+    saveActivity({ ...a, start: isNaN(t) ? a.start : t, dur: n(mins) * 6e4, dist: n(dist) > 0 ? n(dist) * (metric() ? 1000 : MI) : null, kcal: n(kcal) > 0 ? Math.round(n(kcal)) : null });
+    s.close();
+    toast(existing ? 'Saved' : `${activityType(a.type).name} added`);
+  };
+  const s = sheet(h('div.form',
+    h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', existing ? 'Edit activity' : 'Add activity'), h('button.link.strong', { onclick: save }, 'Save')),
+    chips,
+    h('label.form-label', 'Started'), when,
+    h('div.group', row('Time', mins, 'min'), row('Distance', dist, distUnit()), row('Calories', kcal, 'kcal')),
+    h('p.fine', 'Leave calories blank and Carver estimates them from the activity, your time and your weight.'),
+    existing ? h('button.btn.dark.wide.red-text', {
+      onclick: async () => {
+        if (!(await confirmBox('Delete this activity?', null, { ok: 'Delete', danger: true }))) return;
+        commit((st) => { st.activities = st.activities.filter((x) => x.id !== a.id); });
+        s.close();
+      },
+    }, 'Delete') : null,
+  ));
+}
+
+export function importActivitiesSheet() {
+  const box = h('textarea.field.paste-box', { rows: 4, placeholder: 'Paste activities here, e.g.\nRunning | 2026-11-14 07:30 | 32 min | 5.2 km | 410 kcal' });
+  const doImport = (text) => {
+    const { list, skipped } = parseActivities(text || '');
+    if (!list.length) { toast(skipped ? 'Only strength workouts found. Log those in Workout.' : 'No activities found in that text'); return; }
+    const added = addImported(list);
+    toast(added ? `Imported ${added} activit${added > 1 ? 'ies' : 'y'}` : 'Those are already in Carver');
+    if (added) s.close();
+  };
+  const s = sheet(h('div.form',
+    h('div.sheet-head', h('span'), h('div.sheet-title', 'Import activities'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
+    h('p.fine', 'iPhone web apps can’t read Apple Health directly, so a Shortcut copies your workouts (from your Apple Watch, Strava, Nike Run Club and anything else that saves to Health) and you paste them here.'),
+    h('button.btn.gold.wide', {
+      onclick: async () => {
+        try { const t = await navigator.clipboard.readText(); box.value = t; doImport(t); }
+        catch { toast('Tap the box and paste instead'); box.focus(); }
+      },
+    }, 'Paste from Health'),
+    box,
+    h('button.btn.dark.wide', { onclick: () => doImport(box.value) }, 'Import pasted text'),
+    h('details.howto',
+      h('summary', 'Set up the Shortcut (once)'),
+      h('ol',
+        h('li', 'Open Shortcuts → + → name it “Carver activities”.'),
+        h('li', 'Add Find Health Samples: Type is Workouts, Start Date is in the last 30 days, sort by Start Date, Latest First.'),
+        h('li', 'Add Repeat with Each. Inside it add Text: Repeat Item’s Type | Start Date (format ISO 8601) | Duration | Distance | Active Energy. Put a “|” between each.'),
+        h('li', 'After the repeat, add Combine Text (new lines), then Copy to Clipboard.'),
+        h('li', 'Run it after a workout, open Carver and tap Paste from Health.'),
+      ),
+      h('p.fine', 'If your iPhone doesn’t list Workouts in Find Health Samples, a free export app (like Health Auto Export) can copy them as JSON or CSV, which Carver also reads. Activities already in Carver are skipped, and strength workouts are left out because you log those in Workout.')),
+  ));
+}
+
+// ---------- The page ----------
+
+function activityRow(a) {
+  const t = activityType(a.type);
+  const bits = [fmtDurationWords(a.dur), a.dist ? fmtDist(a.dist) : '', paceText(a)].filter(Boolean).join(' · ');
+  return h('button.food-line', { onclick: () => activitySheet(a) },
+    h('span.food-ico', t.icon),
+    h('span.food-text', h('span.food-name', a.name && t.id === 'other' ? a.name : t.name), h('span.food-sub', `${fmtDate(a.start, { month: 'short', day: 'numeric' })} · ${bits}`)),
+    h('span.food-kcal', `${fmtNum(activityKcal(a))}`, h('span.food-sub', a.kcal ? ' kcal' : ' kcal est.')));
 }
 
 export function fitnessPage() {
   const el = h('div.page');
   const body = h('div.scroll-body');
+  let showAll = false;
 
   function draw() {
-    const last = latestWeight();
-    const c30 = change(30);
-    const recent = trend().filter((p) => p.x > Date.now() - 90 * 864e5);
-    const pics = photos();
+    const list = activities();
+    const wk = weekStart();
+    const week = list.filter((a) => a.start >= wk);
+    const sum = (arr, f) => arr.reduce((n, a) => n + (f(a) || 0), 0);
+    const weeks = [];
+    for (let w = weekStart(Date.now() - 11 * 7 * 864e5); w <= Date.now(); w = weekStart(w + 8 * 864e5)) {
+      const ws = list.filter((a) => a.start >= w && a.start < w + 7 * 864e5);
+      weeks.push({ x: w, y: Math.round(sum(ws, (a) => a.dur) / 6e4) });
+    }
+    const fmtDay = (t) => fmtDate(t, { month: 'short', day: 'numeric' });
+    const shown = showAll ? list : list.slice(0, 20);
 
     fill(body,
-      navBar({ title: 'Fitness', back: false, large: true }),
+      navBar({ title: 'Fitness', back: false, large: true, right: [h('button.icon-btn.gold-text', { onclick: () => activitySheet(), 'aria-label': 'Add activity' }, icon('plus', 24))] }),
 
-      // Weight
-      h('div.section-head', h('h2.section-title', 'Weight'), weights().length ? h('button.link', { onclick: () => push(weightScreen) }, 'History') : null),
-      h('section.card.weight-card',
-        last ? h('div.energy-top',
-          h('div', h('div.energy-v', toDisplay(last.kg), h('span.orm-unit', unit())), h('div.energy-k', `Last weigh-in · ${fmtDate(last.ts, { month: 'short', day: 'numeric' })}`)),
-          c30 != null ? h('div.energy-goal', h('div.weight-change', signed(c30)), h('div.energy-k', 'last 30 days')) : null)
-          : h('div.empty-text.left', 'Log your weight to see your trend. Weighing in most mornings gives the clearest picture.'),
-        recent.length > 1 ? lineChart(recent.map((p) => ({ ...p, y: +toDisplay(p.y) })), {
-          height: 140, dots: false, fmtY: (v) => Math.round(v), label: 'Weight trend, last 90 days',
-          tip: (p) => `<b>${toDisplay(p.raw)} ${unit()}</b><span>Trend ${p.y} · ${fmtDate(p.x, { month: 'short', day: 'numeric' })}</span>`,
-        }) : null,
-        h('div.btn-pair',
-          h('button.btn.gold', { onclick: logWeightSheet }, icon('plus', 18), 'Log weight'),
-          h('button.btn.dark', { onclick: importSheet }, 'Import'))),
+      h('div.section-head', h('h2.section-title', 'This week')),
+      h('div.tiles.three',
+        h('div.tile', h('div.tile-v', week.length), h('div.tile-k', 'Activities'), h('div.tile-sub', `${fmtDurationWords(sum(week, (a) => a.dur))}`)),
+        h('div.tile', h('div.tile-v', week.some((a) => a.dist) ? fmtDist(sum(week, (a) => a.dist)).split(' ')[0] : '0'), h('div.tile-k', 'Distance'), h('div.tile-sub', distUnit())),
+        h('div.tile', h('div.tile-v', fmtNum(sum(week, activityKcal))), h('div.tile-k', 'Burned'), h('div.tile-sub', 'active kcal'))),
 
-      // Progress photos
-      h('div.section-head', h('h2.section-title', 'Progress photos'), h('button.link', { onclick: takeProgressPhoto }, icon('plus', 16), 'Add')),
-      pics.length
-        ? h('div.photo-strip', pics.slice(0, 12).map((p) => h('button.photo-thumb', { onclick: () => push(() => photoScreen(p.id)) },
-          loadInto(h('img', { alt: 'Progress photo', loading: 'lazy' }), p.id),
-          h('span.photo-date', fmtDate(p.ts, { month: 'short', day: 'numeric' })))))
-        : h('button.card.empty-plan', { onclick: takeProgressPhoto },
-          h('div.empty-title', 'Take your first progress photo'),
-          h('div.empty-text', 'Same spot, same light, once a month. Carver reminds you and lines them up in your monthly recap.')),
-      pics.length > 12 ? h('button.link', { onclick: () => push(allPhotosScreen) }, `See all ${pics.length}`) : null,
-      pics.length ? h('p.fine', 'Photos stay on this phone only. They aren’t in the data export.') : null,
+      h('div.btn-pair',
+        h('button.btn.gold', { onclick: importActivitiesSheet }, icon('apple', 18), 'Import'),
+        h('button.btn.dark', { onclick: () => activitySheet() }, icon('plus', 18), 'Add')),
 
-      monthlySection(),
+      h('div.section-head', h('h2.section-title', 'Minutes'), h('span.section-count', 'per week')),
+      h('section.card.chart-card', barChart(weeks, {
+        height: 140, color: COLORS.gold, fmtX: fmtDay, label: 'Activity minutes per week', empty: 'Import or add an activity to see it here',
+        tip: (p) => `<b>${p.y} min</b><span>Week of ${fmtDay(p.x)}</span>`,
+      })),
+
+      h('div.section-head', h('h2.section-title', 'Activities'), list.length ? h('span.section-count', list.length) : null),
+      list.length
+        ? h('section.card.list-card', shown.map(activityRow))
+        : h('button.card.empty-plan', { onclick: importActivitiesSheet },
+          h('div.empty-title', 'Bring in your runs and rides'),
+          h('div.empty-text', 'Import from Apple Health (Apple Watch, Strava, Nike Run Club…) or add one by hand. Carver uses them in your metabolism estimate on Trends.')),
+      list.length > shown.length ? h('button.link', { onclick: () => { showAll = true; draw(); } }, `Show all ${list.length}`) : null,
       h('div.bottom-space'),
     );
   }
   draw();
   el.append(body);
   return { el, refresh: draw };
-}
-
-// ---------- Weight history ----------
-
-function weightScreen() {
-  const el = h('div.page');
-  const body = h('div.scroll-body');
-  let range = 90;
-  function draw() {
-    const all = trend();
-    const shown = range ? all.filter((p) => p.x > Date.now() - range * 864e5) : all;
-    fill(body,
-      h('h2.detail-title', 'Weight'),
-      h('div.detail-date', 'The line is your 7-day average, which evens out daily water swings.'),
-      h('div.segment.range', [[30, '1M'], [90, '3M'], [365, '1Y'], [0, 'All']].map(([d, l]) => h('button' + (range === d ? '.on' : ''), { onclick: () => { range = d; draw(); } }, l))),
-      h('section.card.chart-card', lineChart(shown.map((p) => ({ ...p, y: +toDisplay(p.y) })), {
-        height: 200, dots: shown.length < 40, fmtY: (v) => Math.round(v), label: 'Weight trend',
-        tip: (p) => `<b>${toDisplay(p.raw)} ${unit()}</b><span>Trend ${p.y} · ${fmtDate(p.x, { month: 'short', day: 'numeric' })}</span>`,
-      })),
-      h('div.stats-inline',
-        ...[[7, 'Week'], [30, 'Month'], [90, '3 months']].map(([d, l]) => { const c = change(d); return h('div.stat', h('span.stat-k', l), h('span.stat-v', c == null ? '—' : signed(c))); })),
-      h('div.section-head', h('h2.section-title', 'Weigh-ins')),
-      h('section.card.list-card', weights().slice().reverse().slice(0, 200).map(weightRow)),
-      h('div.bottom-space'),
-    );
-  }
-  draw();
-  el.append(navBar({ title: 'Weight', backLabel: 'Fitness', right: [h('button.link', { onclick: logWeightSheet }, 'Log')] }), body);
-  return { el, refresh: draw };
-}
-
-// ---------- Photos ----------
-
-function allPhotosScreen() {
-  const el = h('div.page', navBar({ title: 'Progress photos', backLabel: 'Fitness' }),
-    h('div.scroll-body', h('div.photo-grid', photos().map((p) => h('button.photo-thumb', { onclick: () => push(() => photoScreen(p.id)) },
-      loadInto(h('img', { alt: 'Progress photo', loading: 'lazy' }), p.id), h('span.photo-date', fmtDate(p.ts, { month: 'short', day: 'numeric', year: '2-digit' }))))), h('div.bottom-space')));
-  return { el };
-}
-
-const weightNear = (ts) => {
-  let best = null;
-  for (const w of weights()) if (Math.abs(w.ts - ts) < 4 * 864e5 && (!best || Math.abs(w.ts - ts) < Math.abs(best.ts - ts))) best = w;
-  return best;
-};
-
-function photoScreen(id) {
-  const p = photos().find((x) => x.id === id);
-  const w = p && weightNear(p.ts);
-  const el = h('div.page.photo-page',
-    navBar({
-      title: p ? fmtDate(p.ts, { month: 'long', day: 'numeric', year: 'numeric' }) : 'Photo', backLabel: 'Back',
-      right: [h('button.icon-btn', {
-        'aria-label': 'Photo options',
-        onclick: () => actionSheet('Progress photo', [
-          { label: 'Compare with another', onClick: () => pickCompare(id) },
-          { label: 'Delete photo', danger: true, onClick: async () => { if (await confirmBox('Delete this photo?', 'This cannot be undone.', { ok: 'Delete', danger: true })) { await deletePhoto(id); pop(); } } },
-        ]),
-      }, icon('more'))],
-    }),
-    h('div.scroll-body',
-      loadInto(h('img.photo-full', { alt: 'Progress photo' }), id, 'full'),
-      w ? h('p.fine.center', `Weight around then: ${fmtW(w.kg)}`) : null,
-      h('button.btn.dark.wide', { onclick: () => pickCompare(id) }, 'Compare with another photo'),
-      h('div.bottom-space')),
-  );
-  return { el };
-}
-
-function pickCompare(id) {
-  const others = photos().filter((p) => p.id !== id);
-  if (!others.length) { toast('Add another photo to compare'); return; }
-  actionSheet('Compare with', others.slice(0, 12).map((p) => ({ label: fmtDate(p.ts, { month: 'short', day: 'numeric', year: 'numeric' }), onClick: () => push(() => compareScreen(id, p.id)) })));
-}
-
-/** Two photos side by side, older on the left, with the weight at each. */
-export function compareView(idA, idB) {
-  const [a, b] = [photos().find((p) => p.id === idA), photos().find((p) => p.id === idB)].sort((x, y) => x.ts - y.ts);
-  const side = (p) => {
-    const w = weightNear(p.ts);
-    return h('figure.compare-side', loadInto(h('img', { alt: 'Progress photo' }), p.id, 'full'),
-      h('figcaption', h('b', fmtDate(p.ts, { month: 'short', day: 'numeric', year: 'numeric' })), w ? h('span', fmtW(w.kg)) : null));
-  };
-  const wa = weightNear(a.ts), wb = weightNear(b.ts);
-  const days = Math.round((b.ts - a.ts) / 864e5);
-  return h('div',
-    h('div.compare', side(a), side(b)),
-    h('p.fine.center', `${days} day${days === 1 ? '' : 's'} apart${wa && wb ? ` · ${signed(wb.kg - wa.kg)}` : ''}`));
-}
-
-function compareScreen(idA, idB) {
-  return { el: h('div.page', navBar({ title: 'Compare', backLabel: 'Back' }), h('div.scroll-body', compareView(idA, idB), h('div.bottom-space'))) };
 }

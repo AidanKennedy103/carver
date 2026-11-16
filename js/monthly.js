@@ -5,7 +5,7 @@ import { h, icon, push, navBar, sheet, toast, fmtDate, fmtNum, fmtDurationWords 
 import { state, commit, exercise, workoutStats, e1rm, toDisplay, unit, ymd, dayTotals } from './store.js';
 import { photos } from './photos.js';
 import { trend } from './body.js';
-import { compareView } from './fitness.js';
+import { compareView } from './progress.js';
 
 export const GOAL_OPTIONS = ['Build muscle', 'Lose fat', 'Get stronger', 'Maintain weight', 'Improve endurance', 'Eat better', 'Be consistent'];
 
@@ -141,7 +141,7 @@ const tile = (v, k, sub) => h('div.tile', h('div.tile-v', v), h('div.tile-k', k)
 
 // ---------- Sections and prompts ----------
 
-/** Fitness page: this month's goals, photo status, and past recaps. */
+/** Progress page: this month's goals, photo status, and past recaps. */
 export function monthlySection() {
   const key = monthKey();
   const goals = monthGoals(key);

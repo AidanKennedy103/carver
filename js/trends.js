@@ -5,6 +5,7 @@ import { h, fill, navBar, fmtNum, fmtDate } from './ui.js';
 import { state, ymd, dayTotals, weekStart, workoutStats, toDisplay, unit } from './store.js';
 import { lineChart, barChart, COLORS } from './charts.js';
 import { trend, latestWeight } from './body.js';
+import { activityKcal } from './fitness.js';
 
 const KCAL_PER_KG = 7700;   // energy in a kilogram of body weight change (common estimate)
 const LIFT_MET = 5;         // weight training ≈ 5 METs (kcal per kg per hour)
@@ -36,9 +37,12 @@ export function metabolism(days = 28) {
   const tdee = intake - (dKg * KCAL_PER_KG) / span;
   const kg = latestWeight()?.kg || 75;
   const ws = state.workouts.filter((w) => w.start >= startTs);
-  const workoutKcal = ws.reduce((n, w) => n + (LIFT_MET * kg * workoutStats(w).duration) / 36e5, 0) / days;
+  const acts = state.activities.filter((a) => a.start >= startTs);
+  // Lifting at ~5 METs, plus cardio (Health's active calories, or an estimate)
+  const liftKcal = ws.reduce((n, w) => n + ((LIFT_MET - 1) * kg * workoutStats(w).duration) / 36e5, 0);
+  const workoutKcal = (liftKcal + acts.reduce((n, a) => n + activityKcal(a), 0)) / days;
   const confidence = logged.length >= 21 && tr.length >= 10 ? 'Good' : logged.length >= 14 ? 'Fair' : 'Rough';
-  return { ready: true, tdee, intake, dKg, span, workoutKcal, resting: tdee - workoutKcal, logged: logged.length, weighins: tr.length, confidence, workouts: ws.length };
+  return { ready: true, tdee, intake, dKg, span, workoutKcal, resting: tdee - workoutKcal, logged: logged.length, weighins: tr.length, confidence, workouts: ws.length, activities: acts.length };
 }
 
 export function trendsPage() {
@@ -79,7 +83,7 @@ export function trendsPage() {
           h('div.meta-top',
             h('div', h('div.energy-v', fmtNum(m.tdee)), h('div.energy-k', 'kcal a day to maintain')),
             h('div.energy-goal', h('div.meta-rest', fmtNum(m.resting)), h('div.energy-k', 'without workouts'))),
-          h('p.fine', `You ate ${fmtNum(m.intake)} kcal a day on average and your weight trend moved ${m.dKg >= 0 ? '+' : '−'}${toDisplay(Math.abs(m.dKg))} ${unit()} over ${Math.round(m.span)} days. Your ${m.workouts} workouts burned about ${fmtNum(m.workoutKcal)} kcal a day on top of your resting burn.`),
+          h('p.fine', `You ate ${fmtNum(m.intake)} kcal a day on average and your weight trend moved ${m.dKg >= 0 ? '+' : '−'}${toDisplay(Math.abs(m.dKg))} ${unit()} over ${Math.round(m.span)} days. Your ${m.workouts} gym workout${m.workouts === 1 ? '' : 's'}${m.activities ? ` and ${m.activities} activit${m.activities === 1 ? 'y' : 'ies'}` : ''} burned about ${fmtNum(m.workoutKcal)} kcal a day on top of your resting burn.${m.activities ? '' : ' Import runs and rides on Fitness to sharpen this.'}`),
           h('div.meta-foot', h('span', `Confidence: ${m.confidence}`), h('span', `${m.logged} days of food · ${m.weighins} weigh-ins`)),
           h('p.fine', 'An estimate that sharpens the more days you log. Eat about 300–500 kcal under maintenance to lose fat, or 200–300 over to build muscle.'))
         : h('section.card.meta-card',
