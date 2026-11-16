@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="75%">
+      <stop offset="0" stop-color="#17140e"/><stop offset=".6" stop-color="#060606"/><stop offset="1" stop-color="#000"/>
+    </radialGradient>
+    <linearGradient id="lit" x1="208.39999999999998" y1="208.39999999999998" x2="694.16" y2="815.6" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff1b8"/><stop offset=".35" stop-color="#f2c75e"/><stop offset=".75" stop-color="#c8922c"/><stop offset="1" stop-color="#8a5f17"/>
+    </linearGradient>
+    <linearGradient id="shade" x1="694.16" y1="815.6" x2="208.39999999999998" y2="208.39999999999998" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffe08a"/><stop offset=".4" stop-color="#d9a13b"/><stop offset=".8" stop-color="#8f6216"/><stop offset="1" stop-color="#5e3f0c"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#e3b04b" stop-opacity=".22"/><stop offset="1" stop-color="#e3b04b" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="230.4" fill="url(#bg)"/>
+  <circle cx="512" cy="512" r="440.22" fill="url(#glow)"/>
+  <path d="M730.4 301.1 A303.6 303.6 0 1 0 730.4 722.9 L666.6 696.9 A241.04000000000002 241.04000000000002 0 1 1 666.6 327.1 Z" fill="url(#lit)"/>
+  <path d="M666.6 327.1 A241.04000000000002 241.04000000000002 0 1 0 666.6 696.9 L612.8 661.5 A180.32000000000002 180.32000000000002 0 1 1 612.8 362.5 Z" fill="url(#shade)"/>
+</svg>

@@ -1,0 +1,6 @@
+.git
+.claude
+scripts
+node_modules
+wrangler.jsonc
+README.md
