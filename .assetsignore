@@ -4,3 +4,6 @@ scripts
 node_modules
 wrangler.jsonc
 README.md
+.gitignore
+.assetsignore
+.wrangler
