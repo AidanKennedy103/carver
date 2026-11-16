@@ -5,7 +5,7 @@
 
 import { h, sheet, toast } from './ui.js';
 import { state, commit } from './store.js';
-import { createFood } from './nutrition.js';
+import { createFood } from './foodpicker.js';
 import { sharedByBarcode, shareFood } from './cloud.js';
 
 const ZXING = 'https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js';

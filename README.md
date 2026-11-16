@@ -46,6 +46,16 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 - **Diary** for any day, by meal (breakfast, lunch, dinner, snacks). Macros come first, each with a bar toward its goal.
 - **Micronutrients page:** your energy split, plus vitamins and minerals against adult targets. Things to stay under (sodium, saturated fat, cholesterol) turn red when you go over.
 - **149 starter foods with emoji icons and real serving sizes**, a Recent list, category filters, and **Create food**. Search matches every word you type, so "greek yog" finds Greek yogurt.
+- **Favorites:** tap ☆ on any food to keep it in a Favorites list. Search puts favorites, your own foods and the foods you log most at the top.
+- **Recipes:** build a dish from foods (Add food → Create → New recipe), set how many servings it makes and, if you like, its cooked weight. Log a serving like any food, with every vitamin and mineral added up. Tap Edit recipe to change it.
+- **Edit or delete your own foods** from the food's amount screen.
+- **Report:** averages over the last 7 or 30 days:
+  - calories and macros against your goals, and how many days you hit them
+  - energy split and calories by meal
+  - your top foods for calories and protein
+  - vitamins and minerals, with the ones you're often low on (or over the limit)
+- **Suggested goals:** in Goals, pick Lose fat, Maintain or Build muscle. Carver suggests calories from your maintenance estimate (or your weight, to start) and protein from your body weight.
+- **The amount screen** lists the vitamins and minerals a food is rich in, and flags high sodium.
 - **Meal shortcuts:** each meal's ⋯ menu can copy yesterday's meal, save the meal to reuse it (it appears under **Meals** when you add food), or clear it.
 - **Import from Cronometer:** in Settings, pick Cronometer's "Food & Recipe Entries" export (CSV). Every entry comes in with its nutrients, in the right meal, and pasting the same file twice is fine.
 - **Shared food database:** when you're signed in, foods you create (with the switch on) and foods you scan are added for everyone, under **Community**. For the beta they appear straight away. To review them first, see the note in `supabase/schema.sql`.
@@ -97,7 +107,10 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 | `js/onerm.js` | One-rep max tracker |
 | `js/volume.js` | Weekly sets per muscle group (program and logged) |
 | `js/workout.js`, `js/session.js`, `js/block.js`, `js/picker.js`, `js/exercises.js` | Workout page, live workout, sets, exercise picker, exercise library |
-| `js/nutrition.js`, `js/foods.js`, `js/barcode.js`, `js/cronometer.js` | Food diary, quick add, saved meals, micronutrients, food list, barcode scanner, Cronometer import |
+| `js/nutrition.js` | The food diary page and meal shortcuts |
+| `js/foodpicker.js`, `js/quickadd.js`, `js/recipes.js` | Finding foods and amounts, favorites, creating and editing foods; quick add; recipes |
+| `js/nutrition-report.js`, `js/food-util.js` | Day micronutrients and the 7/30-day report; shared nutrition helpers |
+| `js/foods.js`, `js/barcode.js`, `js/cronometer.js` | Food list, barcode scanner, Cronometer import |
 | `js/goals.js` | Goals sheet and custom daily goals |
 | `js/fitness.js` | Fitness tab: cardio activities, Health import |
 | `js/progress.js`, `js/body.js`, `js/photos.js`, `js/monthly.js` | Progress tab, weight and imports, progress photos, monthly goals and recaps |

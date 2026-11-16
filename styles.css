@@ -676,3 +676,25 @@ body.has-live .root .bottom-space { height: calc(160px + var(--safe-bottom)); }
 .own-post { cursor: pointer; }
 .plan-muscles { margin-top: 8px; }
 .own-post { display: block; width: 100%; text-align: left; } .own-post + .own-post .feed-row, .own-post + .feed-row, .feed-row + .own-post .feed-row { border-top: .5px solid var(--line); }
+
+/* Nutrition: favorites, recipes, report, goal helper */
+.energy-links { display: flex; justify-content: space-between; }
+.fav-btn { font-size: 24px; color: var(--faint); }
+.fav-btn.on { color: var(--gold); }
+.fav-star { color: var(--gold); font-size: 13px; }
+.amount-food { position: relative; }
+.small-link { margin-left: auto; font-size: 14px; padding: 4px 0; align-self: flex-start; }
+.preview-rich { font-size: 13px; color: var(--muted); margin-top: 8px; }
+.recipe-total { padding: 16px; }
+.recipe-whole { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.small-v { font-size: 22px; }
+.report-hit { font-size: 13px; color: var(--muted); margin-top: 10px; }
+.report-row { display: grid; grid-template-columns: 82px 1fr 74px; align-items: center; gap: 10px; padding: 11px 16px; }
+.report-row + .report-row { border-top: .5px solid var(--line); }
+.report-name { font-size: 14px; font-weight: 600; }
+.report-bar { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.report-bar i { display: block; height: 100%; background: var(--gold); border-radius: 4px; }
+.report-val { text-align: right; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.food-line.static { cursor: default; }
+.report-flags { padding: 14px 16px; display: grid; gap: 6px; font-size: 14px; margin-top: 12px; }
+.suggest-btn { margin-bottom: 10px; }

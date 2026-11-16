@@ -9,7 +9,7 @@ import { goTab } from './tabs.js';
 import { oneRmSection } from './onerm.js';
 import { rings, sparkline, COLORS } from './charts.js';
 import { openGoals, logCustom, customAmount } from './goals.js';
-import { quickAdd } from './nutrition.js';
+import { quickAdd } from './quickadd.js';
 import { takeProgressPhoto, progressPage } from './progress.js';
 import { trendsPage, metabolism } from './trends.js';
 import { logWeightSheet, latestWeight, change, trend } from './body.js';
