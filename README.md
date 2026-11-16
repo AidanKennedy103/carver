@@ -4,11 +4,11 @@
 
 A free iPhone web app that puts workout tracking, food tracking, body weight, progress photos and your trends in one place. It's a beta for friends. You don't need the App Store or the $99 Apple fee, and it opens full-screen like a normal app.
 
-Black and gold. The logo is a carved gold **C**.
+Black and gold. The logo is a faceted gold **C**, cut like a gem with a V-groove on every side.
 
 ## What it does
 
-Six tabs: **Home, Workout, Nutrition, Fitness, Progress, Trends**. A gold bar above the tabs shows a workout in progress, with Resume.
+Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** open from two cards on Home. A gold bar above the tabs shows a workout in progress, with Resume.
 
 ### Home: today first
 - **Rings**, like closing your rings on Apple Watch. Pick up to 4 (pencil button): **Workout, Calories, Protein, Weigh-in**, or up to 2 goals of your own (water, steps…).
@@ -16,6 +16,7 @@ Six tabs: **Home, Workout, Nutrition, Fitness, Progress, Trends**. A gold bar ab
   - Calories count as hit within ±10% of your goal.
   - Closing a ring plays a short celebration (daily rings once a day, weekly rings once a week). Banners say "Hit your protein goal!" or "Hit your calorie goal!".
 - **Today:** today's workout, food (calories and protein) and weigh-in, each with a quick button.
+- **Progress & trends cards:** your weight and 30-day change, and your maintenance calories, each with a mini graph. Tap one to open Progress or Trends.
 - **Monthly nudges:** set this month's goals, take this month's progress photo, and see last month's recap.
 - **Calendar:** workout days are gold. A week turns gold when you hit your workouts-per-week goal. Tap a day to open that workout.
 - **One-rep max tracker:** pick up to 4 lifts (it starts with your most-logged ones). Each card shows your estimated 1RM (Epley formula), the change since you started, and a mini graph. Tap a card for a full chart and every workout's best set.
@@ -30,7 +31,7 @@ Six tabs: **Home, Workout, Nutrition, Fitness, Progress, Trends**. A gold bar ab
 - **Rest timer** with −15 / +15 and Skip, and a chime when rest is over.
 - **Summary when you finish**, with any personal records.
 - **History** with Repeat and Save as a plan.
-- **80 built-in exercises** plus your own custom ones. Choose lb or kg.
+- **81 built-in exercises** (including weighted pull-ups) plus your own custom ones. Choose lb or kg.
 - **A workout in progress survives closing the app.**
 
 ### Nutrition (like Cronometer)
@@ -48,7 +49,7 @@ Six tabs: **Home, Workout, Nutrition, Fitness, Progress, Trends**. A gold bar ab
 - **This week** (activities, distance, active calories), minutes per week for 12 weeks, and every activity with distance and pace.
 - Cardio counts in the metabolism estimate on Trends.
 
-### Progress: weight, photos, monthly
+### Progress (from Home): weight, photos, monthly
 - **Weight:**
   - Log your weight.
   - See a 7-day-average trend chart and history over 1M, 3M, 1Y or All.
@@ -63,7 +64,7 @@ Six tabs: **Home, Workout, Nutrition, Fitness, Progress, Trends**. A gold bar ab
   - your biggest 1RM gains
   - average calories and protein, and how many days you hit your protein goal
 
-### Trends
+### Trends (from Home)
 - **Your metabolism:**
   - **Maintenance calories:** worked out from your average intake and the change in your weight trend (about 7,700 kcal per kg).
   - **Calories without workouts:** your gym time (about 5 METs) and your cardio (Health's active calories, or an estimate) are taken out.

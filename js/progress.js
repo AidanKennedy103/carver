@@ -36,7 +36,7 @@ export function progressPage() {
     const pics = photos();
 
     fill(body,
-      navBar({ title: 'Progress', back: false, large: true }),
+      navBar({ title: 'Progress', backLabel: 'Home', large: true }),
 
       // Weight
       h('div.section-head', h('h2.section-title', 'Weight'), weights().length ? h('button.link', { onclick: () => push(weightScreen) }, 'History') : null),

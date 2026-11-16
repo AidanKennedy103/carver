@@ -1,20 +1,32 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
-    <radialGradient id="bg" cx="50%" cy="40%" r="75%">
-      <stop offset="0" stop-color="#17140e"/><stop offset=".6" stop-color="#060606"/><stop offset="1" stop-color="#000"/>
+    <radialGradient id="bg" cx="50%" cy="40%" r="80%">
+      <stop offset="0" stop-color="#1d1910"/><stop offset=".55" stop-color="#080807"/><stop offset="1" stop-color="#000"/>
     </radialGradient>
-    <linearGradient id="lit" x1="208.39999999999998" y1="208.39999999999998" x2="694.16" y2="815.6" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#fff1b8"/><stop offset=".35" stop-color="#f2c75e"/><stop offset=".75" stop-color="#c8922c"/><stop offset="1" stop-color="#8a5f17"/>
-    </linearGradient>
-    <linearGradient id="shade" x1="694.16" y1="815.6" x2="208.39999999999998" y2="208.39999999999998" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#ffe08a"/><stop offset=".4" stop-color="#d9a13b"/><stop offset=".8" stop-color="#8f6216"/><stop offset="1" stop-color="#5e3f0c"/>
-    </linearGradient>
-    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0" stop-color="#e3b04b" stop-opacity=".22"/><stop offset="1" stop-color="#e3b04b" stop-opacity="0"/>
+    <radialGradient id="glow" cx="500" cy="500" r="560" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e3b04b" stop-opacity=".18"/><stop offset=".6" stop-color="#e3b04b" stop-opacity=".04"/><stop offset="1" stop-color="#e3b04b" stop-opacity="0"/>
     </radialGradient>
   </defs>
   <rect width="1024" height="1024" rx="230.4" fill="url(#bg)"/>
-  <circle cx="512" cy="512" r="440.22" fill="url(#glow)"/>
-  <path d="M730.4 301.1 A303.6 303.6 0 1 0 730.4 722.9 L666.6 696.9 A241.04000000000002 241.04000000000002 0 1 1 666.6 327.1 Z" fill="url(#lit)"/>
-  <path d="M666.6 327.1 A241.04000000000002 241.04000000000002 0 1 0 666.6 696.9 L612.8 661.5 A180.32000000000002 180.32000000000002 0 1 1 612.8 362.5 Z" fill="url(#shade)"/>
+  <g transform="translate(40.95999999999998 40.95999999999998) scale(0.94208)">
+    <circle cx="500" cy="500" r="560" fill="url(#glow)"/>
+    <g stroke-linejoin="round" stroke-width="1.2" stroke="rgba(0,0,0,.25)">
+    <polygon points="780.9,689.5 637.8,832.6 602.6,747.6 709.1,641.0" fill="rgb(113,76,20)"/>
+    <polygon points="709.1,641.0 602.6,747.6 575.0,681.1 652.9,603.2" fill="rgb(254,239,191)"/>
+    <polygon points="637.8,832.6 362.2,832.6 397.4,747.6 602.6,747.6" fill="rgb(113,76,20)"/>
+    <polygon points="602.6,747.6 397.4,747.6 425.0,681.1 575.0,681.1" fill="rgb(223,173,75)"/>
+    <polygon points="362.2,832.6 167.4,637.8 252.4,602.6 397.4,747.6" fill="rgb(160,111,35)"/>
+    <polygon points="397.4,747.6 252.4,602.6 318.9,575.0 425.0,681.1" fill="rgb(113,76,20)"/>
+    <polygon points="167.4,637.8 167.4,362.2 252.4,397.4 252.4,602.6" fill="rgb(248,215,133)"/>
+    <polygon points="252.4,602.6 252.4,397.4 318.9,425.0 318.9,575.0" fill="rgb(113,76,20)"/>
+    <polygon points="167.4,362.2 362.2,167.4 397.4,252.4 252.4,397.4" fill="rgb(254,239,191)"/>
+    <polygon points="252.4,397.4 397.4,252.4 425.0,318.9 318.9,425.0" fill="rgb(113,76,20)"/>
+    <polygon points="362.2,167.4 637.8,167.4 602.6,252.4 397.4,252.4" fill="rgb(223,173,75)"/>
+    <polygon points="397.4,252.4 602.6,252.4 575.0,318.9 425.0,318.9" fill="rgb(113,76,20)"/>
+    <polygon points="637.8,167.4 780.9,310.5 709.1,359.0 602.6,252.4" fill="rgb(223,173,75)"/>
+    <polygon points="602.6,252.4 709.1,359.0 652.9,396.8 575.0,318.9" fill="rgb(113,76,20)"/>
+    <polygon points="780.9,689.5 709.1,641.0 652.9,603.2" fill="rgb(188,137,48)"/>
+    <polygon points="780.9,310.5 709.1,359.0 652.9,396.8" fill="rgb(139,94,27)"/>
+    </g>
+  </g>
 </svg>

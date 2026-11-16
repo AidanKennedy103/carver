@@ -11,7 +11,10 @@ import { rings, COLORS } from './charts.js';
 import { openGoals, logCustom, customAmount } from './goals.js';
 import { quickAdd } from './nutrition.js';
 import { logWeightSheet } from './body.js';
-import { takeProgressPhoto } from './progress.js';
+import { takeProgressPhoto, progressPage } from './progress.js';
+import { trendsPage, metabolism } from './trends.js';
+import { latestWeight, change, trend } from './body.js';
+import { sparkline } from './charts.js';
 import { monthlyPrompts } from './monthly.js';
 
 function greeting() {
@@ -186,6 +189,34 @@ function calendar(redraw) {
       h('button.link', { onclick: openGoals }, `${thisWeek}/${goal} this week`)));
 }
 
+// ---------- Progress and Trends cards ----------
+
+function progressCards() {
+  const last = latestWeight();
+  const c30 = change(30);
+  const tr = trend().filter((p) => p.x > Date.now() - 90 * 864e5);
+  const m = metabolism(28);
+  const kcals = [];
+  for (let i = 27; i >= 1; i--) { const t = dayTotals(ymd(Date.now() - i * 864e5)); if (t.entries) kcals.push(t.kcal); }
+  const pics = state.body.photos?.length || 0;
+  return h('div.orm-grid',
+    h('button.card.orm-card.link-card', { onclick: () => push(progressPage), 'aria-label': 'Open Progress: weight, photos and monthly goals' },
+      h('div.orm-name', 'Progress', h('span.card-go', '›')),
+      last
+        ? [h('div.orm-val', toDisplay(last.kg), h('span.orm-unit', unit())),
+          h('div.orm-sub', c30 != null ? `${c30 > 0 ? '+' : c30 < 0 ? '−' : ''}${toDisplay(Math.abs(c30))} ${unit()} in 30 days` : 'Weight')]
+        : [h('div.orm-val.dim-val', '—'), h('div.orm-sub', 'Log your weight')],
+      tr.length > 1 ? sparkline(tr.map((p) => p.y)) : h('div.card-foot', `${pics} progress photo${pics === 1 ? '' : 's'}`),
+      tr.length > 1 ? h('div.card-foot', `${pics} photo${pics === 1 ? '' : 's'} · monthly goals`) : null),
+    h('button.card.orm-card.link-card', { onclick: () => push(trendsPage), 'aria-label': 'Open Trends: charts and metabolism' },
+      h('div.orm-name', 'Trends', h('span.card-go', '›')),
+      m.ready
+        ? [h('div.orm-val', fmtNum(m.tdee), h('span.orm-unit', 'kcal')), h('div.orm-sub', 'to maintain')]
+        : [h('div.orm-val.dim-val', '—'), h('div.orm-sub', 'Maintenance calories')],
+      kcals.length > 1 ? sparkline(kcals, { color: COLORS.calories }) : null,
+      h('div.card-foot', m.ready ? `${m.confidence} estimate · charts` : `${m.need.food + m.need.weigh} more log${m.need.food + m.need.weigh === 1 ? '' : 's'} to estimate`)));
+}
+
 // ---------- The page ----------
 
 export function homePage() {
@@ -255,6 +286,10 @@ export function homePage() {
       // Monthly nudges
       prompts.map((p) => h('button.card.prompt', { onclick: p.action },
         h('span.prompt-ico', p.icon), h('span.today-text', h('span.today-k.strong', p.text), h('span.today-v', p.sub)), h('span.prompt-go', icon('back', 16)))),
+
+      // Progress and Trends live here instead of in the tab bar
+      h('div.section-head', h('h2.section-title', 'Progress & trends')),
+      progressCards(),
 
       // Calendar
       h('div.section-head', h('h2.section-title', 'Calendar')),

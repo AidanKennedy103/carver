@@ -28,6 +28,7 @@ export const LIBRARY = [
   L('bb-row', 'Barbell Row', 'Back', 'Barbell'),
   L('db-row', 'Dumbbell Row', 'Back', 'Dumbbell'),
   L('pullup', 'Pull-up', 'Back', 'Bodyweight', 'bw'),
+  L('weighted-pullup', 'Weighted Pull-up', 'Back', 'Bodyweight'),
   L('chinup', 'Chin-up', 'Back', 'Bodyweight', 'bw'),
   L('lat-pulldown', 'Lat Pulldown', 'Back', 'Cable'),
   L('seated-row', 'Seated Cable Row', 'Back', 'Cable'),

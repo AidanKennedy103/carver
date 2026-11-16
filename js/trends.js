@@ -73,7 +73,7 @@ export function trendsPage() {
     const fmtDay = (t) => fmtDate(t, { month: 'short', day: 'numeric' });
 
     fill(body,
-      navBar({ title: 'Trends', back: false, large: true }),
+      navBar({ title: 'Trends', backLabel: 'Home', large: true }),
       h('div.segment.range', [[28, '4W'], [91, '3M'], [182, '6M'], [365, '1Y']].map(([d, l]) => h('button' + (range === d ? '.on' : ''), { onclick: () => { range = d; draw(); } }, l))),
 
       // Metabolism

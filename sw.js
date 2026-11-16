@@ -2,7 +2,7 @@
 // have bad signal). Network first so updates arrive straight away; the saved copy
 // is used only when the network fails. Bump CACHE when you change the file list.
 
-const CACHE = 'carver-v13';
+const CACHE = 'carver-v14';
 const APP_FILES = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
   'js/app.js', 'js/ui.js', 'js/tabs.js', 'js/home.js', 'js/charts.js', 'js/onerm.js', 'js/foods.js', 'js/nutrition.js', 'js/goals.js', 'js/barcode.js', 'js/photos.js', 'js/body.js', 'js/fitness.js', 'js/progress.js', 'js/monthly.js', 'js/trends.js', 'js/store.js', 'js/exercises.js', 'js/picker.js', 'js/block.js', 'js/session.js', 'js/sound.js', 'js/workout.js', 'js/settings.js', 'js/cloud.js', 'js/account.js', 'js/config.js',

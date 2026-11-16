@@ -1,4 +1,4 @@
-// The bottom tab bar (Home, Workout, Nutrition, Fitness, Progress, Trends) and the
+// The bottom tab bar (Home, Workout, Nutrition, Fitness) and the
 // "workout in progress" bar that sits above it on every tab.
 
 import { h, icon, push, depth, fmtDuration, navBar } from './ui.js';
@@ -10,8 +10,6 @@ const TABS = [
   { id: 'workout', label: 'Workout', icon: 'dumbbell' },
   { id: 'nutrition', label: 'Nutrition', icon: 'apple' },
   { id: 'fitness', label: 'Fitness', icon: 'activity' },
-  { id: 'progress', label: 'Progress', icon: 'user' },
-  { id: 'trends', label: 'Trends', icon: 'chart' },
 ];
 
 let pages = {};
