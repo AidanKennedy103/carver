@@ -674,3 +674,4 @@ body.has-live .root .bottom-space { height: calc(160px + var(--safe-bottom)); }
 .prog .group-row { padding-left: 0; padding-right: 0; }
 .feed-photo { display: block; width: 100%; max-width: 260px; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 12px; margin-top: 8px; background: var(--surface-2); }
 .own-post { cursor: pointer; }
+.plan-muscles { margin-top: 8px; }

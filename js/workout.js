@@ -7,7 +7,7 @@ import { startWorkout, openWorkout, repeatWorkout, saveAsPlan } from './session.
 import { exerciseCard, newSet } from './block.js';
 import { pickExercises } from './picker.js';
 import { openSettings } from './settings.js';
-import { volumeCard } from './volume.js';
+import { volumeCard, tally, MUSCLE_ORDER } from './volume.js';
 
 export function workoutPage() {
   const el = h('div.page');
@@ -72,6 +72,16 @@ export function workoutPage() {
     el: (el.append(body), el),
     refresh: draw,
   };
+}
+
+/** Working sets per muscle in one plan (helping muscles count half). */
+function planMuscles(plan) {
+  const t = tally(plan.exercises.map((e) => ({ exId: e.exId, sets: e.sets.filter((s) => s.type !== 'w').length })));
+  const list = MUSCLE_ORDER.filter((m) => t[m].total > 0).sort((a, b) => t[b].total - t[a].total);
+  if (!list.length) return null;
+  return h('div.plan-muscles',
+    h('div.form-label', 'Sets per muscle in this plan'),
+    h('div.chips.tight.static', list.map((m) => h('span.chip', `${m} ${Math.round(t[m].total * 10) / 10}`))));
 }
 
 export function historyCard(w) {
@@ -194,6 +204,7 @@ function planEditor(existing = null) {
           setTimeout(() => body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' }), 50);
         }),
       }, icon('plus', 18), 'Add exercise'),
+      planMuscles(plan),
       h('div.bottom-space'),
     );
     requestAnimationFrame(() => { body.scrollTop = y; });
