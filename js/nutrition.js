@@ -2,7 +2,7 @@
 // picker, quick add, recipes and reports live in their own files.
 
 import { h, fill, icon, push, toast, actionSheet, confirmBox, promptBox, navBar } from './ui.js';
-import { state, commit, uid, ymd, addDays, dayLog, dayTotals, food, logFood, deleteLog, waterOn, addWater } from './store.js';
+import { state, commit, uid, ymd, addDays, dayStart, weekStart, dayLog, dayTotals, food, logFood, deleteLog, waterOn, addWater } from './store.js';
 import { MACROS } from './foods.js';
 import { COLORS } from './charts.js';
 import { openGoals } from './goals.js';
@@ -26,6 +26,7 @@ export function nutritionPage() {
     const g = state.goals;
     const left = g.kcal - t.kcal;
     const entries = dayLog(viewDate);
+    const showLeft = !!state.settings.macroLeft;
 
     fill(body,
       navBar({ title: 'Nutrition', back: false, large: true, right: [h('button.link', { onclick: openGoals }, 'Goals')] }),
@@ -34,6 +35,7 @@ export function nutritionPage() {
         h('button.icon-btn', { onclick: () => { viewDate = addDays(viewDate, -1); draw(); }, 'aria-label': 'Previous day' }, icon('back')),
         h('button.date-label', { onclick: () => { viewDate = ymd(); draw(); } }, dayLabel(viewDate)),
         h('button.icon-btn.flip', { onclick: () => { viewDate = addDays(viewDate, 1); draw(); }, 'aria-label': 'Next day' }, icon('back'))),
+      weekStrip(viewDate, (k) => { viewDate = k; draw(); }),
 
       // Energy and macros
       h('section.card.energy',
@@ -41,9 +43,15 @@ export function nutritionPage() {
           h('div', h('div.energy-v', r0(t.kcal).toLocaleString()), h('div.energy-k', 'kcal eaten')),
           h('div.energy-goal', h('div.energy-v' + (left < 0 ? '.over' : ''), Math.abs(r0(left)).toLocaleString()), h('div.energy-k', left < 0 ? 'over goal' : 'left'))),
         bar(t.kcal, g.kcal, COLORS.calories, true),
-        h('div.macro-rows', MACROS.map((m) => h('div.macro-row',
-          h('div.macro-head', h('span.macro-name', h('i.swatch', { style: { background: MACRO_COLOR[m.k] } }), m.name), h('span.macro-val', `${r0(t[m.k])} / ${g[m.k]} g`)),
-          bar(t[m.k], g[m.k], MACRO_COLOR[m.k])))),
+        // Tap the macros to switch between what you've eaten and what's left
+        h('button.macro-rows', { onclick: () => { commit((st) => { st.settings.macroLeft = !st.settings.macroLeft; }); }, 'aria-label': showLeft ? 'Show grams eaten' : 'Show grams left' },
+          MACROS.map((m) => {
+            const rest = g[m.k] - t[m.k];
+            return h('div.macro-row',
+              h('div.macro-head', h('span.macro-name', h('i.swatch', { style: { background: MACRO_COLOR[m.k] } }), m.name),
+                h('span.macro-val' + (showLeft && rest < 0 ? '.red-text' : ''), showLeft ? (rest >= 0 ? `${r0(rest)} g left` : `${r0(-rest)} g over`) : `${r0(t[m.k])} / ${g[m.k]} g`)),
+              bar(t[m.k], g[m.k], MACRO_COLOR[m.k]));
+          })),
         h('div.energy-links',
           h('button.link.micros-link', { onclick: () => push(reportScreen) }, 'Report', icon('back', 16)),
           h('button.link.micros-link', { onclick: () => push(() => microsScreen(viewDate)) }, 'Micronutrients', icon('back', 16)))),
@@ -60,7 +68,8 @@ export function nutritionPage() {
         const kcal = list.reduce((n, e) => n + (e.n.kcal || 0), 0);
         return h('section.meal',
           h('div.meal-head',
-            h('span.meal-name', meal.name),
+            h('span.meal-name', meal.name,
+              list.length ? h('span.meal-macros', `P ${r0(sumOf(list, 'p'))} · C ${r0(sumOf(list, 'c'))} · F ${r0(sumOf(list, 'f'))}`) : null),
             h('span.meal-kcal', list.length ? `${r0(kcal)} kcal` : ''),
             h('button.icon-btn', { onclick: () => mealMenu(meal, list, viewDate), 'aria-label': `${meal.name} options` }, icon('more', 20)),
             h('button.icon-btn.gold-text', { onclick: () => addFood({ date: viewDate, meal: meal.id }), 'aria-label': `Add to ${meal.name}` }, icon('plus', 20))),
@@ -99,6 +108,31 @@ async function saveMeal(list, meal) {
   if (!name?.trim()) return;
   commit((s) => { s.food.meals = [...(s.food.meals || []), { id: uid(), name: name.trim(), items: list.map((e) => copyEntry(e, null, null)) }]; });
   toast('Saved. Find it under Saved meals when you add food.');
+}
+
+const sumOf = (list, k) => list.reduce((n, e) => n + (e.n?.[k] || 0), 0);
+
+// ---------- The week at a glance ----------
+
+/** Monday to Sunday around the day you're viewing: calories against your goal, tap to jump. */
+function weekStrip(key, go) {
+  const g = state.goals.kcal;
+  const mon = ymd(weekStart(dayStart(key)));
+  const days = Array.from({ length: 7 }, (_, i) => addDays(mon, i));
+  const today = ymd();
+  return h('div.week-strip', days.map((k) => {
+    const t = dayTotals(k);
+    const pct = g ? Math.min(1, t.kcal / g) : 0;
+    const hit = t.kcal >= g * 0.9 && t.kcal <= g * 1.1;
+    const over = t.kcal > g * 1.1;
+    const d = new Date(dayStart(k));
+    return h('button.wk-day' + (k === key ? '.on' : '') + (k > today ? '.future' : ''), {
+      onclick: () => go(k), 'aria-label': `${dayLabel(k)}: ${r0(t.kcal)} kcal`,
+    },
+    h('span.wk-dow', 'MTWTFSS'[(d.getDay() + 6) % 7]),
+    h('span.wk-bar', h('i' + (hit ? '.hit' : over ? '.over' : ''), { style: { height: pct * 100 + '%' } })),
+    h('span.wk-num', d.getDate()));
+  }));
 }
 
 // ---------- Water ----------

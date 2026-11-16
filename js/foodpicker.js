@@ -7,7 +7,7 @@
 import { h, fill, icon, sheet, toast, actionSheet, confirmBox } from './ui.js';
 import { state, commit, uid, ymd, allFoods, food, nutrientsFor, logFood, updateLog, deleteLog, recentFoods, sharedFoods } from './store.js';
 import { enabled as cloudOn, account, shareFood } from './cloud.js';
-import { MACROS, CATEGORIES } from './foods.js';
+import { MACROS, MICROS, CATEGORIES } from './foods.js';
 import { scanBarcode, searchOFF, keepFood } from './barcode.js';
 import { MEALS, mealNow, mealName, MACRO_COLOR, r0, r1, num } from './food-util.js';
 import { foodIcon } from './food-icons.js';
@@ -179,6 +179,8 @@ export function amountSheet({ food: f, date = ymd(), meal = null, entry = null, 
   drawMeals();
 
   const preview = h('div.preview');
+  const factsBody = h('div.facts-body');
+  const facts = h('details.facts', h('summary', 'Nutrition facts'), factsBody);
   function update() {
     const grams = qty * opts[si].g;
     const n = nutrientsFor(f, grams);
@@ -187,6 +189,18 @@ export function amountSheet({ food: f, date = ymd(), meal = null, entry = null, 
       h('div.preview-macros', MACROS.map((m) => h('div.pm', h('i.swatch', { style: { background: MACRO_COLOR[m.k] } }), h('b', `${r1(n[m.k])} g`), h('span', m.name)))),
       highlights(n),
     );
+    if (facts.open) drawFacts(n);
+    else facts.ontoggle = () => facts.open && drawFacts(nutrientsFor(f, qty * opts[si].g));
+  }
+  function drawFacts(n) {
+    const known = MICROS.filter((m) => n[m.k] != null);
+    fill(factsBody,
+      MACROS.map((m) => h('div.facts-row', h('span', m.name), h('span', `${r1(n[m.k])} g`))),
+      known.map((m) => {
+        const t = m.target || m.max;
+        return h('div.facts-row', h('span', m.name), h('span', `${r1(n[m.k])} ${m.unit}`, t ? h('span.muted', ` · ${Math.round((n[m.k] / t) * 100)}%`) : null));
+      }),
+      known.length < MICROS.length ? h('p.fine', `${known.length ? 'Nutrients not listed' : 'Vitamins and minerals'} aren’t known for this food.`) : null);
   }
 
   const star = h('button.icon-btn.fav-btn' + (isFav(f.id) ? '.on' : ''), {
@@ -218,6 +232,7 @@ export function amountSheet({ food: f, date = ymd(), meal = null, entry = null, 
       h('button.qty-btn', { onclick: () => step(opts[si].g === 1 ? 10 : 0.5), 'aria-label': 'More' }, '+')),
     servSeg,
     preview,
+    facts,
     onPick ? null : [h('label.form-label', 'Meal'), mealRow],
     h('button.btn.gold.wide', {
       onclick: () => {
