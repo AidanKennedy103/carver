@@ -1,0 +1,162 @@
+// Weekly sets per muscle group: what your program asks for, and what you
+// actually logged. Sets for the main muscle count fully; muscles that help
+// (triceps on bench press, biceps on rows…) count half, a common way to tally it.
+
+import { h, fill, icon, push, navBar } from './ui.js';
+import { state, commit, exercise, weekStart } from './store.js';
+
+export const MUSCLE_ORDER = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Forearms', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Core'];
+export const TARGET = [10, 20];   // weekly hard sets that suit most people building muscle
+
+// Muscles that help in each built-in lift (half a set each)
+const HELPERS = {
+  bench: ['Triceps', 'Shoulders'], 'incline-bench': ['Triceps', 'Shoulders'], 'decline-bench': ['Triceps', 'Shoulders'],
+  'db-bench': ['Triceps', 'Shoulders'], 'db-incline': ['Triceps', 'Shoulders'], 'chest-press': ['Triceps', 'Shoulders'],
+  pushup: ['Triceps', 'Shoulders'], dips: ['Triceps', 'Shoulders'], cgbp: ['Chest', 'Shoulders'],
+  deadlift: ['Hamstrings', 'Glutes', 'Forearms'], 'rack-pull': ['Glutes', 'Forearms'],
+  'bb-row': ['Biceps'], 'db-row': ['Biceps'], 'tbar-row': ['Biceps'], 'chest-row': ['Biceps'], 'seated-row': ['Biceps'],
+  pullup: ['Biceps'], 'weighted-pullup': ['Biceps'], chinup: ['Biceps'], 'lat-pulldown': ['Biceps'],
+  'back-ext': ['Glutes', 'Hamstrings'],
+  ohp: ['Triceps'], 'db-shoulder': ['Triceps'], arnold: ['Triceps'], 'shoulder-press-m': ['Triceps'],
+  'face-pull': ['Back'], 'rear-delt-fly': ['Back'], 'upright-row': ['Back'], shrug: ['Back'],
+  squat: ['Glutes'], 'front-squat': ['Glutes', 'Core'], 'hack-squat': ['Glutes'], 'leg-press': ['Glutes'],
+  bss: ['Glutes'], lunge: ['Glutes'], 'goblet-squat': ['Glutes'],
+  rdl: ['Glutes', 'Back'], 'db-rdl': ['Glutes', 'Back'], 'hip-thrust': ['Hamstrings'],
+  'power-clean': ['Back', 'Quads', 'Glutes'], 'kb-swing': ['Glutes', 'Hamstrings'], 'farmers-walk': ['Forearms', 'Core'], burpee: ['Chest', 'Quads'],
+  'hanging-leg-raise': ['Forearms'],
+};
+
+/** items: [{ exId, sets }] → { Chest: { direct, helper, total, from: [{ name, sets, half }] }, … } */
+export function tally(items) {
+  const out = Object.fromEntries(MUSCLE_ORDER.map((m) => [m, { direct: 0, helper: 0, total: 0, from: new Map() }]));
+  const add = (m, n, name, half) => {
+    const t = out[m];
+    if (!t) return;
+    if (half) t.helper += n; else t.direct += n;
+    const k = name + (half ? ' (helps)' : '');
+    t.from.set(k, (t.from.get(k) || 0) + n);
+  };
+  for (const { exId, sets } of items) {
+    if (!sets) continue;
+    const ex = exercise(exId);
+    if (ex.type === 'time' && ex.muscle === 'Cardio') continue;
+    add(ex.muscle, sets, ex.name, false);
+    for (const m of HELPERS[exId] || []) add(m, sets, ex.name, true);
+  }
+  for (const t of Object.values(out)) {
+    t.total = t.direct + t.helper / 2;
+    t.from = [...t.from.entries()].map(([name, sets]) => ({ name, sets })).sort((a, b) => b.sets - a.sets);
+  }
+  return out;
+}
+
+const workSets = (sets, doneOnly) => sets.filter((s) => s.type !== 'w' && (!doneOnly || s.done)).length;
+
+/** How many times a week you run each plan (your program). Starts at once a week each. */
+export const timesPerWeek = (planId) => state.settings.program?.[planId] ?? 1;
+
+export function programTally() {
+  const items = [];
+  for (const p of state.plans) {
+    const n = timesPerWeek(p.id);
+    for (const e of p.exercises) items.push({ exId: e.exId, sets: workSets(e.sets, false) * n });
+  }
+  return tally(items);
+}
+
+/** Sets you actually logged, per week, over the last `weeks` full weeks (or the last 7 days when weeks = 0). */
+export function loggedTally(weeks = 0) {
+  const now = Date.now();
+  const from = weeks ? weekStart(now) - weeks * 7 * 864e5 : now - 7 * 864e5;
+  const to = weeks ? weekStart(now) : now;
+  const items = [];
+  for (const w of state.workouts) {
+    if (w.start < from || w.start >= to) continue;
+    for (const e of w.exercises) items.push({ exId: e.exId, sets: workSets(e.sets, true) / (weeks || 1) });
+  }
+  return tally(items);
+}
+
+const r1 = (v) => (Math.round(v * 10) / 10).toString();
+const status = (v) => (v < TARGET[0] ? 'low' : v > TARGET[1] ? 'high' : 'ok');
+
+// ---------- Workout page card ----------
+
+export function volumeCard() {
+  const usePlans = state.plans.length > 0;
+  const t = usePlans ? programTally() : loggedTally(0);
+  const vals = MUSCLE_ORDER.map((m) => [m, t[m].total]);
+  const low = vals.filter(([, v]) => v < TARGET[0]).sort((a, b) => a[1] - b[1]);
+  const inRange = vals.length - low.length - vals.filter(([, v]) => v > TARGET[1]).length;
+  return h('button.card.vol-card', { onclick: () => push(volumeScreen) },
+    h('div.vol-card-top', h('span.vol-card-title', 'Weekly sets per muscle'), h('span.prompt-go', icon('back', 16))),
+    h('div.vol-mini', vals.map(([m, v]) => h('div.vol-mini-col', { title: `${m}: ${r1(v)} sets` },
+      h('div.vol-mini-bar', h('i.' + status(v), { style: { height: Math.min(100, (v / 24) * 100) + '%' } })),
+      h('span', m.slice(0, 2))))),
+    h('div.vol-card-sub', `${usePlans ? 'Your plans' : 'Last 7 days'}: ${inRange} of ${vals.length} muscles in the 10–20 set range${low.length ? ` · low: ${low.slice(0, 3).map(([m]) => m).join(', ')}` : ''}`));
+}
+
+// ---------- Full screen ----------
+
+let view = null;   // 'program' | 'week' | 'avg'
+
+export function volumeScreen() {
+  const el = h('div.page');
+  const body = h('div.scroll-body');
+  if (!view) view = state.plans.length ? 'program' : 'week';
+
+  function draw() {
+    const t = view === 'program' ? programTally() : view === 'week' ? loggedTally(0) : loggedTally(4);
+    const total = MUSCLE_ORDER.reduce((n, m) => n + t[m].direct, 0);
+    fill(body,
+      navBar({ title: 'Sets per muscle', backLabel: 'Workout', large: true }),
+      h('div.segment.range', [['program', 'Program'], ['week', 'Last 7 days'], ['avg', '4-week avg']].map(([v, l]) => h('button' + (view === v ? '.on' : ''), { onclick: () => { view = v; draw(); } }, l))),
+
+      view === 'program' ? programEditor(draw) : null,
+
+      h('section.card.vol-list',
+        h('div.vol-legend',
+          h('span', h('i.vol-key.direct'), 'Main muscle'),
+          h('span', h('i.vol-key.helper'), 'Helping (counts half)'),
+          h('span', h('i.vol-key.band'), `${TARGET[0]}–${TARGET[1]} sets`)),
+        total ? MUSCLE_ORDER.map((m) => muscleRow(m, t[m])) : h('div.feed-empty', view === 'program' ? 'Add exercises to your plans to see your weekly sets.' : 'Finish a workout to see your sets here.')),
+
+      h('p.fine', 'Sets are working sets (warm-ups don’t count). Most people building muscle do well with about 10–20 hard sets per muscle each week; fewer can maintain, more can work if you recover well. Tap a muscle to see which exercises count.'),
+      h('div.bottom-space'),
+    );
+  }
+  draw();
+  el.append(body);
+  return { el, refresh: draw };
+}
+
+function muscleRow(m, t) {
+  const max = 28;
+  const pct = (v) => Math.min(100, (v / max) * 100);
+  const st = status(t.total);
+  return h('details.vol-row',
+    h('summary',
+      h('span.vol-name', m),
+      h('span.vol-track',
+        h('i.vol-band', { style: { left: pct(TARGET[0]) + '%', width: pct(TARGET[1]) - pct(TARGET[0]) + '%' } }),
+        h('i.vol-direct', { style: { width: pct(t.direct) + '%' } }),
+        h('i.vol-helper', { style: { left: pct(t.direct) + '%', width: pct(t.helper / 2) + '%' } })),
+      h('span.vol-num', r1(t.total)),
+      h('span.vol-tag.' + st, st === 'low' ? 'Low' : st === 'high' ? 'High' : 'Good')),
+    t.from.length
+      ? h('div.vol-from', t.from.map((f) => h('div', h('span', f.name), h('span', `${r1(f.sets)} set${f.sets === 1 ? '' : 's'}`))))
+      : h('div.vol-from.muted', 'Nothing trains this yet.'));
+}
+
+function programEditor(redraw) {
+  if (!state.plans.length) return h('div.feed-empty.card', 'Make plans on the Workout tab, then set how often you run each one here.');
+  const set = (id, d) => { commit((s) => { s.settings.program = { ...(s.settings.program || {}), [id]: Math.max(0, Math.min(4, timesPerWeek(id) + d)) }; }); redraw(); };
+  return h('section.card.list-card.prog',
+    h('div.prog-head', 'How often you run each plan'),
+    state.plans.map((p) => h('div.group-row',
+      h('span', p.name),
+      h('span.stepper',
+        h('button', { 'aria-label': `Run ${p.name} less often`, onclick: () => set(p.id, -1) }, '−'),
+        h('span', `${timesPerWeek(p.id)}×/wk`),
+        h('button', { 'aria-label': `Run ${p.name} more often`, onclick: () => set(p.id, 1) }, '+')))));
+}

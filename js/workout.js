@@ -7,6 +7,7 @@ import { startWorkout, openWorkout, repeatWorkout, saveAsPlan } from './session.
 import { exerciseCard, newSet } from './block.js';
 import { pickExercises } from './picker.js';
 import { openSettings } from './settings.js';
+import { volumeCard } from './volume.js';
 
 export function workoutPage() {
   const el = h('div.page');
@@ -33,6 +34,7 @@ export function workoutPage() {
       state.plans.length ? h('div.plan-grid', state.plans.map(planCard)) : h('button.card.empty-plan', { onclick: () => push(() => planEditor()) },
         h('div.empty-title', 'Make your first plan'),
         h('div.empty-text', 'Save up to 5 routines, like Push, Pull and Legs, and start them in one tap.')),
+      state.plans.length || state.workouts.length ? volumeCard() : null,
 
       h('div.section-head', h('h2.section-title', 'History')),
       state.workouts.length ? h('div.history', state.workouts.map(historyCard))

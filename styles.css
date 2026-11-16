@@ -633,3 +633,42 @@ body.has-live .root .bottom-space { height: calc(160px + var(--safe-bottom)); }
 .share-sub { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
 .leave { display: block; margin: 20px auto 0; }
 .group-code { font-size: 13px; color: var(--muted); margin: -6px 0 12px; } .group-code b { color: var(--gold); letter-spacing: 1px; }
+
+/* Weekly sets per muscle */
+.vol-card { width: 100%; text-align: left; padding: 14px 16px; margin-top: 12px; }
+.vol-card-top { display: flex; justify-content: space-between; align-items: center; }
+.vol-card-title { font-weight: 700; font-size: 16px; }
+.vol-mini { display: grid; grid-template-columns: repeat(11, 1fr); gap: 4px; margin: 12px 0 8px; }
+.vol-mini-col { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; color: var(--faint); }
+.vol-mini-bar { height: 44px; width: 100%; max-width: 18px; background: var(--surface-2); border-radius: 4px; display: flex; align-items: flex-end; overflow: hidden; }
+.vol-mini-bar i { display: block; width: 100%; border-radius: 4px 4px 0 0; background: var(--gold); }
+.vol-mini-bar i.low { background: #6b6b70; }
+.vol-mini-bar i.high { background: #e0803a; }
+.vol-card-sub { font-size: 13px; color: var(--muted); }
+
+.vol-list { padding: 8px 16px 6px; }
+.vol-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); padding: 6px 0 8px; }
+.vol-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.vol-key { width: 12px; height: 8px; border-radius: 2px; display: inline-block; }
+.vol-key.direct { background: var(--gold); }
+.vol-key.helper { background: rgba(227, 176, 75, .4); }
+.vol-key.band { background: rgba(255, 255, 255, .1); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2); }
+.vol-row { border-top: .5px solid var(--line); }
+.vol-row summary { list-style: none; display: grid; grid-template-columns: 82px 1fr 34px 42px; align-items: center; gap: 8px; padding: 11px 0; cursor: pointer; }
+.vol-row summary::-webkit-details-marker { display: none; }
+.vol-name { font-size: 14px; font-weight: 600; }
+.vol-track { position: relative; height: 12px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.vol-track i { position: absolute; top: 0; bottom: 0; }
+.vol-band { background: rgba(255, 255, 255, .08); box-shadow: inset 1px 0 rgba(255, 255, 255, .25), inset -1px 0 rgba(255, 255, 255, .25); }
+.vol-direct { left: 0; background: var(--gold); border-radius: 4px 0 0 4px; }
+.vol-helper { background: rgba(227, 176, 75, .4); border-left: 2px solid var(--surface); }
+.vol-num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.vol-tag { font-size: 11px; font-weight: 700; text-align: center; border-radius: 6px; padding: 2px 0; }
+.vol-tag.ok { color: var(--gold); background: var(--gold-bg); }
+.vol-tag.low { color: #a1a1a6; background: var(--surface-2); }
+.vol-tag.high { color: #f0a066; background: rgba(224, 128, 58, .15); }
+.vol-from { padding: 0 0 10px 90px; font-size: 13px; color: var(--muted); display: grid; gap: 4px; }
+.vol-from div { display: flex; justify-content: space-between; gap: 8px; }
+.prog { padding: 0 16px; margin-bottom: 12px; }
+.prog-head { font-size: 13px; color: var(--muted); padding: 12px 0 4px; }
+.prog .group-row { padding-left: 0; padding-right: 0; }

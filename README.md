@@ -32,6 +32,12 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 - **Rest timer** with −15 / +15 and Skip, and a chime when rest is over.
 - **Summary when you finish**, with any personal records.
 - **History** with Repeat and Save as a plan.
+- **Weekly sets per muscle:** a card on the Workout tab opens a breakdown by muscle group, in three views:
+  - **Program:** set how many times a week you run each plan.
+  - **Last 7 days.**
+  - **4-week average.**
+
+  Main-muscle sets count fully and helping muscles count half (triceps on bench press, biceps on rows…). Each muscle shows against a 10–20 set guide. Tap one to see which exercises count.
 - **81 built-in exercises** (including weighted pull-ups) plus your own custom ones. Choose lb or kg.
 - **A workout in progress survives closing the app.**
 
@@ -87,6 +93,7 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 | `js/store.js` | Saving (on this phone), units, PRs, estimated 1RM, food totals, backups |
 | `js/home.js` | Home: rings, today, calendar, profile |
 | `js/onerm.js` | One-rep max tracker |
+| `js/volume.js` | Weekly sets per muscle group (program and logged) |
 | `js/workout.js`, `js/session.js`, `js/block.js`, `js/picker.js`, `js/exercises.js` | Workout page, live workout, sets, exercise picker, exercise library |
 | `js/nutrition.js`, `js/foods.js`, `js/barcode.js` | Food diary, quick add, micronutrients, food list, barcode scanner |
 | `js/goals.js` | Goals sheet and custom daily goals |
