@@ -4,7 +4,7 @@
 
 A free iPhone web app that puts workout tracking, food tracking, body weight, progress photos and your trends in one place. It's a beta for friends. You don't need the App Store or the $99 Apple fee, and it opens full-screen like a normal app.
 
-Black and gold. The logo is a faceted gold **C**, cut like a gem with a V-groove on every side.
+Black and gold. The logo is a gold blackletter **C**, drawn stroke by stroke with a broad pen (`scripts/letter.mjs`), with a hairline carved into its stem.
 
 ## What it does
 
@@ -96,7 +96,7 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 | `js/trends.js`, `js/charts.js` | Trends tab and metabolism estimate; line, bar, sparkline and ring charts |
 | `js/settings.js`, `js/sound.js` | Settings, export/restore; the rest-timer chime |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Home-screen install, offline support, icons and launch screens |
-| `scripts/make-icons.mjs` | Draws the logo and makes every icon and launch screen |
+| `scripts/letter.mjs`, `scripts/make-icons.mjs` | Draws the blackletter C, and makes every icon and launch screen |
 
 Chart colours (rings, macros) were checked for colour-blind readers and contrast on the dark background.
 
