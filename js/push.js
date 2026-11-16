@@ -47,14 +47,22 @@ export async function disablePush() {
   await sub.unsubscribe();
 }
 
-/** Ask the server to send this phone a test notification. */
+/** Ask the server to send this phone a test notification. Returns a message saying what happened. */
 export async function testPush() {
   const reg = await navigator.serviceWorker.getRegistration();
   const sub = await reg?.pushManager.getSubscription();
   if (!sub) throw new Error('Turn notifications on first');
+  await save(sub);   // make sure the server has this phone (fixes a sign-up that didn't save)
   const db = await client();
-  const { error } = await db.functions.invoke('carver-push', { body: { test: sub.endpoint } });
-  if (error) throw new Error('The notification server isn’t set up yet (see README: Notifications).');
+  const { data, error } = await db.functions.invoke('carver-push', { body: { test: sub.endpoint } });
+  if (error) throw new Error(`The notification server didn’t answer (${error.message || 'error'}). Check it’s deployed as carver-push.`);
+  const r = typeof data === 'string' ? (() => { try { return JSON.parse(data); } catch { return {}; } })() : data || {};
+  if (r.ok) return 'Sent. It should arrive in a few seconds.';
+  if (r.reason === 'secrets') throw new Error('The server is missing its VAPID secrets.');
+  if (r.reason === 'not-registered') throw new Error('The server couldn’t find this phone. Turn notifications off and on, then try again.');
+  if (r.reason === 'db') throw new Error(`Database error: ${r.error}`);
+  if (r.reason === 'apple') throw new Error(`Apple refused it (${r.status}): ${r.error}`);
+  return 'Sent (old server version: redeploy carver-push to see details).';
 }
 
 /** After signing in (or on a new account), make sure the server knows this phone. */
@@ -83,7 +91,11 @@ export function pushRow() {
       h('div.push-text', h('b', '🔔 Notifications'), h('span', msg)),
       st === 'off' ? h('button.btn.gold.small', { onclick: async () => { try { await enablePush(); toast('Notifications on'); } catch (e) { toast(e.message); } draw(); } }, 'Turn on') : null,
       st === 'on' ? h('div.btn-pair',
-        h('button.btn.dark.small', { onclick: async () => { try { await testPush(); toast('Sent. It should arrive in a few seconds.'); } catch (e) { toast(e.message); } } }, 'Send a test'),
+        h('button.btn.dark.small', { onclick: async (e) => {
+          const b = e.currentTarget; b.disabled = true; b.textContent = 'Sending…';
+          try { toast(await testPush()); } catch (err) { toast(err.message || 'Couldn’t send'); }
+          b.disabled = false; b.textContent = 'Send a test';
+        } }, 'Send a test'),
         h('button.btn.dark.small', { onclick: async () => { await disablePush(); toast('Notifications off'); draw(); } }, 'Turn off')) : null,
     );
   };

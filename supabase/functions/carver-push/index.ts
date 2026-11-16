@@ -20,16 +20,24 @@ webpush.setVapidDetails(Deno.env.get('VAPID_SUBJECT') || 'mailto:carver@example.
 
 const CARDIO: Record<string, string> = { run: 'run', walk: 'walk', cycle: 'ride', hike: 'hike', swim: 'swim', row: 'row', elliptical: 'elliptical session', hiit: 'HIIT session', sport: 'sport session', yoga: 'yoga session' };
 
+// The app calls the test from the browser, which first asks whether that's allowed (CORS)
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   const body = await req.json().catch(() => ({}));
   try {
     if (body.event) await notify(String(body.event));
     else if (body.cron) await sweep();
-    else if (body.test) await test(String(body.test));
-    return new Response('ok');
+    else if (body.test) return Response.json(await test(String(body.test)), { headers: CORS });
+    return new Response('ok', { headers: CORS });
   } catch (e) {
     console.error(e);
-    return new Response(String(e), { status: 500 });
+    return new Response(String(e), { status: 500, headers: CORS });
   }
 });
 
@@ -37,21 +45,28 @@ Deno.serve(async (req) => {
 
 type Sub = { endpoint: string; p256dh: string; auth: string };
 
+/** Send to each phone. Returns what happened to each (for the test button). */
 async function send(subs: Sub[], msg: { title: string; body: string; tag?: string }) {
-  await Promise.all(subs.map(async (s) => {
+  return await Promise.all(subs.map(async (s) => {
     try {
-      await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(msg), { TTL: 60 * 60 * 12 });
+      const r = await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(msg), { TTL: 60 * 60 * 12, urgency: 'high' });
+      return { ok: true, status: r?.statusCode };
     } catch (e) {
       // The phone unsubscribed or the app was removed: forget it
       if (e?.statusCode === 404 || e?.statusCode === 410) await db.from('carver_push').delete().eq('endpoint', s.endpoint);
-      else console.error('push failed', e?.statusCode, e?.body);
+      console.error('push failed', e?.statusCode, e?.body || e?.message);
+      return { ok: false, status: e?.statusCode, error: String(e?.body || e?.message || e).slice(0, 200) };
     }
   }));
 }
 
 async function test(endpoint: string) {
-  const { data } = await db.from('carver_push').select('endpoint, p256dh, auth').eq('endpoint', endpoint);
-  if (data?.length) await send(data, { title: 'Carver', body: 'Notifications work. 💪', tag: 'test' });
+  if (!Deno.env.get('VAPID_PRIVATE_KEY') || !Deno.env.get('VAPID_PUBLIC_KEY')) return { ok: false, reason: 'secrets' };
+  const { data, error } = await db.from('carver_push').select('endpoint, p256dh, auth').eq('endpoint', endpoint);
+  if (error) return { ok: false, reason: 'db', error: error.message };
+  if (!data?.length) return { ok: false, reason: 'not-registered' };
+  const [r] = await send(data, { title: 'Carver', body: 'Notifications work. 💪', tag: 'test' });
+  return r.ok ? { ok: true, status: r.status } : { ok: false, reason: 'apple', status: r.status, error: r.error };
 }
 
 /** What the notification says about a post. */
