@@ -698,3 +698,5 @@ body.has-live .root .bottom-space { height: calc(160px + var(--safe-bottom)); }
 .food-line.static { cursor: default; }
 .report-flags { padding: 14px 16px; display: grid; gap: 6px; font-size: 14px; margin-top: 12px; }
 .suggest-btn { margin-bottom: 10px; }
+.list-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 14px 4px 6px; }
+.online-row .ex-name { color: var(--gold); }

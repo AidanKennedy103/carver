@@ -4,11 +4,11 @@
 // The picker can also "pick" instead of logging (recipes use that to add
 // ingredients): pass onPick and it hands back { food, qty, servingLabel, grams, n }.
 
-import { h, icon, sheet, toast, actionSheet, confirmBox } from './ui.js';
+import { h, fill, icon, sheet, toast, actionSheet, confirmBox } from './ui.js';
 import { state, commit, uid, ymd, allFoods, food, nutrientsFor, logFood, updateLog, deleteLog, recentFoods, sharedFoods } from './store.js';
 import { enabled as cloudOn, account, shareFood } from './cloud.js';
 import { MACROS, CATEGORIES } from './foods.js';
-import { scanBarcode } from './barcode.js';
+import { scanBarcode, searchOFF, keepFood } from './barcode.js';
 import { MEALS, mealNow, mealName, MACRO_COLOR, r0, r1, num } from './food-util.js';
 
 export const isFav = (id) => (state.food.favs || []).includes(id);
@@ -63,6 +63,28 @@ export function addFood({ date = ymd(), meal = null, cat: startCat = null, onPic
   const drawChips = () => chips.replaceChildren(...tabs().map((c) => h('button.chip' + (c === cat && !q ? '.on' : ''), { onclick: () => { cat = c; search.value = ''; q = ''; drawChips(); draw(); } }, c)));
   const choose = (f) => amountSheet({ food: f, date, meal, onPick, onDone: () => s.close() });
 
+  // Online search (Open Food Facts), on request, remembered per search
+  const online = new Map();
+  async function searchOnline(term) {
+    online.set(term, 'loading'); draw();
+    try { online.set(term, await searchOFF(term)); } catch { online.set(term, 'error'); }
+    if (q === term) draw();
+  }
+  function onlineRows() {
+    if (q.length < 3) return null;
+    const res = online.get(q);
+    if (!res) return h('button.ex-row.online-row', { onclick: () => searchOnline(q) }, h('span.ex-badge.food-badge', '🌐'), h('span.ex-text', h('span.ex-name', `Search online for “${q}”`), h('span.ex-sub', 'Brands and packaged foods from Open Food Facts')));
+    if (res === 'loading') return h('div.empty-small', 'Searching Open Food Facts…');
+    if (res === 'error') return h('button.ex-row.online-row', { onclick: () => searchOnline(q) }, h('span.ex-badge.food-badge', '⚠️'), h('span.ex-text', h('span.ex-name', 'Couldn’t search online'), h('span.ex-sub', 'Check your connection, then tap to try again')));
+    if (!res.length) return h('div.empty-small', 'Nothing online either. Try fewer words, scan the barcode, or create the food.');
+    return [h('div.list-label', 'From Open Food Facts'), ...res.map((f) => {
+      const sv = f.servings[0];
+      return h('button.ex-row', { onclick: () => choose(keepFood(f)) },
+        h('span.ex-badge.food-badge', '🏷️'),
+        h('span.ex-text', h('span.ex-name', f.name), h('span.ex-sub', `${f.brand ? f.brand + ' · ' : ''}${sv.label} · ${r0((f.n.kcal * sv.g) / 100)} kcal · ${r0((f.n.p * sv.g) / 100)} g protein`)));
+    })];
+  }
+
   function draw() {
     if (cat === 'Saved meals' && !q) { drawMeals(); return; }
     let items;
@@ -75,15 +97,16 @@ export function addFood({ date = ymd(), meal = null, cat: startCat = null, onPic
     else if (cat === 'My foods') items = state.food.custom.filter((f) => !f.recipe);
     else if (cat === 'Recipes') items = state.food.custom.filter((f) => f.recipe);
     else items = allFoods().filter((f) => f.cat === cat);
-    list.replaceChildren(
-      ...items.map((f) => {
+    fill(list,
+      items.map((f) => {
         const sv = f.servings[0];
         return h('button.ex-row', { onclick: () => choose(f) },
           h('span.ex-badge.food-badge', f.icon || '🍽️'),
           h('span.ex-text', h('span.ex-name', f.name, isFav(f.id) ? h('span.fav-star', ' ★') : null),
             h('span.ex-sub', `${f.brand ? f.brand + ' · ' : ''}${sv.label} · ${r0((f.n.kcal * sv.g) / 100)} kcal · ${r0((f.n.p * sv.g) / 100)} g protein`)));
       }),
-      items.length ? null : h('div.empty-small', q ? 'Nothing matches. Try Quick add or create the food.'
+      q ? onlineRows() : null,
+      items.length || q ? null : h('div.empty-small', q ? 'Nothing matches. Try Quick add or create the food.'
         : cat === 'Favorites' ? 'Tap ☆ on a food to keep it here.'
           : cat === 'My foods' ? 'Foods you create or scan show up here.'
             : cat === 'Recipes' ? 'Recipes you build show up here.' : 'Foods you log show up here.'),

@@ -95,6 +95,33 @@ export function scanBarcode(onFood) {
   start();
 }
 
+/**
+ * Search Open Food Facts by name. Products sold in Canada come first, then the
+ * rest of the world. Returns foods ready to log (not saved until you pick one).
+ */
+export async function searchOFF(q) {
+  const url = (host) => `https://${host}.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=20&fields=code,product_name,brands,serving_size,serving_quantity,nutriments`;
+  const get = async (host) => { const r = await fetch(url(host)); if (!r.ok) throw new Error('search failed'); return (await r.json()).products || []; };
+  let list = await get('ca');
+  if (list.length < 8) list = [...list, ...(await get('world').catch(() => []))];
+  const seen = new Set(), out = [];
+  for (const p of list) {
+    if (!p.code || seen.has(p.code) || !p.product_name) continue;
+    seen.add(p.code);
+    const f = fromOFF(p.code, p);
+    if (f) out.push(f);
+  }
+  return out.slice(0, 25);
+}
+
+/** Keep a food from Open Food Facts in My foods (and share it when signed in). */
+export function keepFood(f) {
+  if (state.food.custom.some((x) => x.id === f.id)) return state.food.custom.find((x) => x.id === f.id);
+  commit((st) => { st.food.custom.unshift(f); });
+  shareFood(f);
+  return f;
+}
+
 /** Look a barcode up: your saved foods, then the Carver database, then Open Food Facts. Returns a food or null. */
 export async function lookup(code) {
   const mine = state.food.custom.find((f) => f.barcode === code);
@@ -112,7 +139,7 @@ export async function lookup(code) {
   return f;
 }
 
-function fromOFF(code, p) {
+export function fromOFF(code, p) {
   const nu = p.nutriments || {};
   const g = (k) => (nu[k] == null || nu[k] === '' ? undefined : +nu[k]);
   let kcal = g('energy-kcal_100g');
