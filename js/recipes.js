@@ -7,6 +7,7 @@ import { state, commit, uid, food } from './store.js';
 import { MACROS, NUTRIENT_KEYS } from './foods.js';
 import { addFood, amountSheet } from './foodpicker.js';
 import { MACRO_COLOR, r0, r1, num, amountText } from './food-util.js';
+import { foodIcon } from './food-icons.js';
 
 /** Add up the nutrients of the ingredients. */
 function totals(items) {
@@ -74,7 +75,7 @@ function recipeScreen(existing) {
       h('div.section-head', h('h2.section-title', 'Ingredients'), r.items.length ? h('span.section-count', `${r.items.length}`) : null),
       r.items.length
         ? h('section.card.list-card', r.items.map((it, i) => h('button.food-line', { onclick: () => editItem(i) },
-          h('span.food-ico', it.icon || '🍽️'),
+          h('span.food-ico', foodIcon((it.foodId && food(it.foodId)?.icon) || it.icon)),
           h('span.food-text', h('span.food-name', it.name), h('span.food-sub', it.servingLabel === 'g' ? `${r0(it.grams)} g` : `${amountText(it)} · ${r0(it.grams)} g`)),
           h('span.food-kcal', r0(it.n.kcal)))))
         : h('div.empty-small', 'Add each ingredient and how much of it goes in.'),

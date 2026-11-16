@@ -11,6 +11,7 @@ import { MEALS, MACRO_COLOR, r0, amountText, dayLabel } from './food-util.js';
 import { quickAdd } from './quickadd.js';
 import { addFood, amountSheet } from './foodpicker.js';
 import { microsScreen, reportScreen } from './nutrition-report.js';
+import { foodIcon } from './food-icons.js';
 
 let viewDate = ymd();
 
@@ -64,7 +65,7 @@ export function nutritionPage() {
             h('button.icon-btn', { onclick: () => mealMenu(meal, list, viewDate), 'aria-label': `${meal.name} options` }, icon('more', 20)),
             h('button.icon-btn.gold-text', { onclick: () => addFood({ date: viewDate, meal: meal.id }), 'aria-label': `Add to ${meal.name}` }, icon('plus', 20))),
           list.length ? h('div.card.list-card', list.map((e) => h('button.food-line', { onclick: () => editEntry(e) },
-            h('span.food-ico', e.icon || (e.quick ? '⚡' : '🍽️')),
+            h('span.food-ico', foodIcon((e.foodId && food(e.foodId)?.icon) || e.icon || (e.quick ? '⚡' : '🍽️'))),
             h('span.food-text', h('span.food-name', e.name), h('span.food-sub', e.quick ? `${e.note ? e.note + ' · ' : ''}P ${r0(e.n.p)} · C ${r0(e.n.c)} · F ${r0(e.n.f)} g` : amountText(e))),
             h('span.food-kcal', r0(e.n.kcal))))) : null);
       }),

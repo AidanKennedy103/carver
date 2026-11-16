@@ -711,3 +711,17 @@ body.has-live .root .bottom-space { height: calc(160px + var(--safe-bottom)); }
 .water-glasses i.on { background: #2e8bd8; }
 .water-btns { display: flex; gap: 8px; }
 .water-btns .chip { flex: 1; justify-content: center; height: 32px; font-size: 13px; }
+.auto-tag { display: none; margin-left: 6px; font-size: 11px; font-weight: 700; color: var(--gold); background: var(--gold-bg); padding: 1px 6px; border-radius: 6px; vertical-align: 1px; }
+.goal-row.auto .auto-tag { display: inline-block; }
+.goal-row.auto .goal-input { color: var(--gold); }
+.food-svg { display: inline-flex; line-height: 1; } .food-svg svg { display: block; }
+
+/* Optical centering: numbers and short labels inside circles and pills.
+   Fonts reserve room above and below letters, so flex-centered text sits a
+   little off on iPhone. text-box trims to the letters themselves (iOS 18.2+;
+   older phones simply ignore it). */
+.cal-day span, .avatar, .feed-av, .set-num, .qty-btn, .stepper button, .stepper span,
+.chip, .btn, .segment button, .ring-plus, .vol-tag, .auto-tag, .water-minus {
+  text-box: trim-both cap alphabetic;
+}
+.cal-day span, .avatar, .feed-av, .set-num, .qty-btn, .stepper button, .water-minus { line-height: 1; }

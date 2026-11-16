@@ -3,10 +3,11 @@
 // your top foods, and the vitamins and minerals you tend to run low on).
 
 import { h, fill, navBar } from './ui.js';
-import { state, ymd, addDays, dayLog, dayTotals } from './store.js';
+import { state, ymd, addDays, dayLog, dayTotals, food } from './store.js';
 import { MACROS, MICROS, NUTRIENT_KEYS } from './foods.js';
 import { COLORS } from './charts.js';
 import { MEALS, MACRO_COLOR, r0, fmtAmt, dayLabel } from './food-util.js';
+import { foodIcon } from './food-icons.js';
 
 function bar(v, goal, color) {
   const pct = goal ? Math.min(100, (v / goal) * 100) : 0;
@@ -79,7 +80,7 @@ export function report(days) {
       byMeal[e.meal] = (byMeal[e.meal] || 0) + (e.n.kcal || 0);
       if (!e.quick) {
         const id = e.foodId || e.name;
-        const f = foods.get(id) || { name: e.name, icon: e.icon, kcal: 0, p: 0, times: 0 };
+        const f = foods.get(id) || { name: e.name, icon: food(e.foodId)?.icon || e.icon, kcal: 0, p: 0, times: 0 };
         f.kcal += e.n.kcal || 0; f.p += e.n.p || 0; f.times++;
         foods.set(id, f);
       }
@@ -146,11 +147,11 @@ export function reportScreen() {
         r.topKcal.length ? [
           h('div.section-head', h('h2.section-title', 'Most calories from')),
           h('section.card.list-card', r.topKcal.map((f) => h('div.food-line.static',
-            h('span.food-ico', f.icon || '🍽️'), h('span.food-text', h('span.food-name', f.name), h('span.food-sub', `${f.times} time${f.times === 1 ? '' : 's'}`)),
+            h('span.food-ico', foodIcon(f.icon)), h('span.food-text', h('span.food-name', f.name), h('span.food-sub', `${f.times} time${f.times === 1 ? '' : 's'}`)),
             h('span.food-kcal', `${r0(f.kcal / r.logged)}`, h('span.food-sub', ' /day'))))),
           h('div.section-head', h('h2.section-title', 'Most protein from')),
           h('section.card.list-card', r.topProtein.map((f) => h('div.food-line.static',
-            h('span.food-ico', f.icon || '🍽️'), h('span.food-text', h('span.food-name', f.name), h('span.food-sub', `${f.times} time${f.times === 1 ? '' : 's'}`)),
+            h('span.food-ico', foodIcon(f.icon)), h('span.food-text', h('span.food-name', f.name), h('span.food-sub', `${f.times} time${f.times === 1 ? '' : 's'}`)),
             h('span.food-kcal', `${r0(f.p / r.logged)} g`, h('span.food-sub', ' /day'))))),
         ] : null,
 

@@ -10,6 +10,7 @@ import { enabled as cloudOn, account, shareFood } from './cloud.js';
 import { MACROS, CATEGORIES } from './foods.js';
 import { scanBarcode, searchOFF, keepFood } from './barcode.js';
 import { MEALS, mealNow, mealName, MACRO_COLOR, r0, r1, num } from './food-util.js';
+import { foodIcon } from './food-icons.js';
 
 export const isFav = (id) => (state.food.favs || []).includes(id);
 export function toggleFav(id) {
@@ -57,7 +58,7 @@ export function addFood({ date = ymd(), meal = null, cat: startCat = null, onPic
   const list = h('div.ex-list');
   const search = h('input.search-input', {
     type: 'search', placeholder: 'Search foods', autocomplete: 'off', enterkeyhint: 'search', 'aria-label': 'Search foods',
-    oninput: () => { q = search.value.toLowerCase().trim(); draw(); },
+    oninput: () => { const was = !!q; q = search.value.toLowerCase().trim(); if (was !== !!q) drawChips(); draw(); },
   });
   const chips = h('div.chips.no-drag');
   const drawChips = () => chips.replaceChildren(...tabs().map((c) => h('button.chip' + (c === cat && !q ? '.on' : ''), { onclick: () => { cat = c; search.value = ''; q = ''; drawChips(); draw(); } }, c)));
@@ -101,7 +102,7 @@ export function addFood({ date = ymd(), meal = null, cat: startCat = null, onPic
       items.map((f) => {
         const sv = f.servings[0];
         return h('button.ex-row', { onclick: () => choose(f) },
-          h('span.ex-badge.food-badge', f.icon || '🍽️'),
+          h('span.ex-badge.food-badge', foodIcon(f.icon)),
           h('span.ex-text', h('span.ex-name', f.name, isFav(f.id) ? h('span.fav-star', ' ★') : null),
             h('span.ex-sub', `${f.brand ? f.brand + ' · ' : ''}${sv.label} · ${r0((f.n.kcal * sv.g) / 100)} kcal · ${r0((f.n.p * sv.g) / 100)} g protein`)));
       }),
@@ -210,7 +211,7 @@ export function amountSheet({ food: f, date = ymd(), meal = null, entry = null, 
   const s = sheet(h('div.form',
     h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', ''),
       entry ? h('button.link.red', { onclick: () => { deleteLog(entry.id); s.close(); } }, 'Delete') : star),
-    h('div.amount-food', h('span.amount-ico', f.icon || '🍽️'), h('div', h('div.amount-name', f.name), f.brand ? h('div.muted', f.brand) : null, f.recipe ? h('div.muted', `Recipe · ${f.recipe.servings} serving${f.recipe.servings === 1 ? '' : 's'}`) : null), manage),
+    h('div.amount-food', h('span.amount-ico', foodIcon(f.icon)), h('div', h('div.amount-name', f.name), f.brand ? h('div.muted', f.brand) : null, f.recipe ? h('div.muted', `Recipe · ${f.recipe.servings} serving${f.recipe.servings === 1 ? '' : 's'}`) : null), manage),
     h('div.qty-row',
       h('button.qty-btn', { onclick: () => step(opts[si].g === 1 ? -10 : -0.5), 'aria-label': 'Less' }, '−'),
       qtyIn,

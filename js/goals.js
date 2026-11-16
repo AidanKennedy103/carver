@@ -10,16 +10,42 @@ export function openGoals() {
   const field = (label, key, unit, step = 1) => {
     const input = h('input.field.goal-input', { value: g[key] ?? '', inputmode: 'decimal', 'aria-label': label });
     // Save when you leave the field (saving on every keystroke redraws the whole app)
-    input.addEventListener('change', () => { const v = num(input.value); if (v != null && v >= 0) { commit((s) => { s.goals[key] = Math.round(v / step) * step; }); hint(); } });
+    input.addEventListener('change', () => { const v = num(input.value); if (v != null && v >= 0) commit((s) => { s.goals[key] = Math.round(v / step) * step; }); });
     return h('label.goal-row', h('span', label), h('span.goal-field', input, h('span.goal-unit', unit)));
   };
-  const hintEl = h('p.fine');
-  const hint = () => {
-    const k = Math.round(g.p * 4 + g.c * 4 + g.f * 9);
-    hintEl.textContent = `Your macros add up to ${k.toLocaleString()} kcal (protein and carbs 4 kcal/g, fat 9 kcal/g).` +
-      (Math.abs(k - g.kcal) > 100 ? ` That's ${Math.abs(k - g.kcal).toLocaleString()} ${k > g.kcal ? 'over' : 'under'} your calorie goal.` : '');
+
+  // Calories and the three macros are tied (protein and carbs 4 kcal/g, fat 9): type any
+  // three and the one you touched longest ago fills itself in, rounded to a whole number.
+  const KCAL = { p: 4, c: 4, f: 9 };
+  const energy = {}, order = ['c', 'f', 'p', 'kcal'];   // oldest first: carbs fills in until you choose otherwise
+  const energyField = (label, key, unit) => {
+    const input = h('input.field.goal-input', { value: g[key] ?? '', inputmode: 'decimal', 'aria-label': label });
+    const tag = h('span.auto-tag', 'auto');
+    input.addEventListener('input', () => { order.splice(order.indexOf(key), 1); order.push(key); balance(); });
+    input.addEventListener('change', save);
+    input.addEventListener('focus', () => input.select());
+    energy[key] = { input, tag, row: h('label.goal-row', h('span', label, tag), h('span.goal-field', input, h('span.goal-unit', unit))) };
+    return energy[key].row;
   };
-  hint();
+  const val = (k) => Math.max(0, num(energy[k].input.value) || 0);
+  function balance(apply = true) {
+    const auto = order[0];
+    let v;
+    if (auto === 'kcal') v = val('p') * 4 + val('c') * 4 + val('f') * 9;
+    else v = (val('kcal') - Object.keys(KCAL).filter((m) => m !== auto).reduce((n, m) => n + val(m) * KCAL[m], 0)) / KCAL[auto];
+    if (apply) energy[auto].input.value = Math.max(0, Math.round(v));
+    for (const k of Object.keys(energy)) energy[k].row.classList.toggle('auto', k === auto);
+    const over = apply && auto !== 'kcal' && v < 0;
+    hintEl.textContent = over
+      ? 'Those macros already add up to more than your calories. Raise calories or lower a macro.'
+      : `${{ kcal: 'Calories', p: 'Protein', c: 'Carbs', f: 'Fat' }[auto]} fills itself in from the other three (protein and carbs are 4 kcal per gram, fat 9).`;
+    hintEl.classList.toggle('red-text', over);
+  }
+  function save() {
+    balance();
+    commit((s) => { for (const k of Object.keys(energy)) s.goals[k] = Math.round(val(k) / (k === 'kcal' ? 10 : 1)) * (k === 'kcal' ? 10 : 1); });
+  }
+  const hintEl = h('p.fine');
 
   const wkSeg = h('div.segment', [1, 2, 3, 4, 5, 6, 7].map((n) => h('button' + (g.workoutsPerWeek === n ? '.on' : ''), {
     onclick: (e) => { commit((s) => { s.goals.workoutsPerWeek = n; }); wkSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === e.currentTarget)); },
@@ -56,13 +82,15 @@ export function openGoals() {
     h('div.sheet-head', h('span'), h('div.sheet-title', 'Goals'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
     h('label.form-label', 'Daily food'),
     h('button.btn.gold-soft.wide.suggest-btn', { onclick: () => { s.close(); suggestGoals(); } }, '✨ Suggest goals for me'),
-    h('div.group', field('Calories', 'kcal', 'kcal', 10), field('Protein', 'p', 'g'), field('Carbs', 'c', 'g'), field('Fat', 'f', 'g'), field('Water', 'water', 'ml', 50)),
+    h('div.group', energyField('Calories', 'kcal', 'kcal'), energyField('Protein', 'p', 'g'), energyField('Carbs', 'c', 'g'), energyField('Fat', 'f', 'g')),
     hintEl,
+    h('div.group', field('Water', 'water', 'ml', 50)),
     h('label.form-label', 'Workouts per week'), wkSeg,
     h('p.fine', 'Hit this and the week turns gold on your calendar.'),
     h('label.form-label', 'Your own daily goals (up to 2)'), customList,
     h('p.fine', 'Each one gets its own ring on Home. Tap the ring row to log it.'),
   ));
+  balance(false);   // show which one fills in, without changing your saved goals
 }
 
 // ---------- Suggested food goals ----------

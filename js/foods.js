@@ -32,7 +32,7 @@ export const NUTRIENT_KEYS = ['kcal', 'p', 'c', 'f', ...MICROS.map((m) => m.k)];
 
 export const CATEGORIES = ['Fruit', 'Vegetables', 'Protein', 'Dairy & eggs', 'Grains', 'Nuts & fats', 'Meals', 'Snacks', 'Drinks'];
 
-// F(id, name, emoji, category, servings [[label, grams]], per-100 g nutrients)
+// F(id, name, icon (emoji, or 'svg:name' for one of the drawings in food-icons.js), category, servings [[label, grams]], per-100 g nutrients)
 const F = (id, name, icon, cat, servings, n) => ({ id, name, icon, cat, servings: servings.map(([label, g]) => ({ label, g })), n });
 
 export const FOODS = [
@@ -63,7 +63,7 @@ export const FOODS = [
   F('corn', 'Corn', '🌽', 'Vegetables', [['1 ear', 103], ['1 cup', 145]], { kcal: 96, p: 3.4, c: 21, f: 1.5, fib: 2.4, sug: 4.5, k: 218, mg: 26, fol: 23, vc: 5.5 }),
   F('onion', 'Onion', '🧅', 'Vegetables', [['1 medium', 110]], { kcal: 40, p: 1.1, c: 9.3, f: 0.1, fib: 1.7, sug: 4.2, k: 146, vc: 7.4, fol: 19, ca: 23 }),
   F('mushrooms', 'Mushrooms', '🍄', 'Vegetables', [['1 cup', 70]], { kcal: 22, p: 3.1, c: 3.3, f: 0.3, fib: 1, k: 318, fe: 0.5, zn: 0.5, vd: 0.2, fol: 17 }),
-  F('romaine', 'Romaine lettuce', '🥗', 'Vegetables', [['1 cup shredded', 47]], { kcal: 17, p: 1.2, c: 3.3, f: 0.3, fib: 2.1, k: 247, va: 436, vc: 4, fol: 136, ca: 33, fe: 1 }),
+  F('romaine', 'Romaine lettuce', '🥬', 'Vegetables', [['1 cup shredded', 47]], { kcal: 17, p: 1.2, c: 3.3, f: 0.3, fib: 2.1, k: 247, va: 436, vc: 4, fol: 136, ca: 33, fe: 1 }),
   F('green-beans', 'Green beans', '🫛', 'Vegetables', [['1 cup', 110]], { kcal: 31, p: 1.8, c: 7, f: 0.2, fib: 2.7, k: 211, vc: 12.2, va: 35, ca: 37, fe: 1, mg: 25 }),
   // Protein
   F('chicken-breast', 'Chicken breast, cooked', '🍗', 'Protein', [['100 g', 100], ['1 breast', 172], ['4 oz', 113]], { kcal: 165, p: 31, c: 0, f: 3.6, sat: 1, chol: 85, na: 74, k: 256, mg: 29, zn: 1, fe: 1, b12: 0.3 }),
@@ -71,22 +71,22 @@ export const FOODS = [
   F('ground-beef', 'Ground beef 90% lean, cooked', '🥩', 'Protein', [['4 oz', 113], ['100 g', 100]], { kcal: 217, p: 26.1, c: 0, f: 11.7, sat: 4.6, chol: 86, na: 76, k: 375, fe: 2.7, zn: 6.4, b12: 2.5 }),
   F('steak', 'Sirloin steak, cooked', '🥩', 'Protein', [['6 oz', 170], ['100 g', 100]], { kcal: 207, p: 30, c: 0, f: 8.8, sat: 3.4, chol: 89, na: 60, k: 380, fe: 2.6, zn: 5.6, b12: 1.8 }),
   F('salmon', 'Salmon, cooked', '🐟', 'Protein', [['1 fillet', 154], ['4 oz', 113]], { kcal: 206, p: 22.1, c: 0, f: 12.4, sat: 2.5, chol: 63, na: 61, k: 384, vd: 13.1, b12: 2.8, mg: 30, zn: 0.4 }),
-  F('tuna', 'Tuna, canned in water', '🐟', 'Protein', [['1 can, drained', 142]], { kcal: 116, p: 25.5, c: 0, f: 0.8, chol: 30, na: 247, k: 237, b12: 2.5, vd: 1.2, fe: 1.5, mg: 27 }),
+  F('tuna', 'Tuna, canned in water', 'svg:tin', 'Protein', [['1 can, drained', 142]], { kcal: 116, p: 25.5, c: 0, f: 0.8, chol: 30, na: 247, k: 237, b12: 2.5, vd: 1.2, fe: 1.5, mg: 27 }),
   F('shrimp', 'Shrimp, cooked', '🦐', 'Protein', [['3 oz', 85]], { kcal: 99, p: 24, c: 0.2, f: 0.3, chol: 189, na: 111, k: 259, zn: 1.6, b12: 1.1, ca: 70 }),
-  F('tofu', 'Tofu, firm', '🧊', 'Protein', [['½ cup', 126]], { kcal: 144, p: 17.3, c: 2.8, f: 8.7, fib: 2.3, ca: 683, fe: 2.7, mg: 58, k: 237, na: 14, zn: 1.6 }),
+  F('tofu', 'Tofu, firm', 'svg:tofu', 'Protein', [['½ cup', 126]], { kcal: 144, p: 17.3, c: 2.8, f: 8.7, fib: 2.3, ca: 683, fe: 2.7, mg: 58, k: 237, na: 14, zn: 1.6 }),
   F('black-beans', 'Black beans, cooked', '🫘', 'Protein', [['1 cup', 172], ['½ cup', 86]], { kcal: 132, p: 8.9, c: 23.7, f: 0.5, fib: 8.7, k: 355, fe: 2.1, mg: 70, fol: 149, ca: 27, zn: 1.1 }),
   F('lentils', 'Lentils, cooked', '🫘', 'Protein', [['1 cup', 198]], { kcal: 116, p: 9, c: 20.1, f: 0.4, fib: 7.9, k: 369, fe: 3.3, mg: 36, fol: 181, zn: 1.3 }),
   F('chickpeas', 'Chickpeas, cooked', '🫘', 'Protein', [['1 cup', 164]], { kcal: 164, p: 8.9, c: 27.4, f: 2.6, fib: 7.6, sug: 4.8, k: 291, fe: 2.9, mg: 48, fol: 172, zn: 1.5, ca: 49 }),
   F('bacon', 'Bacon', '🥓', 'Protein', [['1 slice', 8]], { kcal: 541, p: 37, c: 1.4, f: 42, sat: 14, chol: 110, na: 1717, k: 565, zn: 3.5 }),
-  F('whey', 'Whey protein powder', '🥤', 'Protein', [['1 scoop', 30]], { kcal: 400, p: 80, c: 10, f: 5, ca: 400, na: 170, k: 500, chol: 80 }),
-  F('protein-bar', 'Protein bar', '🍫', 'Protein', [['1 bar', 60]], { kcal: 350, p: 33, c: 38, f: 11, fib: 15, sug: 3, sat: 4, na: 300, ca: 200 }),
+  F('whey', 'Whey protein powder', 'svg:powder', 'Protein', [['1 scoop', 30]], { kcal: 400, p: 80, c: 10, f: 5, ca: 400, na: 170, k: 500, chol: 80 }),
+  F('protein-bar', 'Protein bar', 'svg:proteinbar', 'Protein', [['1 bar', 60]], { kcal: 350, p: 33, c: 38, f: 11, fib: 15, sug: 3, sat: 4, na: 300, ca: 200 }),
   // Dairy & eggs
   F('egg', 'Egg', '🥚', 'Dairy & eggs', [['1 large', 50]], { kcal: 143, p: 12.6, c: 0.7, f: 9.5, sat: 3.1, chol: 372, na: 142, k: 138, ca: 56, fe: 1.8, zn: 1.3, va: 160, vd: 2, b12: 0.9, fol: 47 }),
   F('egg-white', 'Egg white', '🥚', 'Dairy & eggs', [['1 large', 33], ['1 cup', 243]], { kcal: 52, p: 10.9, c: 0.7, f: 0.2, na: 166, k: 163, mg: 11 }),
   F('milk', 'Milk, 2%', '🥛', 'Dairy & eggs', [['1 cup', 244]], { kcal: 50, p: 3.3, c: 4.8, f: 2, sat: 1.1, sug: 5, chol: 8, ca: 120, k: 140, na: 47, vd: 1.1, b12: 0.5, va: 55 }),
-  F('greek-yogurt', 'Greek yogurt, plain nonfat', '🥣', 'Dairy & eggs', [['¾ cup', 170]], { kcal: 59, p: 10.2, c: 3.6, f: 0.4, sug: 3.2, ca: 110, k: 141, na: 36, b12: 0.75, zn: 0.5 }),
+  F('greek-yogurt', 'Greek yogurt, plain nonfat', 'svg:yogurt', 'Dairy & eggs', [['¾ cup', 170]], { kcal: 59, p: 10.2, c: 3.6, f: 0.4, sug: 3.2, ca: 110, k: 141, na: 36, b12: 0.75, zn: 0.5 }),
   F('cheddar', 'Cheddar cheese', '🧀', 'Dairy & eggs', [['1 slice', 28]], { kcal: 403, p: 24.9, c: 1.3, f: 33.1, sat: 21, chol: 105, na: 621, ca: 721, zn: 3.1, va: 265, b12: 0.8 }),
-  F('cottage-cheese', 'Cottage cheese, 2%', '🥣', 'Dairy & eggs', [['1 cup', 226], ['½ cup', 113]], { kcal: 81, p: 10.5, c: 4.8, f: 2.3, sug: 4, sat: 1.3, na: 308, ca: 91, k: 86 }),
+  F('cottage-cheese', 'Cottage cheese, 2%', 'svg:tub', 'Dairy & eggs', [['1 cup', 226], ['½ cup', 113]], { kcal: 81, p: 10.5, c: 4.8, f: 2.3, sug: 4, sat: 1.3, na: 308, ca: 91, k: 86 }),
   F('butter', 'Butter', '🧈', 'Dairy & eggs', [['1 tbsp', 14]], { kcal: 717, p: 0.9, c: 0.1, f: 81, sat: 51, chol: 215, na: 643, va: 684 }),
   // Grains
   F('white-rice', 'White rice, cooked', '🍚', 'Grains', [['1 cup', 158]], { kcal: 130, p: 2.7, c: 28.2, f: 0.3, fib: 0.4, k: 35, fe: 1.2, fol: 58, mg: 12 }),
@@ -103,7 +103,7 @@ export const FOODS = [
   F('peanut-butter', 'Peanut butter', '🥜', 'Nuts & fats', [['2 tbsp', 32]], { kcal: 588, p: 25, c: 20, f: 50, fib: 6, sug: 9, sat: 10, na: 459, mg: 154, k: 558, zn: 2.9 }),
   F('walnuts', 'Walnuts', '🌰', 'Nuts & fats', [['1 oz', 28]], { kcal: 654, p: 15.2, c: 13.7, f: 65.2, fib: 6.7, sat: 6.1, mg: 158, k: 441, fe: 2.9 }),
   F('olive-oil', 'Olive oil', '🫒', 'Nuts & fats', [['1 tbsp', 13.5]], { kcal: 884, p: 0, c: 0, f: 100, sat: 13.8 }),
-  F('hummus', 'Hummus', '🥙', 'Nuts & fats', [['2 tbsp', 30]], { kcal: 166, p: 7.9, c: 14.3, f: 9.6, fib: 6, na: 379, fe: 2.4, mg: 71 }),
+  F('hummus', 'Hummus', 'svg:hummus', 'Nuts & fats', [['2 tbsp', 30]], { kcal: 166, p: 7.9, c: 14.3, f: 9.6, fib: 6, na: 379, fe: 2.4, mg: 71 }),
   // Meals
   F('pizza', 'Cheese pizza', '🍕', 'Meals', [['1 slice', 107]], { kcal: 266, p: 11.4, c: 33.3, f: 9.7, fib: 2.3, sug: 3.6, sat: 4.5, chol: 17, na: 598, ca: 188, fe: 2.5 }),
   F('cheeseburger', 'Cheeseburger', '🍔', 'Meals', [['1 burger', 119]], { kcal: 252, p: 13, c: 26, f: 10.5, sat: 4.6, chol: 34, na: 620, ca: 140, fe: 2.4 }),
@@ -126,19 +126,19 @@ export const FOODS = [
   // ---- More foods (Nov 2026) ----
   // Fruit
   F('raspberries', 'Raspberries', '🍓', 'Fruit', [['1 cup', 123]], { kcal: 52, p: 1.2, c: 11.9, f: 0.7, fib: 6.5, sug: 4.4, k: 151, vc: 26.2, mg: 22, ca: 25, fol: 21, fe: 0.7 }),
-  F('dates', 'Medjool dates', '🌴', 'Fruit', [['1 date', 24]], { kcal: 277, p: 1.8, c: 75, f: 0.2, fib: 6.7, sug: 66.5, k: 696, mg: 54, ca: 64, fe: 0.9 }),
+  F('dates', 'Medjool dates', 'svg:dates', 'Fruit', [['1 date', 24]], { kcal: 277, p: 1.8, c: 75, f: 0.2, fib: 6.7, sug: 66.5, k: 696, mg: 54, ca: 64, fe: 0.9 }),
   F('raisins', 'Raisins', '🍇', 'Fruit', [['¼ cup', 40]], { kcal: 299, p: 3.1, c: 79.2, f: 0.5, fib: 3.7, sug: 59.2, k: 749, fe: 1.9, ca: 50, mg: 32 }),
   F('grapefruit', 'Grapefruit', '🍊', 'Fruit', [['½ fruit', 123]], { kcal: 42, p: 0.8, c: 10.7, f: 0.1, fib: 1.6, sug: 6.9, k: 135, vc: 31.2, va: 58, ca: 22 }),
   F('cantaloupe', 'Cantaloupe', '🍈', 'Fruit', [['1 cup diced', 160]], { kcal: 34, p: 0.8, c: 8.2, f: 0.2, fib: 0.9, sug: 7.9, k: 267, vc: 36.7, va: 169, fol: 21, mg: 12 }),
-  F('plum', 'Plum', '🟣', 'Fruit', [['1 fruit', 66]], { kcal: 46, p: 0.7, c: 11.4, f: 0.3, fib: 1.4, sug: 9.9, k: 157, vc: 9.5, va: 17 }),
+  F('plum', 'Plum', 'svg:plum', 'Fruit', [['1 fruit', 66]], { kcal: 46, p: 0.7, c: 11.4, f: 0.3, fib: 1.4, sug: 9.9, k: 157, vc: 9.5, va: 17 }),
   // Vegetables
-  F('cauliflower', 'Cauliflower', '🥦', 'Vegetables', [['1 cup chopped', 107]], { kcal: 25, p: 1.9, c: 5, f: 0.3, fib: 2, sug: 1.9, k: 299, vc: 48.2, fol: 57, ca: 22, mg: 15, na: 30 }),
+  F('cauliflower', 'Cauliflower', 'svg:cauliflower', 'Vegetables', [['1 cup chopped', 107]], { kcal: 25, p: 1.9, c: 5, f: 0.3, fib: 2, sug: 1.9, k: 299, vc: 48.2, fol: 57, ca: 22, mg: 15, na: 30 }),
   F('kale', 'Kale', '🥬', 'Vegetables', [['1 cup chopped', 21]], { kcal: 35, p: 2.9, c: 4.4, f: 1.5, fib: 4.1, k: 348, ca: 254, vc: 93.4, va: 241, mg: 33, fe: 1.6, fol: 62 }),
   F('zucchini', 'Zucchini', '🥒', 'Vegetables', [['1 medium', 196]], { kcal: 17, p: 1.2, c: 3.1, f: 0.3, fib: 1, sug: 2.5, k: 261, vc: 17.9, va: 10, fol: 24, mg: 18 }),
   F('asparagus', 'Asparagus', '🌱', 'Vegetables', [['6 spears', 96]], { kcal: 20, p: 2.2, c: 3.9, f: 0.1, fib: 2.1, sug: 1.9, k: 202, fol: 52, va: 38, fe: 2.1, vc: 5.6, ca: 24 }),
   F('peas', 'Green peas, cooked', '🫛', 'Vegetables', [['1 cup', 160]], { kcal: 84, p: 5.4, c: 15.6, f: 0.2, fib: 5.5, sug: 5.9, k: 271, vc: 14.2, fe: 1.5, mg: 39, fol: 63, zn: 1.2 }),
-  F('brussels', 'Brussels sprouts, cooked', '🥬', 'Vegetables', [['1 cup', 156]], { kcal: 36, p: 2.6, c: 7.1, f: 0.5, fib: 2.6, sug: 1.7, k: 317, vc: 62, fol: 60, ca: 36, fe: 1.2 }),
-  F('celery', 'Celery', '🥬', 'Vegetables', [['1 stalk', 40]], { kcal: 14, p: 0.7, c: 3, f: 0.2, fib: 1.6, sug: 1.3, k: 260, ca: 40, na: 80, fol: 36 }),
+  F('brussels', 'Brussels sprouts, cooked', 'svg:brussels', 'Vegetables', [['1 cup', 156]], { kcal: 36, p: 2.6, c: 7.1, f: 0.5, fib: 2.6, sug: 1.7, k: 317, vc: 62, fol: 60, ca: 36, fe: 1.2 }),
+  F('celery', 'Celery', 'svg:celery', 'Vegetables', [['1 stalk', 40]], { kcal: 14, p: 0.7, c: 3, f: 0.2, fib: 1.6, sug: 1.3, k: 260, ca: 40, na: 80, fol: 36 }),
   F('edamame', 'Edamame, shelled', '🫛', 'Vegetables', [['1 cup', 155]], { kcal: 121, p: 11.9, c: 8.9, f: 5.2, fib: 5.2, sug: 2.2, k: 436, fol: 311, fe: 2.3, mg: 64, ca: 63, zn: 1.4 }),
   F('salad-mix', 'Mixed salad greens', '🥗', 'Vegetables', [['2 cups', 85]], { kcal: 17, p: 1.4, c: 3.3, f: 0.2, fib: 2, sug: 1.2, k: 280, va: 300, vc: 15, fol: 100, ca: 40, fe: 1 }),
   // Protein
@@ -147,11 +147,11 @@ export const FOODS = [
   F('pork-tenderloin', 'Pork tenderloin, cooked', '🥩', 'Protein', [['4 oz', 113]], { kcal: 143, p: 26.2, c: 0, f: 3.5, sat: 1.2, chol: 73, na: 57, k: 421, zn: 2.4, b12: 0.5, fe: 1.2 }),
   F('cod', 'Cod, cooked', '🐟', 'Protein', [['1 fillet', 180]], { kcal: 105, p: 22.8, c: 0, f: 0.9, chol: 55, na: 78, k: 244, b12: 1, mg: 42 }),
   F('tilapia', 'Tilapia, cooked', '🐟', 'Protein', [['1 fillet', 87]], { kcal: 128, p: 26.2, c: 0, f: 2.7, chol: 57, na: 56, k: 380, b12: 1.9, vd: 3.7 }),
-  F('sardines', 'Sardines, canned in oil', '🐟', 'Protein', [['1 can', 92]], { kcal: 208, p: 24.6, c: 0, f: 11.5, sat: 1.5, chol: 142, na: 307, ca: 382, vd: 4.8, b12: 8.9, fe: 2.9 }),
+  F('sardines', 'Sardines, canned in oil', 'svg:tin', 'Protein', [['1 can', 92]], { kcal: 208, p: 24.6, c: 0, f: 11.5, sat: 1.5, chol: 142, na: 307, ca: 382, vd: 4.8, b12: 8.9, fe: 2.9 }),
   F('rotisserie-chicken', 'Rotisserie chicken (with skin)', '🍗', 'Protein', [['4 oz', 113]], { kcal: 190, p: 28, c: 0, f: 8, sat: 2.2, chol: 90, na: 330, k: 250, zn: 1.8, b12: 0.3 }),
   F('jerky', 'Beef jerky', '🥩', 'Protein', [['1 oz', 28]], { kcal: 410, p: 33.2, c: 11, f: 25.6, sug: 9, na: 1785, zn: 8.1, fe: 5.4, chol: 48 }),
-  F('tempeh', 'Tempeh', '🟫', 'Protein', [['3 oz', 85]], { kcal: 192, p: 20.3, c: 7.6, f: 10.8, sat: 2.2, ca: 111, fe: 2.7, mg: 81, k: 412, zn: 1.1 }),
-  F('protein-shake', 'Protein shake, ready to drink', '🥤', 'Protein', [['1 bottle', 325]], { kcal: 49, p: 9.2, c: 1.5, f: 0.9, ca: 154, na: 68, vd: 0.8 }),
+  F('tempeh', 'Tempeh', 'svg:tempeh', 'Protein', [['3 oz', 85]], { kcal: 192, p: 20.3, c: 7.6, f: 10.8, sat: 2.2, ca: 111, fe: 2.7, mg: 81, k: 412, zn: 1.1 }),
+  F('protein-shake', 'Protein shake, ready to drink', 'svg:shaker', 'Protein', [['1 bottle', 325]], { kcal: 49, p: 9.2, c: 1.5, f: 0.9, ca: 154, na: 68, vd: 0.8 }),
   // Dairy & eggs
   F('mozzarella', 'Mozzarella, part-skim', '🧀', 'Dairy & eggs', [['1 oz', 28], ['1 string cheese', 28]], { kcal: 254, p: 24.3, c: 2.8, f: 15.9, sat: 10.1, chol: 64, na: 619, ca: 782, zn: 2.8 }),
   F('parmesan', 'Parmesan, grated', '🧀', 'Dairy & eggs', [['1 tbsp', 5]], { kcal: 420, p: 28.4, c: 13.9, f: 27.8, sat: 15.4, na: 1529, ca: 853 }),
@@ -159,7 +159,7 @@ export const FOODS = [
   F('whole-milk', 'Milk, whole', '🥛', 'Dairy & eggs', [['1 cup', 244]], { kcal: 61, p: 3.2, c: 4.8, f: 3.3, sat: 1.9, sug: 5.1, ca: 113, k: 132, vd: 1.3, b12: 0.5, chol: 10, na: 43 }),
   F('almond-milk', 'Almond milk, unsweetened', '🥛', 'Dairy & eggs', [['1 cup', 240]], { kcal: 15, p: 0.6, c: 0.6, f: 1.1, ca: 184, vd: 1, na: 72, k: 67 }),
   F('cream-cheese', 'Cream cheese', '🧀', 'Dairy & eggs', [['2 tbsp', 29]], { kcal: 342, p: 6, c: 4.1, f: 34.2, sat: 19.3, chol: 110, ca: 98, na: 321 }),
-  F('sour-cream', 'Sour cream', '🥣', 'Dairy & eggs', [['2 tbsp', 24]], { kcal: 198, p: 2.4, c: 4.6, f: 19.4, sat: 10.1, ca: 101, na: 31 }),
+  F('sour-cream', 'Sour cream', 'svg:tub', 'Dairy & eggs', [['2 tbsp', 24]], { kcal: 198, p: 2.4, c: 4.6, f: 19.4, sat: 10.1, ca: 101, na: 31 }),
   // Grains
   F('english-muffin', 'English muffin', '🥯', 'Grains', [['1 muffin', 57]], { kcal: 235, p: 8.9, c: 46, f: 1.8, fib: 3.5, sug: 3.5, na: 424, ca: 177, fe: 2.4 }),
   F('granola', 'Granola', '🥣', 'Grains', [['½ cup', 61]], { kcal: 471, p: 10, c: 64, f: 20, fib: 5.3, sug: 24, k: 435, mg: 120, fe: 3 }),
@@ -176,13 +176,13 @@ export const FOODS = [
   F('chia', 'Chia seeds', '🌱', 'Nuts & fats', [['1 tbsp', 12]], { kcal: 486, p: 16.5, c: 42.1, f: 30.7, fib: 34.4, ca: 631, mg: 335, fe: 7.7, zn: 4.6 }),
   F('almond-butter', 'Almond butter', '🥜', 'Nuts & fats', [['1 tbsp', 16]], { kcal: 614, p: 21, c: 18.8, f: 55.5, fib: 10.3, ca: 347, mg: 279, fe: 3.5, k: 748 }),
   F('pumpkin-seeds', 'Pumpkin seeds', '🎃', 'Nuts & fats', [['1 oz', 28]], { kcal: 559, p: 30.2, c: 10.7, f: 49, fib: 6, mg: 592, zn: 7.8, fe: 8.8, k: 809 }),
-  F('mayo', 'Mayonnaise', '🥚', 'Nuts & fats', [['1 tbsp', 14]], { kcal: 680, p: 1, c: 0.6, f: 75, sat: 11.7, chol: 42, na: 635 }),
+  F('mayo', 'Mayonnaise', 'svg:jar', 'Nuts & fats', [['1 tbsp', 14]], { kcal: 680, p: 1, c: 0.6, f: 75, sat: 11.7, chol: 42, na: 635 }),
   // Meals
   F('fried-rice', 'Fried rice', '🍚', 'Meals', [['1 cup', 198]], { kcal: 163, p: 6.3, c: 21, f: 5.5, fib: 0.9, na: 400, k: 100 }),
   F('spaghetti-meat', 'Spaghetti with meat sauce', '🍝', 'Meals', [['1 plate', 350]], { kcal: 139, p: 6.6, c: 17, f: 4.8, fib: 1.6, na: 330, k: 240, fe: 1.3 }),
   F('mac-cheese', 'Mac and cheese', '🧀', 'Meals', [['1 cup', 200]], { kcal: 164, p: 7, c: 20, f: 6.6, sat: 2.4, ca: 120, na: 380 }),
   F('nuggets', 'Chicken nuggets', '🍗', 'Meals', [['6 pieces', 96]], { kcal: 296, p: 15.4, c: 15.6, f: 19.3, sat: 3.2, na: 548, chol: 46 }),
-  F('burrito-bowl', 'Chicken burrito bowl', '🥙', 'Meals', [['1 bowl', 500]], { kcal: 140, p: 8.5, c: 15, f: 5, fib: 3, na: 380, k: 230 }),
+  F('burrito-bowl', 'Chicken burrito bowl', 'svg:bowl', 'Meals', [['1 bowl', 500]], { kcal: 140, p: 8.5, c: 15, f: 5, fib: 3, na: 380, k: 230 }),
   F('chicken-sandwich', 'Grilled chicken sandwich', '🥪', 'Meals', [['1 sandwich', 230]], { kcal: 174, p: 12, c: 18, f: 6, fib: 1.2, na: 450 }),
   F('caesar-chicken', 'Chicken Caesar salad', '🥗', 'Meals', [['1 bowl', 300]], { kcal: 145, p: 11, c: 4, f: 9.5, sat: 2.3, na: 380, ca: 90, va: 120 }),
   F('ramen', 'Ramen (restaurant)', '🍜', 'Meals', [['1 bowl', 600]], { kcal: 83, p: 4, c: 10, f: 3, na: 420 }),
@@ -193,13 +193,13 @@ export const FOODS = [
   F('pretzels', 'Pretzels', '🥨', 'Snacks', [['1 oz', 28]], { kcal: 380, p: 10.3, c: 79.8, f: 2.6, fib: 2.9, na: 1357, fe: 4.3 }),
   F('chips', 'Potato chips', '🥔', 'Snacks', [['1 oz', 28]], { kcal: 536, p: 7, c: 53, f: 34.6, fib: 4.4, sat: 3.1, na: 525, k: 1275 }),
   F('trail-mix', 'Trail mix', '🥜', 'Snacks', [['¼ cup', 38]], { kcal: 462, p: 13.8, c: 44.9, f: 29.4, fib: 4.5, mg: 159, fe: 2.3 }),
-  F('granola-bar', 'Granola bar', '🍫', 'Snacks', [['1 bar', 28]], { kcal: 443, p: 6.1, c: 66, f: 17, fib: 4, sug: 29, na: 278 }),
+  F('granola-bar', 'Granola bar', 'svg:granolabar', 'Snacks', [['1 bar', 28]], { kcal: 443, p: 6.1, c: 66, f: 17, fib: 4, sug: 29, na: 278 }),
   F('donut', 'Glazed donut', '🍩', 'Snacks', [['1 donut', 49]], { kcal: 403, p: 4.6, c: 51, f: 19.6, sat: 5.2, sug: 22, na: 342 }),
   F('muffin', 'Blueberry muffin', '🧁', 'Snacks', [['1 muffin', 113]], { kcal: 377, p: 4.4, c: 54, f: 16, sug: 28, na: 300 }),
   // Drinks
   F('latte', 'Latte, 2% milk', '☕', 'Drinks', [['Grande (16 oz)', 473], ['Tall (12 oz)', 355]], { kcal: 40, p: 2.7, c: 3.9, f: 1.5, sug: 3.7, ca: 100, na: 36 }),
-  F('sports-drink', 'Sports drink', '🥤', 'Drinks', [['1 bottle', 591]], { kcal: 26, p: 0, c: 6.4, f: 0, sug: 5.9, na: 41, k: 13 }),
-  F('energy-drink', 'Energy drink', '⚡', 'Drinks', [['1 can (250 ml)', 250], ['1 can (473 ml)', 473]], { kcal: 45, p: 0, c: 11, f: 0, sug: 11, na: 40 }),
+  F('sports-drink', 'Sports drink', 'svg:sportsdrink', 'Drinks', [['1 bottle', 591]], { kcal: 26, p: 0, c: 6.4, f: 0, sug: 5.9, na: 41, k: 13 }),
+  F('energy-drink', 'Energy drink', 'svg:can', 'Drinks', [['1 can (250 ml)', 250], ['1 can (473 ml)', 473]], { kcal: 45, p: 0, c: 11, f: 0, sug: 11, na: 40 }),
   F('smoothie', 'Fruit smoothie', '🥤', 'Drinks', [['16 oz', 473]], { kcal: 60, p: 1, c: 14, f: 0.3, fib: 1, sug: 12, vc: 15, k: 180 }),
   F('apple-juice', 'Apple juice', '🧃', 'Drinks', [['1 cup', 248]], { kcal: 46, p: 0.1, c: 11.3, f: 0.1, sug: 9.6, k: 101 }),
   F('light-beer', 'Light beer', '🍺', 'Drinks', [['1 can', 355]], { kcal: 29, p: 0.2, c: 1.6, f: 0 }),
