@@ -52,6 +52,7 @@ function workoutScreen() {
   const elapsed = h('span.stat-v', '0:00');
   const volumeEl = h('span.stat-v', '0');
   const setsEl = h('span.stat-v', '0');
+  const progress = h('i');
   const body = h('div.scroll-body');
   const restBar = h('div.rest-bar');
   let tick;
@@ -72,23 +73,26 @@ function workoutScreen() {
     const st = workoutStats(w);
     elapsed.textContent = fmtDuration(Date.now() - w.start);
     volumeEl.textContent = `${fmtNum(+toDisplay(st.volume) || 0)} ${unit()}`;
-    setsEl.textContent = st.sets;
+    const total = w.exercises.reduce((n, e) => n + e.sets.length, 0);
+    setsEl.textContent = total ? `${st.sets}/${total}` : String(st.sets);
+    progress.style.width = (total ? (st.sets / total) * 100 : 0) + '%';
   }
 
   function draw() {
     const y = body.scrollTop;
     fill(body, 
       title,
-      h('div.stats-inline',
-        h('div.stat', h('span.stat-k', 'Duration'), elapsed),
+      h('div.live-stats',
+        h('div.stat.time', h('span.stat-k', 'Time'), elapsed),
         h('div.stat', h('span.stat-k', 'Volume'), volumeEl),
-        h('div.stat', h('span.stat-k', 'Sets'), setsEl)),
+        h('div.stat', h('span.stat-k', 'Sets'), setsEl),
+        h('div.live-progress', progress)),
       w.exercises.length ? null : h('div.empty',
         h('div.empty-icon', icon('dumbbell', 40)),
         h('div.empty-title', 'Get started'),
         h('div.empty-text', 'Add an exercise to start logging sets.')),
       w.exercises.map((ex, i) => exerciseCard({
-        ex, index: i, count: w.exercises.length, mode: 'live',
+        ex, index: i, count: w.exercises.length, mode: 'live', current: i === w.exercises.findIndex((e) => e.sets.some((x) => !x.done)),
         prev: previousSets(ex.exId, w.id),
         redraw: () => { save(); draw(); },
         save: () => { save(); updateStats(); },

@@ -30,10 +30,13 @@ export function exerciseCard(opts) {
     }))),
   }, icon('timer', 13), h('span', ex.rest ? `Rest ${fmtSecs(ex.rest)}` : 'Rest off'));
 
+  const doneN = ex.sets.filter((x) => x.done).length;
+  const complete = live && ex.sets.length > 0 && doneN === ex.sets.length;
   const head = h('div.card-head',
     h('div.card-title-wrap',
       h('div.ex-title', info.name),
       h('div.ex-meta', h('span', info.muscle), restBtn)),
+    live && ex.sets.length ? h('span.ex-count' + (complete ? '.all' : ''), complete ? icon('check', 14) : null, `${doneN}/${ex.sets.length}`) : null,
     h('button.icon-btn', {
       'aria-label': 'Exercise options',
       onclick: () => actionSheet(info.name, [
@@ -60,6 +63,7 @@ export function exerciseCard(opts) {
   );
 
   let normalN = 0;
+  const nextIdx = live && opts.current ? ex.sets.findIndex((x) => !x.done) : -1;   // the set to do next
   ex.sets.forEach((set, si) => {
     const label = set.type === 'n' ? String(++normalN) : set.type.toUpperCase();
     const p = prev[si];
@@ -70,7 +74,7 @@ export function exerciseCard(opts) {
     const phR = p?.reps != null ? String(p.reps) : set.tReps != null ? String(set.tReps) : '';
     const phS = p?.secs != null ? fmtSecs(p.secs) : set.tSecs != null ? fmtSecs(set.tSecs) : '';
 
-    const row = h('div.set-row' + (set.done ? '.done' : ''));
+    const row = h('div.set-row' + (set.done ? '.done' : si === nextIdx ? '.next' : ''));
     const num = h('button.set-num.t-' + set.type, {
       'aria-label': `Set ${label}: change set type`,
       onclick: () => actionSheet('Set ' + label, [
@@ -157,7 +161,7 @@ export function exerciseCard(opts) {
     },
   }, icon('plus', 16), 'Add set');
 
-  return h('section.ex-card', head, note, table, addSet);
+  return h('section.ex-card' + (live ? '.live' : '') + (complete ? '.complete' : ''), head, note, table, addSet);
 }
 
 function autoGrow(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }

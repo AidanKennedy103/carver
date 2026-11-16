@@ -1,9 +1,10 @@
-// The Workout page: quick start, My plans (up to 5), and History.
+// The Workout page: what's up next (or the workout in progress), this week,
+// your plans (up to 5), and History by week.
 // Also the plan editor and the workout detail screen.
 
 import { h, fill, icon, push, pop, navBar, actionSheet, confirmBox, promptBox, toast, fmtDate, fmtDurationWords, fmtNum, fmtSecs } from './ui.js';
-import { state, commit, save, uid, exercise, savePlan, deletePlan, workoutStats, toDisplay, unit, e1rm, MAX_PLANS } from './store.js';
-import { startWorkout, repeatWorkout, saveAsPlan } from './session.js';
+import { state, commit, save, uid, exercise, savePlan, deletePlan, workoutStats, toDisplay, unit, e1rm, MAX_PLANS, ymd, addDays, dayStart, weekStart, dayPlan, DAY_SHORT } from './store.js';
+import { startWorkout, repeatWorkout, saveAsPlan, openWorkout } from './session.js';
 import { exerciseCard, newSet } from './block.js';
 import { pickExercises } from './picker.js';
 import { openSettings } from './settings.js';
@@ -12,6 +13,7 @@ import { volumeCard, tally, MUSCLE_ORDER } from './volume.js';
 export function workoutPage() {
   const el = h('div.page');
   const body = h('div.scroll-body');
+  let showAll = false;
 
   const nav = navBar({
     title: 'Workout', back: false, large: true,
@@ -19,52 +21,102 @@ export function workoutPage() {
   });
 
   function draw() {
-    const a = state.active;
     const plansFull = state.plans.length >= MAX_PLANS;
-    fill(body, 
+    const next = nextPlan();
+    fill(body,
       nav,
-
-      a ? null : h('button.quick-start', { onclick: () => startWorkout() }, icon('plus', 18), 'Start empty workout'),
+      state.active ? activeCard(state.active) : next ? upNext(next) : firstPlanCard(),
+      weekStrip(),
 
       h('div.section-head',
         h('h2.section-title', 'Plans', h('span.section-count', `${state.plans.length} of ${MAX_PLANS}`)),
         h('button.link' + (plansFull ? '.off' : ''), {
           onclick: () => plansFull ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor()),
         }, icon('plus', 16), 'New')),
-      state.plans.length ? h('div.plan-grid', state.plans.map(planCard)) : h('button.card.empty-plan', { onclick: () => push(() => planEditor()) },
-        h('div.empty-title', 'Make your first plan'),
-        h('div.empty-text', 'Save up to 5 routines, like Push, Pull and Legs, and start them in one tap.')),
+      state.plans.length ? h('section.card.list-card.plan-list', state.plans.map((p) => planRow(p, p === next))) : null,
+      state.active ? null : h('button.quick-start', { onclick: () => startWorkout() }, icon('plus', 18), h('span', 'Empty workout'), h('span.quick-sub', 'Add exercises as you go')),
       state.plans.length || state.workouts.length ? volumeCard() : null,
 
-      h('div.section-head', h('h2.section-title', 'History')),
-      state.workouts.length ? h('div.history', state.workouts.map(historyCard))
-        : h('div.empty-small', 'Finished workouts show up here.'),
+      h('div.section-head', h('h2.section-title', 'History'), state.workouts.length ? h('span.section-count', `${state.workouts.length} workout${state.workouts.length === 1 ? '' : 's'}`) : null),
+      state.workouts.length ? historyByWeek(showAll ? state.workouts : state.workouts.slice(0, 12)) : h('div.empty-small', 'Finished workouts show up here.'),
+      !showAll && state.workouts.length > 12 ? h('button.btn.dark.wide', { onclick: () => { showAll = true; draw(); } }, `Show all ${state.workouts.length}`) : null,
       h('div.bottom-space'),
     );
   }
 
-  function planCard(p) {
-    const names = p.exercises.map((e) => exercise(e.exId).name);
+  /** The workout going on right now. */
+  function activeCard(a) {
+    const total = a.exercises.reduce((n, e) => n + e.sets.length, 0);
+    const done = a.exercises.reduce((n, e) => n + e.sets.filter((x) => x.done).length, 0);
+    return h('section.card.hero.live',
+      h('div.hero-label', h('span.pulse'), 'In progress'),
+      h('div.hero-name', a.name || 'Workout'),
+      h('div.hero-meta', `Started ${fmtDurationWords(Date.now() - a.start)} ago · ${done} of ${total} sets`),
+      h('div.hero-progress', h('i', { style: { width: (total ? (done / total) * 100 : 0) + '%' } })),
+      h('button.btn.gold.wide.hero-go', { onclick: () => openWorkout() }, icon('play', 16), 'Resume'));
+  }
+
+  /** The plan that's up next (the one after the plan you did last), ready to start. */
+  function upNext(p) {
+    const last = lastDone(p);
+    const muscles = topMuscles(p);
     const sets = p.exercises.reduce((n, e) => n + e.sets.length, 0);
-    return h('div.card.plan-card',
-      h('div.plan-top',
-        h('button.plan-name', { onclick: () => push(() => planEditor(p)) }, p.name),
-        h('button.icon-btn', {
-          'aria-label': 'Plan options',
-          onclick: () => actionSheet(p.name, [
-            { label: 'Edit plan', onClick: () => push(() => planEditor(p)) },
-            { label: 'Rename', onClick: async () => { const n = await promptBox('Rename plan', p.name); if (n) savePlan({ ...p, name: n }); } },
-            { label: 'Duplicate', onClick: () => {
-              if (state.plans.length >= MAX_PLANS) { toast(`You can keep ${MAX_PLANS} plans.`); return; }
-              savePlan({ ...structuredClone(p), id: uid(), name: p.name + ' copy', created: Date.now() });
-            } },
-            { label: 'Delete plan', danger: true, onClick: async () => { if (await confirmBox(`Delete “${p.name}”?`, 'Your past workouts stay in History.', { ok: 'Delete', danger: true })) deletePlan(p.id); } },
-          ]),
-        }, icon('more'))),
-      h('div.plan-meta', `${names.length} exercise${names.length === 1 ? '' : 's'} · ${sets} sets`),
-      h('div.plan-ex', names.length ? names.join(' · ') : 'No exercises yet'),
-      h('button.btn.gold-soft.plan-start', { onclick: () => startWorkout(p), disabled: !names.length }, 'Start'),
-    );
+    const mins = last ? Math.round(workoutStats(last).duration / 6e4) : null;
+    return h('section.card.hero',
+      h('div.hero-label', 'Up next'),
+      h('button.hero-name', { onclick: () => push(() => planEditor(p)) }, p.name),
+      muscles.length ? h('div.hero-chips', muscles.map((m) => h('span.chip.small', m))) : null,
+      h('div.hero-meta', [`${p.exercises.length} exercise${p.exercises.length === 1 ? '' : 's'}`, `${sets} sets`, mins ? `about ${mins} min` : null, last ? `last ${ago(last.start)}` : 'not done yet'].filter(Boolean).join(' · ')),
+      h('button.btn.gold.wide.hero-go', { onclick: () => startWorkout(p), disabled: !p.exercises.length }, icon('play', 16), `Start ${p.name}`));
+  }
+
+  function firstPlanCard() {
+    return h('button.card.hero.empty-hero', { onclick: () => push(() => planEditor()) },
+      h('div.hero-label', 'Get set up'),
+      h('div.hero-name', 'Make your first plan'),
+      h('div.hero-meta', 'Save up to 5 routines, like Push, Pull and Legs. Carver keeps them in order and has the next one ready to start.'),
+      h('span.btn.gold.wide.hero-go', icon('plus', 16), 'New plan'));
+  }
+
+  /** Monday to Sunday: workouts done, days you planned, today. */
+  function weekStrip() {
+    const mon = ymd(weekStart()), today = ymd();
+    const n = state.workouts.filter((w) => w.start >= weekStart()).length;
+    const goal = state.goals.workoutsPerWeek;
+    const did = new Set(state.workouts.filter((w) => w.start >= weekStart()).map((w) => ymd(w.start)));
+    if (state.active) did.add(today);
+    return h('section.card.wk-card',
+      h('div.wk-days', DAY_SHORT.map((d, i) => {
+        const k = addDays(mon, i);
+        const cls = did.has(k) ? '.did' : dayPlan(k) === 'planned' && k >= today ? '.plan' : '';
+        return h('div.wk-col' + cls + (k === today ? '.today' : ''), h('span.wk-d', d[0]), h('span.wk-dot', did.has(k) ? icon('check', 14) : null));
+      })),
+      h('div.wk-sum', h('b', `${n} of ${goal}`), n >= goal ? ' this week · goal hit 🔥' : ' workouts this week'));
+  }
+
+  function planRow(p, isNext) {
+    const last = lastDone(p);
+    return h('div.plan-row',
+      h('button.plan-main', { onclick: () => push(() => planEditor(p)), 'aria-label': `Edit ${p.name}` },
+        h('span.plan-badge' + (isNext ? '.next' : ''), p.name.trim()[0]?.toUpperCase() || '•'),
+        h('span.plan-text',
+          h('span.plan-name', p.name),
+          h('span.plan-meta', [`${p.exercises.length} exercise${p.exercises.length === 1 ? '' : 's'}`, last ? `last ${ago(last.start)}` : 'not done yet'].join(' · ')))),
+      h('button.icon-btn', { 'aria-label': `${p.name} options`, onclick: () => planMenu(p) }, icon('more')),
+      h('button.play-btn', { 'aria-label': `Start ${p.name}`, onclick: () => startWorkout(p), disabled: !p.exercises.length }, icon('play', 16)));
+  }
+
+  function planMenu(p) {
+    actionSheet(p.name, [
+      { label: 'Start', onClick: () => startWorkout(p) },
+      { label: 'Edit plan', onClick: () => push(() => planEditor(p)) },
+      { label: 'Rename', onClick: async () => { const n = await promptBox('Rename plan', p.name); if (n) savePlan({ ...p, name: n }); } },
+      { label: 'Duplicate', onClick: () => {
+        if (state.plans.length >= MAX_PLANS) { toast(`You can keep ${MAX_PLANS} plans.`); return; }
+        savePlan({ ...structuredClone(p), id: uid(), name: p.name + ' copy', created: Date.now() });
+      } },
+      { label: 'Delete plan', danger: true, onClick: async () => { if (await confirmBox(`Delete “${p.name}”?`, 'Your past workouts stay in History.', { ok: 'Delete', danger: true })) deletePlan(p.id); } },
+    ]);
   }
 
   draw();
@@ -72,6 +124,18 @@ export function workoutPage() {
     el: (el.append(body), el),
     refresh: draw,
   };
+}
+
+/** The last finished workout from a plan. */
+const lastDone = (p) => state.workouts.find((w) => w.planId === p.id || (!w.planId && w.name === p.name));
+
+/** The plan after the one you did most recently (plans rotate in order). */
+function nextPlan() {
+  const plans = state.plans.filter((p) => p.exercises.length);
+  if (!plans.length) return state.plans[0] || null;
+  const lastW = state.workouts.find((w) => plans.some((p) => p.id === w.planId));
+  if (!lastW) return plans[0];
+  return plans[(plans.findIndex((p) => p.id === lastW.planId) + 1) % plans.length];
 }
 
 /** Working sets per muscle in one plan (helping muscles count half). */
@@ -84,17 +148,46 @@ function planMuscles(plan) {
     h('div.chips.tight.static', list.map((m) => h('span.chip', `${m} ${Math.round(t[m].total * 10) / 10}`))));
 }
 
+function topMuscles(p) {
+  const t = tally(p.exercises.map((e) => ({ exId: e.exId, sets: e.sets.filter((s) => s.type !== 'w').length })));
+  return MUSCLE_ORDER.filter((m) => t[m].total >= 1).sort((a, b) => t[b].total - t[a].total).slice(0, 4);
+}
+
+const ago = (ts) => {
+  const d = Math.round((dayStart(ymd()) - dayStart(ymd(ts))) / 864e5);
+  return d <= 0 ? 'today' : d === 1 ? 'yesterday' : d < 7 ? `${d} days ago` : fmtDate(ts, { month: 'short', day: 'numeric' });
+};
+
+/** History in weeks: "This week · 3 workouts · 24,500 lb", then each workout. */
+function historyByWeek(list) {
+  const weeks = [];
+  for (const w of list) {
+    const ws = weekStart(w.start);
+    let g = weeks[weeks.length - 1];
+    if (!g || g.ws !== ws) weeks.push(g = { ws, items: [] });
+    g.items.push(w);
+  }
+  const thisWeek = weekStart(), lastWeek = weekStart(thisWeek - 3 * 864e5);
+  return weeks.map((g) => {
+    const vol = g.items.reduce((n, w) => n + workoutStats(w).volume, 0);
+    const label = g.ws === thisWeek ? 'This week' : g.ws === lastWeek ? 'Last week'
+      : `${fmtDate(g.ws, { month: 'short', day: 'numeric' })} – ${fmtDate(g.ws + 6 * 864e5, { month: 'short', day: 'numeric' })}`;
+    return h('div.hist-week',
+      h('div.hist-week-head', h('span', label), h('span', `${g.items.length} workout${g.items.length === 1 ? '' : 's'}${vol ? ` · ${fmtNum(+toDisplay(vol))} ${unit()}` : ''}`)),
+      h('section.card.list-card', g.items.map(historyCard)));
+  });
+}
+
 export function historyCard(w) {
   const st = workoutStats(w);
-  return h('button.card.hist-card', { onclick: () => push(() => workoutDetail(w)) },
-    h('div.hist-top', h('span.hist-name', w.name), h('span.hist-date', fmtDate(w.start))),
-    h('div.hist-stats',
-      h('span', fmtDurationWords(st.duration)),
-      st.volume ? h('span', `${fmtNum(+toDisplay(st.volume))} ${unit()}`) : null,
-      h('span', `${st.sets} sets`),
-      w.prs ? h('span.gold-text', icon('trophy', 13), `${w.prs} PR${w.prs > 1 ? 's' : ''}`) : null),
-    h('div.hist-ex', w.exercises.map((e) => exercise(e.exId).name).join(' · ')),
-  );
+  const d = new Date(w.start);
+  return h('button.hist-row', { onclick: () => push(() => workoutDetail(w)) },
+    h('span.hist-date-box', h('span', d.toLocaleDateString(undefined, { weekday: 'short' })), h('b', d.getDate())),
+    h('span.hist-text',
+      h('span.hist-name', w.name, w.prs ? h('span.hist-pr', icon('trophy', 12), w.prs) : null),
+      h('span.hist-stats', [fmtDurationWords(st.duration), `${st.sets} sets`, st.volume ? `${fmtNum(+toDisplay(st.volume))} ${unit()}` : null].filter(Boolean).join(' · ')),
+      h('span.hist-ex', w.exercises.map((e) => exercise(e.exId).name).join(', '))),
+    h('span.card-go', '›'));
 }
 
 // ---------- Workout detail ----------

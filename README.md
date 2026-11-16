@@ -25,8 +25,12 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 - **One-rep max tracker:** pick up to 4 lifts (it starts with your most-logged ones). Each card shows your estimated 1RM (Epley formula), the change since you started, and a mini graph. Tap a card for a full chart and every workout's best set.
 - **Profile:** your name, "carving since", week streak, all-time workouts, weight lifted, records, hours trained, and recent personal records.
 
-### Workout (like Hevy)
-- **Start empty workout** or start one of your **plans** in one tap. You can keep up to **5 plans**.
+### Workout
+- **Up next:** your plans rotate in order, so the next one is ready at the top with its muscles, sets, how long it took last time and when you last did it. While a workout is going, that card becomes **Resume** with your progress.
+- **This week:** Monday to Sunday with the days you trained and the days you planned.
+- **Plans:** up to **5**, each a row with a play button to start it. Tap a plan to edit it; ··· to rename, duplicate or delete. Or start an **empty workout**.
+- **History** grouped by week, with each week's workouts and total weight lifted.
+- **During a workout:** the timer, volume and a sets progress line stay pinned at the top. Each exercise is its own card showing sets done (2/3), the set to do next is outlined in gold, and a finished exercise gets a gold edge.
 - **Logging sets:**
   - Each exercise shows a **Previous** column (what you did last time).
   - The weight and reps boxes show grey hints, and ticking an empty set fills them in.

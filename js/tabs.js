@@ -56,7 +56,7 @@ function drawLive() {
 function syncVisibility() {
   const onRoot = depth() <= 1;
   bar.classList.toggle('hidden', !onRoot);
-  live.classList.toggle('hidden', !onRoot);
+  live.classList.toggle('hidden', !onRoot || current === 'workout');   // the Workout tab shows its own Resume card
 }
 
 function comingSoon(tab) {

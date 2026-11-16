@@ -41,7 +41,7 @@ export function habitSlider(g, date = ymd(), { tag } = {}) {
   knob.addEventListener('pointerdown', (e) => {
     max = el.clientWidth - knob.offsetWidth - 8;
     x0 = e.clientX - x;
-    knob.setPointerCapture(e.pointerId);
+    try { knob.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
     el.classList.add('dragging');
   });
   knob.addEventListener('pointermove', (e) => { if (x0 != null) place(e.clientX - x0); });
