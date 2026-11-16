@@ -46,10 +46,27 @@ function load() {
 export const state = load();
 const listeners = new Set();
 
+// Bumped on every save, so lookups below can cache until the data changes
+let rev = 0;
 const savers = new Set();
-export function save() {
+// Writing everything to storage on each keystroke is slow with a long history, so
+// writes are batched (at most every 250 ms) and flushed when the app is hidden.
+let writeTimer = 0;
+function write() {
+  clearTimeout(writeTimer); writeTimer = 0;
   try { localStorage.setItem(KEY, JSON.stringify(state)); }
   catch (e) { console.warn('Could not save', e); }
+}
+const inBrowser = typeof document !== 'undefined' && typeof addEventListener === 'function';
+if (inBrowser) {
+  addEventListener('pagehide', () => writeTimer && write());
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && writeTimer) write(); });
+}
+
+export function save() {
+  rev++;
+  if (!inBrowser) write();
+  else if (!writeTimer) writeTimer = setTimeout(write, 250);
   savers.forEach((f) => f());
 }
 /** Runs after every save (sync uses it to know something changed). */
@@ -61,7 +78,8 @@ export function replaceState(data, { quiet = true } = {}) {
   if (state.active && next.active?.id === state.active.id) next.active = state.active;
   for (const k of Object.keys(state)) if (!(k in next)) delete state[k];
   Object.assign(state, next);
-  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* full */ }
+  rev++;
+  write();
   if (!quiet) savers.forEach((f) => f());
   listeners.forEach((l) => l());
 }
@@ -274,14 +292,21 @@ let shared = [];
 try { shared = JSON.parse(localStorage.getItem('carver.shared') || '{}').foods || []; } catch { /* none yet */ }
 export function setSharedFoods(list) {
   shared = list;
+  foodCache = null;
   try { localStorage.setItem('carver.shared', JSON.stringify({ at: Date.now(), foods: list })); } catch { /* full */ }
 }
 export const sharedFoods = () => shared;
-export const allFoods = () => {
-  const mine = new Set(state.food.custom.map((f) => f.id));
-  return [...state.food.custom, ...shared.filter((f) => !mine.has(f.id)), ...FOODS];
-};
-export function food(id) { return allFoods().find((f) => f.id === id); }
+let foodCache = null;   // { rev, list, byId }
+function foods() {
+  if (!foodCache || foodCache.rev !== rev) {
+    const mine = new Set(state.food.custom.map((f) => f.id));
+    const list = [...state.food.custom, ...shared.filter((f) => !mine.has(f.id)), ...FOODS];
+    foodCache = { rev, list, byId: new Map(list.map((f) => [f.id, f])) };
+  }
+  return foodCache;
+}
+export const allFoods = () => foods().list;
+export function food(id) { return foods().byId.get(id); }
 
 /** Nutrients for `grams` of a food (from its per-100 g values). */
 export function nutrientsFor(f, grams) {
@@ -301,16 +326,30 @@ export function updateLog(id, changes) {
 export function deleteLog(id) {
   commit((s) => { s.food.log = s.food.log.filter((x) => x.id !== id); });
 }
-export const dayLog = (key) => state.food.log.filter((e) => e.date === key);
+// The food log grouped by day, and each day's totals, rebuilt only after a change
+let dayCache = { rev: -1, byDate: new Map(), totals: new Map() };
+function days() {
+  if (dayCache.rev !== rev) {
+    const byDate = new Map();
+    for (const e of state.food.log) { const l = byDate.get(e.date); if (l) l.push(e); else byDate.set(e.date, [e]); }
+    dayCache = { rev, byDate, totals: new Map() };
+  }
+  return dayCache;
+}
+const NONE = Object.freeze([]);
+export const dayLog = (key) => days().byDate.get(key) || NONE;
 
-/** Totals for a day: { kcal, p, c, f, ...micros, entries } */
+/** Totals for a day: { kcal, p, c, f, ...micros, entries } (don't change the object you get back) */
 export function dayTotals(key) {
+  const c = days();
+  if (c.totals.has(key)) return c.totals.get(key);
   const t = { entries: 0 };
   for (const k of NUTRIENT_KEYS) t[k] = 0;
   for (const e of dayLog(key)) {
     t.entries++;
     for (const k of NUTRIENT_KEYS) if (e.n?.[k] != null) t[k] += e.n[k];
   }
+  c.totals.set(key, t);
   return t;
 }
 
