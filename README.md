@@ -1,47 +1,95 @@
 # Carver
 
-A free iPhone web app for tracking workouts, built in steps as a beta for friends. Open it in Safari, then **Share → Add to Home Screen**. You don't need the App Store or the $99 Apple fee, and it opens full-screen like a normal app.
+**Live app:** https://carver.aidank103.workers.dev (open in Safari on iPhone → Share → Add to Home Screen)
+
+A free iPhone web app that puts workout tracking, food tracking, body weight, progress photos and your trends in one place. It's a beta for friends. You don't need the App Store or the $99 Apple fee, and it opens full-screen like a normal app.
 
 Black and gold. The logo is a carved gold **C**.
 
 ## What it does
 
-- **Five tabs:** Home, Workout, Nutrition, Fitness, Trends (the last three are coming soon). A gold bar above the tabs shows a workout in progress, with Resume.
-- **Home:** your profile (name, "carving since", week streak), all-time workouts, weight lifted, records and hours trained, your recent personal records, and your last workout.
+Five tabs: **Home, Workout, Nutrition, Fitness, Trends**. A gold bar above the tabs shows a workout in progress, with Resume.
 
-### Workout tracker
+### Home: today first
+- **Rings**, like closing your rings on Apple Watch:
+  - **Gym:** workouts this week against your weekly goal.
+  - **Calories:** counts as hit within ±10% of your goal.
+  - **Protein.**
+  - **Up to 2 of your own daily goals** (water, steps…). Tap a goal's row to add 1.
 
-- **Start empty workout** or start one of your **plans** in one tap.
-- **My plans:** keep up to **5** routines (e.g. Push, Pull, Legs). Each one lists its exercises, sets, target weight and reps, rest time and notes. You can edit, rename, duplicate or delete a plan, or save any workout as a new plan.
-- **Logging sets, like Hevy:** each exercise has a **Previous** column (what you did last time), weight and reps boxes with last time's numbers as grey hints, and a ✓ to tick off each set. Ticking an empty set fills in the hints. Tap the set number to make it a warm-up, drop set or failure set, or to delete it. Tap **Previous** to copy last time's numbers in.
-- **Rest timer:** starts when you tick a set. It has −15 / +15 and Skip, and plays a chime when rest is over. You can set the rest time for each exercise or a default in Settings.
-- **Live stats:** duration, volume and completed sets as you go.
-- **Workouts survive closing the app:** the workout in progress is saved on every tap and reopens straight away. You can also **Hide** it and come back from the gold banner.
-- **Finish:** a summary with any **personal records** (heaviest weight, best estimated 1RM, most reps).
-- **History:** every workout, with a detail view, **Repeat**, **Save as a plan**, rename and delete.
-- **80 exercises** across all muscle groups with search and muscle filters, plus your own **custom exercises** (weight × reps, reps only, or time).
-- **lb or kg**, switchable any time. Weights are stored in kg, so switching never changes your numbers.
-- **Export / restore** everything as a JSON backup (Settings), via the iPhone share sheet.
-- Works offline once opened (gyms often have bad signal).
+  Closing a ring plays a short celebration once a day, and banners say "Hit your protein goal!" or "Hit your calorie goal!".
+- **Today:** today's workout, food (calories and protein) and weigh-in, each with a quick button.
+- **Monthly nudges:** set this month's goals, take this month's progress photo, and see last month's recap.
+- **Calendar:** workout days are gold. A week turns gold when you hit your workouts-per-week goal. Tap a day to open that workout.
+- **One-rep max tracker:** pick up to 4 lifts (it starts with your most-logged ones). Each card shows your estimated 1RM (Epley formula), the change since you started, and a mini graph. Tap a card for a full chart and every workout's best set.
+- **Profile:** your name, "carving since", week streak, all-time workouts, weight lifted, records, hours trained, and recent personal records.
+
+### Workout (like Hevy)
+- **Start empty workout** or start one of your **plans** in one tap. You can keep up to **5 plans**.
+- **Logging sets:**
+  - Each exercise shows a **Previous** column (what you did last time).
+  - The weight and reps boxes show grey hints, and ticking an empty set fills them in.
+  - Tap the set number to mark it as a warm-up, drop set or failure set.
+- **Rest timer** with −15 / +15 and Skip, and a chime when rest is over.
+- **Summary when you finish**, with any personal records.
+- **History** with Repeat and Save as a plan.
+- **80 built-in exercises** plus your own custom ones. Choose lb or kg.
+- **A workout in progress survives closing the app.**
+
+### Nutrition (like Cronometer)
+- **Quick add**: type "dinner 1000 calories" (or "chipotle bowl 850", "1200 cal lunch"). It picks the meal and fills in the calories. Three linked sliders split the calories into protein, carbs and fat and always add up to 100%. Presets: Balanced, High protein, Low carb.
+- **Diary** for any day, by meal (breakfast, lunch, dinner, snacks). Macros come first, each with a bar toward its goal.
+- **Micronutrients page:** your energy split, plus vitamins and minerals against adult targets. Things to stay under (sodium, saturated fat, cholesterol) turn red when you go over.
+- **77 starter foods with emoji icons and real serving sizes**, a Recent list, category filters, and **Create food**.
+- **Barcode scanner:** uses the camera and looks the product up in Open Food Facts, a free, open database. Scanned foods are saved to My foods. You can also type the barcode in.
+- **Goals:** calories, protein, carbs, fat, workouts per week, and your own daily goals.
+
+### Fitness
+- **Weight:**
+  - Log your weight.
+  - See a 7-day-average trend chart and history over 1M, 3M, 1Y or All.
+  - See changes over the last week, month and 3 months.
+- **Import from Apple Health:** iPhone web apps can't read Health directly. Instead, a Shortcut copies your weights and you tap **Paste from Health**. It brings in history and skips duplicates. Smart scales that sync to Health are covered this way too.
+- **Bluetooth scale:** scales that use the standard Bluetooth weight service connect directly, in browsers that support Bluetooth (Chrome on Android, or Bluefy on iPhone; Safari doesn't).
+- **Progress photos:** saved on the phone, with a viewer and a side-by-side compare that shows your weight at each date.
+- **Monthly goals** (build muscle, lose fat, get stronger…) and a **monthly recap**:
+  - photo before and after
+  - weight change
+  - workouts, volume and PRs
+  - your biggest 1RM gains
+  - average calories and protein, and how many days you hit your protein goal
+
+### Trends
+- **Your metabolism:**
+  - **Maintenance calories:** worked out from your average intake and the change in your weight trend (about 7,700 kcal per kg).
+  - **Calories without workouts:** your logged training time is taken out (weight training counts as about 5 METs).
+  - A confidence level, and a note on what data it still needs.
+- **Charts:** weight trend, calories and protein (with goal lines), workouts per week and weekly volume. Ranges are 4W, 3M, 6M and 1Y. Tap or drag any chart to read the values.
+
+### Everywhere
+- **Export / restore** everything (except photos) as a JSON backup in Settings.
+- Works offline once opened (gyms often have bad signal). Updates itself when you come back to the app.
 
 ## Files
 
 | File | What it does |
 |---|---|
 | `index.html`, `styles.css` | The page and the black-and-gold iPhone look |
-| `js/app.js` | Start-up and automatic updates |
-| `js/tabs.js` | The bottom tab bar and the workout-in-progress bar |
-| `js/home.js` | The Home page |
+| `js/app.js`, `js/tabs.js` | Start-up, updates, the tab bar and the workout-in-progress bar |
 | `js/ui.js` | Screens, sheets, alerts and other building blocks |
-| `js/store.js` | Saving (on this phone), units, PRs, estimated 1RM, backups |
-| `js/exercises.js` | The exercise library |
-| `js/workout.js` | Workout page, plan editor, history |
-| `js/session.js` | The live workout, rest timer, summary |
-| `js/block.js` | One exercise card with its sets |
-| `js/picker.js` | The "Add exercises" picker and custom exercises |
-| `js/settings.js` | Settings, export and restore |
+| `js/store.js` | Saving (on this phone), units, PRs, estimated 1RM, food totals, backups |
+| `js/home.js` | Home: rings, today, calendar, profile |
+| `js/onerm.js` | One-rep max tracker |
+| `js/workout.js`, `js/session.js`, `js/block.js`, `js/picker.js`, `js/exercises.js` | Workout page, live workout, sets, exercise picker, exercise library |
+| `js/nutrition.js`, `js/foods.js`, `js/barcode.js` | Food diary, quick add, micronutrients, food list, barcode scanner |
+| `js/goals.js` | Goals sheet and custom daily goals |
+| `js/fitness.js`, `js/body.js`, `js/photos.js`, `js/monthly.js` | Fitness tab, weight and imports, progress photos, monthly goals and recaps |
+| `js/trends.js`, `js/charts.js` | Trends tab and metabolism estimate; line, bar, sparkline and ring charts |
+| `js/settings.js`, `js/sound.js` | Settings, export/restore; the rest-timer chime |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Home-screen install, offline support, icons and launch screens |
 | `scripts/make-icons.mjs` | Draws the logo and makes every icon and launch screen |
+
+Chart colours (rings, macros) were checked for colour-blind readers and contrast on the dark background.
 
 ## Run it on your computer
 
@@ -52,11 +100,7 @@ Then open http://localhost:5181.
 
 ## Put it online (free)
 
-Same setup as Free Park: GitHub plus Cloudflare.
-
-1. **GitHub Desktop:** File → Add local repository → choose this `Carver` folder → **Publish repository** (untick "Keep this code private" if you like; either works).
-2. **Cloudflare:** Workers & Pages → Create → **Import a repository** → pick `carver`. Leave the build command empty. `wrangler.jsonc` already tells it to serve this folder. Deploy.
-3. You get a link like `carver.<your-name>.workers.dev`. Every push to GitHub updates it.
+It's on GitHub (`AidanKennedy103/carver`, private) and Cloudflare Workers. Every push to `main` updates the live app in about a minute. `wrangler.jsonc` serves the folder as it is (no build step), and `.assetsignore` keeps scripts and dev files off the site.
 
 ## Remake the icons
 
@@ -66,4 +110,7 @@ cd scripts && npm install && cd .. && node scripts/make-icons.mjs
 
 ## Known limits (beta)
 
-- Data is saved only on each phone for now. Export a backup now and then. Friends and sharing will need accounts (Supabase), which come with the accountability features.
+- **Data is saved only on each phone for now.** Export a backup now and then (photos aren't included). Friends, sharing and accountability mode will need accounts and a shared database (Supabase, as in Free Park).
+- **Apple Health and Cronometer can't sync automatically into a web app.** Health works through the Shortcut and paste. Fully automatic syncing needs the shared database, with a Shortcut sending your data to it.
+- **Nutrition values are approximate.** The starter foods use USDA figures, and scanned foods come from Open Food Facts.
+- **The metabolism estimate needs at least 10 days of food logs and 2 weigh-ins in the last 4 weeks.** It gets more accurate the more consistently you log.

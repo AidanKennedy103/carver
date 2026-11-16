@@ -50,7 +50,7 @@ export function openSettings() {
       h('button.group-row', { onclick: exportData }, h('span', 'Export all data'), h('span.row-val', 'JSON')),
       h('button.group-row', { onclick: () => fileIn.click() }, h('span', 'Restore from a backup'), h('span.row-val', '›'))),
     fileIn,
-    h('p.fine', 'Carver is a free beta. Everything is saved only on this phone for now, so export a backup now and then.'),
+    h('p.fine', 'Carver is a free beta. Everything is saved only on this phone for now, so export a backup now and then. Progress photos aren’t in the backup.'),
     h('div.group',
       h('button.group-row.danger', {
         onclick: async () => {
@@ -58,7 +58,7 @@ export function openSettings() {
           resetAll(); refreshAll(); s.close(); toast('Erased');
         },
       }, h('span', 'Erase all data'))),
-    h('p.fine.center', 'Carver beta · v0.1'),
+    h('p.fine.center', 'Carver beta · v0.2'),
   ));
 }
 
