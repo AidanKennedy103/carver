@@ -156,36 +156,83 @@ export function quickAdd({ date = ymd(), meal = null, entry = null } = {}) {
   const drawMeals = () => mealRow.replaceChildren(...MEALS.map((m) => h('button.chip' + (st.meal === m.id ? '.on' : ''), { onclick: () => { st.meal = m.id; drawMeals(); } }, m.name)));
   drawMeals();
 
-  const sliders = {};
-  const grams = {};
+  // A locked macro keeps its grams; the other two share whatever calories are left.
+  st.lock = null; st.lockG = 0;
+  const sliders = {}, gramIn = {}, lockBtn = {};
+  const pctOf = (k, g) => (st.kcal ? Math.min(100, (g * MACROS.find((m) => m.k === k).kcal * 100) / st.kcal) : 0);
+  const gramsOf = (k) => (st.lock === k ? st.lockG : ((st.kcal || 0) * st[k]) / 100 / MACROS.find((m) => m.k === k).kcal);
   const macroBox = h('div.sliders', MACROS.map((m) => {
     const input = h('input.slider', { type: 'range', min: 0, max: 100, step: 1, value: st[m.k], style: { '--c': MACRO_COLOR[m.k] }, 'aria-label': `${m.name} share of calories` });
     input.addEventListener('input', () => rebalance(m.k, +input.value));
     sliders[m.k] = input;
-    grams[m.k] = h('span.slider-g');
+    gramIn[m.k] = h('input.gram-in', {
+      inputmode: 'decimal', 'aria-label': `${m.name} grams`,
+      oninput: () => { const g = parseFloat(gramIn[m.k].value.replace(',', '.')); setLock(m.k, isNaN(g) ? 0 : g); },
+      onfocus: () => gramIn[m.k].select(),
+    });
+    lockBtn[m.k] = h('button.lock-btn', { 'aria-label': `Lock ${m.name}`, onclick: () => (st.lock === m.k ? setLock(null) : setLock(m.k, Math.round(gramsOf(m.k)))) });
     return h('div.slider-row',
-      h('div.slider-head', h('span.macro-name', h('i.swatch', { style: { background: MACRO_COLOR[m.k] } }), m.name), grams[m.k]),
+      h('div.slider-head', h('span.macro-name', h('i.swatch', { style: { background: MACRO_COLOR[m.k] } }), m.name),
+        h('span.slider-g', gramIn[m.k], h('span', '00a0g'), h('span.slider-pct'), lockBtn[m.k])),
       input);
   }));
-  const presetRow = h('div.chips.tight', PRESETS.map((p) => h('button.chip', { onclick: () => { st.p = p.p; st.c = p.c; st.f = p.f; syncSliders(); update(); } }, p.name)));
+  const presetRow = h('div.chips.tight', PRESETS.map((p) => h('button.chip', { onclick: () => { st.lock = null; st.p = p.p; st.c = p.c; st.f = p.f; syncSliders(); update(); } }, p.name)));
   const bal = h('div.split-bar');
+  const lockNote = h('p.fine.lock-note');
 
-  // Moving one slider shares the rest between the other two, keeping their ratio,
-  // so the three always add up to 100% of the calories.
+  function setLock(k, g = 0) {
+    st.lock = k; st.lockG = Math.max(0, g);
+    applyLock();
+    syncSliders();
+    update(true);
+  }
+  // Recompute the locked share from its grams, and give the rest to the other two by their ratio
+  function applyLock() {
+    if (!st.lock) return;
+    const v = pctOf(st.lock, st.lockG);
+    const [a, b] = MACROS.map((m) => m.k).filter((x) => x !== st.lock);
+    const rest = 100 - v, sum = st[a] + st[b];
+    if (sum === 0) { st[a] = rest / 2; st[b] = rest / 2; } else { st[a] = (rest * st[a]) / sum; st[b] = (rest * st[b]) / sum; }
+    st[st.lock] = v;
+  }
+
+  // Moving one slider shares the rest between the others, so the three always add up to 100%.
+  // With a macro locked, only the third one moves.
   function rebalance(k, v) {
-    const others = MACROS.map((m) => m.k).filter((x) => x !== k);
-    const rest = 100 - v;
-    const a = st[others[0]], b = st[others[1]];
-    if (a + b === 0) { st[others[0]] = rest / 2; st[others[1]] = rest / 2; }
-    else { st[others[0]] = (rest * a) / (a + b); st[others[1]] = (rest * b) / (a + b); }
-    st[k] = v;
+    if (st.lock && st.lock !== k) {
+      const other = MACROS.map((m) => m.k).find((x) => x !== k && x !== st.lock);
+      const room = 100 - st[st.lock];
+      st[k] = Math.min(v, room); st[other] = room - st[k];
+    } else {
+      const others = MACROS.map((m) => m.k).filter((x) => x !== k);
+      const rest = 100 - v;
+      const a = st[others[0]], b = st[others[1]];
+      if (a + b === 0) { st[others[0]] = rest / 2; st[others[1]] = rest / 2; }
+      else { st[others[0]] = (rest * a) / (a + b); st[others[1]] = (rest * b) / (a + b); }
+      st[k] = v;
+    }
     syncSliders(k);
     update();
   }
   function syncSliders(except) { for (const m of MACROS) if (m.k !== except) sliders[m.k].value = Math.round(st[m.k]); }
-  function update() {
+  function update(fromGrams = false) {
+    if (st.lock && !fromGrams) { applyLock(); syncSliders(); }
     const k = st.kcal || 0;
-    for (const m of MACROS) grams[m.k].textContent = `${r0((k * st[m.k]) / 100 / m.kcal)} g · ${Math.round(st[m.k])}%`;
+    for (const m of MACROS) {
+      const locked = st.lock === m.k;
+      if (document.activeElement !== gramIn[m.k]) gramIn[m.k].value = r0(gramsOf(m.k));
+      gramIn[m.k].parentNode.querySelector('.slider-pct').textContent = `00a0· ${Math.round(st[m.k])}%`;
+      sliders[m.k].disabled = locked;
+      sliders[m.k].closest('.slider-row').classList.toggle('locked', locked);
+      lockBtn[m.k].classList.toggle('on', locked);
+      fill(lockBtn[m.k], icon(locked ? 'lock' : 'unlock', 16));
+    }
+    const lockedM = MACROS.find((m) => m.k === st.lock);
+    const over = lockedM && k && st.lockG * lockedM.kcal > k;
+    lockNote.textContent = lockedM
+      ? (over ? `${r0(st.lockG)} g of ${lockedM.name.toLowerCase()} is more than ${k} kcal.` : `${lockedM.name} is locked at ${r0(st.lockG)} g. The other sliders share the rest.`)
+      : 'Type grams or tap a lock to fix one macro.';
+    lockNote.classList.toggle('red', !!over);
     bal.replaceChildren(...MACROS.map((m) => h('i', { style: { width: st[m.k] + '%', background: MACRO_COLOR[m.k] } })));
     saveBtn.disabled = !k;
   }
@@ -195,7 +242,7 @@ export function quickAdd({ date = ymd(), meal = null, entry = null } = {}) {
       const k = st.kcal || 0;
       if (!k) return;
       const n = { kcal: k };
-      for (const m of MACROS) n[m.k] = (k * st[m.k]) / 100 / m.kcal;
+      for (const m of MACROS) n[m.k] = gramsOf(m.k);
       const mealName = MEALS.find((m) => m.id === st.meal).name;
       const data = { date: entry?.date || date, meal: st.meal, name: st.name || mealName, quick: true, icon: '⚡', n };
       if (entry) updateLog(entry.id, data); else logFood(data);
@@ -211,7 +258,7 @@ export function quickAdd({ date = ymd(), meal = null, entry = null } = {}) {
     h('div.kcal-wrap', kcalIn, h('span.kcal-unit', 'kcal')),
     mealRow,
     h('label.form-label', 'Macros (share of calories)'),
-    bal, macroBox, presetRow,
+    bal, macroBox, lockNote, presetRow,
     saveBtn,
   ));
   update();

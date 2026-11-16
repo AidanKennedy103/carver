@@ -567,3 +567,12 @@ body.has-live .root .bottom-space { height: calc(160px + var(--safe-bottom)); }
 .meta-foot { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); border-top: .5px solid var(--line); padding-top: 8px; margin-top: 4px; }
 .meta-card .fine { margin: 10px 0 0; }
 .empty-title.left { text-align: left; }
+.slider-g { display: inline-flex; align-items: center; }
+.gram-in { width: 52px; text-align: right; background: var(--surface-2); border: 0; border-radius: 8px; color: var(--text); font: inherit; font-variant-numeric: tabular-nums; padding: 3px 6px; }
+.gram-in:focus { outline: 1.5px solid var(--gold); }
+.lock-btn { width: 30px; height: 28px; display: inline-flex; align-items: center; justify-content: center; color: var(--faint); margin-left: 4px; border-radius: 8px; }
+.lock-btn.on { color: #17110a; background: var(--gold); }
+.slider-row.locked .slider { opacity: .45; }
+.lock-note { margin: 8px 0 0; }
+.lock-note.red { color: var(--red, #e5484d); }
+.slider-pct { min-width: 46px; display: inline-block; }
