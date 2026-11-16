@@ -10,12 +10,15 @@ import { fitnessPage } from './fitness.js';
 import { progressPage } from './progress.js';
 import { trendsPage } from './trends.js';
 import { openWorkout } from './session.js';
+import { initCloud } from './cloud.js';
 
 initScreens(document.getElementById('app'));
 initTabs({ home: homePage, workout: workoutPage, nutrition: nutritionPage, fitness: fitnessPage, progress: progressPage, trends: trendsPage });
 
 // Redraw the main page when data changes (only if it's showing)
 onChange(() => top()?.refresh?.());
+
+initCloud();
 
 // Came back to an unfinished workout? Open it straight away.
 if (state.active) openWorkout();

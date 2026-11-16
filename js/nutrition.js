@@ -3,7 +3,8 @@
 // for when you just know the calories.
 
 import { h, fill, icon, push, navBar, sheet, toast, actionSheet, fmtDate } from './ui.js';
-import { state, commit, uid, ymd, addDays, dayLog, dayTotals, allFoods, food, nutrientsFor, logFood, updateLog, deleteLog, recentFoods } from './store.js';
+import { state, commit, uid, ymd, addDays, dayLog, dayTotals, allFoods, food, nutrientsFor, logFood, updateLog, deleteLog, recentFoods, sharedFoods } from './store.js';
+import { enabled as cloudOn, account, shareFood } from './cloud.js';
 import { MACROS, MICROS, CATEGORIES } from './foods.js';
 import { COLORS } from './charts.js';
 import { openGoals } from './goals.js';
@@ -281,7 +282,7 @@ export function addFood({ date = ymd(), meal = null } = {}) {
     oninput: () => { q = search.value.toLowerCase().trim(); draw(); },
   });
   const chips = h('div.chips.no-drag');
-  const drawChips = () => chips.replaceChildren(...['Recent', 'All', 'My foods', ...CATEGORIES].map((c) => h('button.chip' + (c === cat ? '.on' : ''), { onclick: () => { cat = c; drawChips(); draw(); } }, c)));
+  const drawChips = () => chips.replaceChildren(...['Recent', 'All', 'My foods', ...(sharedFoods().length ? ['Community'] : []), ...CATEGORIES].map((c) => h('button.chip' + (c === cat ? '.on' : ''), { onclick: () => { cat = c; drawChips(); draw(); } }, c)));
 
   function draw() {
     let items;
@@ -378,6 +379,7 @@ export function amountSheet({ food: f, date = ymd(), meal = null, entry = null, 
 // ---------- Create your own food ----------
 
 export function createFood(onDone, prefill = {}) {
+  let share = true;
   const v = { name: prefill.name || '', icon: prefill.icon || '🍽️', serving: prefill.serving || '1 serving', g: prefill.g || 100, kcal: '', p: '', c: '', f: '', fib: '', sug: '', na: '' };
   const inp = (key, label, mode = 'decimal', ph = '0') => h('label.goal-row', h('span', label),
     h('span.goal-field', h('input.field.goal-input', { value: v[key], placeholder: ph, inputmode: mode, oninput: (e) => { v[key] = e.target.value; } })));
@@ -392,8 +394,10 @@ export function createFood(onDone, prefill = {}) {
           const n = { kcal: per(kcal), p: per(v.p) ?? 0, c: per(v.c) ?? 0, f: per(v.f) ?? 0, fib: per(v.fib), sug: per(v.sug), na: per(v.na) };
           Object.keys(n).forEach((k) => n[k] === undefined && delete n[k]);
           const fd = { id: 'u-' + uid(), name, icon: v.icon || '🍽️', cat: 'My foods', custom: true, servings: [{ label: v.serving || '1 serving', g }], n };
+          if (prefill.barcode) fd.barcode = prefill.barcode;
           commit((st) => { st.food.custom.unshift(fd); });
           s.close();
+          if (share && account()) shareFood(fd).then((ok) => toast(ok ? 'Added to the Carver food database' : 'Saved to My foods (couldn’t share it)'));
           onDone?.(fd);
         },
       }, 'Save')),
@@ -408,6 +412,9 @@ export function createFood(onDone, prefill = {}) {
     h('div.group', inp('kcal', 'Calories'), inp('p', 'Protein (g)'), inp('c', 'Carbs (g)'), inp('f', 'Fat (g)')),
     h('label.form-label', 'Optional'),
     h('div.group', inp('fib', 'Fiber (g)'), inp('sug', 'Sugars (g)'), inp('na', 'Sodium (mg)')),
+    cloudOn() ? h('label.goal-row.share-row', h('span', 'Add to the Carver food database'),
+      h('input.toggle', { type: 'checkbox', checked: share && !!account(), disabled: !account(), onchange: (e) => { share = e.target.checked; } })) : null,
+    cloudOn() ? h('p.fine', account() ? 'Everyone using Carver can then find it. Check the numbers against the label.' : 'Sign in (Home → Settings) to add foods for everyone. It’s saved to My foods either way.') : null,
   ));
 }
 

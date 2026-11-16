@@ -6,6 +6,7 @@ import { lineChart } from './charts.js';
 import { weights, latestWeight, trend, change, logWeightSheet, importSheet, weightRow } from './body.js';
 import { photos, addPhoto, deletePhoto, loadInto } from './photos.js';
 import { monthlySection } from './monthly.js';
+import { account } from './cloud.js';
 
 const fmtW = (kg) => `${toDisplay(kg)} ${unit()}`;
 const signed = (kg) => { const v = +toDisplay(Math.abs(kg)); return `${kg > 0 ? '+' : kg < 0 ? '−' : ''}${v} ${unit()}`; };
@@ -62,7 +63,7 @@ export function progressPage() {
           h('div.empty-title', 'Take your first progress photo'),
           h('div.empty-text', 'Same spot, same light, once a month. Carver reminds you and lines them up in your monthly recap.')),
       pics.length > 12 ? h('button.link', { onclick: () => push(allPhotosScreen) }, `See all ${pics.length}`) : null,
-      pics.length ? h('p.fine', 'Photos stay on this phone only. They aren’t in the data export.') : null,
+      pics.length && !account() ? h('p.fine', 'Photos stay on this phone unless you sign in. They aren’t in the data export.') : null,
 
       monthlySection(),
       h('div.bottom-space'),

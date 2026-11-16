@@ -6,6 +6,7 @@
 import { h, sheet, toast } from './ui.js';
 import { state, commit } from './store.js';
 import { createFood } from './nutrition.js';
+import { sharedByBarcode, shareFood } from './cloud.js';
 
 const ZXING = 'https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js';
 let zxingLoad;
@@ -83,7 +84,7 @@ export function scanBarcode(onFood) {
       if (f) onFood(f);
       else {
         toast('Not in the database yet. Add it yourself.');
-        createFood((fd) => { commit((st) => { const x = st.food.custom.find((y) => y.id === fd.id); if (x) x.barcode = code; }); onFood(fd); }, { icon: '🏷️' });
+        createFood((fd) => onFood(fd), { icon: '🏷️', barcode: code });
       }
     } catch {
       busy = false;
@@ -94,10 +95,12 @@ export function scanBarcode(onFood) {
   start();
 }
 
-/** Look a barcode up: your saved foods first, then Open Food Facts. Returns a food or null. */
+/** Look a barcode up: your saved foods, then the Carver database, then Open Food Facts. Returns a food or null. */
 export async function lookup(code) {
   const mine = state.food.custom.find((f) => f.barcode === code);
   if (mine) return mine;
+  const shared = await sharedByBarcode(code);
+  if (shared) return shared;
   const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,brands,serving_size,serving_quantity,nutriments`);
   if (!res.ok && res.status !== 404) throw new Error('lookup failed');
   const data = await res.json();
@@ -105,6 +108,7 @@ export async function lookup(code) {
   const f = fromOFF(code, data.product);
   if (!f) return null;
   commit((st) => { st.food.custom.unshift(f); });
+  shareFood(f);   // signed in: saves the next person a lookup
   return f;
 }
 

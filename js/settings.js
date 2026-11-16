@@ -3,6 +3,8 @@
 import { h, sheet, toast, confirmBox, promptBox, fmtSecs, actionSheet, refreshAll } from './ui.js';
 import { state, commit, exportJSON, importJSON, resetAll } from './store.js';
 import { REST_CHOICES } from './block.js';
+import { accountSection } from './account.js';
+import { account } from './cloud.js';
 
 export function openSettings() {
   const unitSeg = h('div.segment', ['lb', 'kg'].map((u) => h('button' + (state.settings.unit === u ? '.on' : ''), {
@@ -30,6 +32,7 @@ export function openSettings() {
 
   const s = sheet(h('div.form',
     h('div.sheet-head', h('span'), h('div.sheet-title', 'Settings'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
+    accountSection(() => s.close()),
     h('div.group',
       h('button.group-row', {
         onclick: async () => {
@@ -50,15 +53,15 @@ export function openSettings() {
       h('button.group-row', { onclick: exportData }, h('span', 'Export all data'), h('span.row-val', 'JSON')),
       h('button.group-row', { onclick: () => fileIn.click() }, h('span', 'Restore from a backup'), h('span.row-val', '›'))),
     fileIn,
-    h('p.fine', 'Carver is a free beta. Everything is saved only on this phone for now, so export a backup now and then. Progress photos aren’t in the backup.'),
+    h('p.fine', account() ? 'Carver is a free beta. Your data is saved on this phone and in your account. The export is a JSON file of everything except progress photos.' : 'Carver is a free beta. Without an account, everything is saved only on this phone, so export a backup now and then. Progress photos aren’t in the backup.'),
     h('div.group',
       h('button.group-row.danger', {
         onclick: async () => {
-          if (!(await confirmBox('Erase everything?', 'Deletes all plans, workouts and custom exercises on this phone. This cannot be undone.', { ok: 'Erase', danger: true }))) return;
+          if (!(await confirmBox('Erase everything?', account() ? 'Deletes all your data on this phone and on every device signed in to your account. This cannot be undone.' : 'Deletes all your data on this phone. This cannot be undone.', { ok: 'Erase', danger: true }))) return;
           resetAll(); refreshAll(); s.close(); toast('Erased');
         },
       }, h('span', 'Erase all data'))),
-    h('p.fine.center', 'Carver beta · v0.2'),
+    h('p.fine.center', 'Carver beta · v0.3'),
   ));
 }
 

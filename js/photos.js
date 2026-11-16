@@ -67,6 +67,10 @@ export async function photoURL(id, size = 'thumb') {
 
 export const photos = () => state.body.photos || [];
 
+/** Raw stored photo (for sync), or undefined. */
+export const getRecord = (id) => tx('readonly', (s) => s.get(id));
+export const putRecord = (rec) => tx('readwrite', (s) => s.put(rec));
+
 /** Fill an <img> once its photo has loaded. */
 export function loadInto(img, id, size = 'thumb') {
   photoURL(id, size).then((u) => { if (u) img.src = u; }).catch(() => {});

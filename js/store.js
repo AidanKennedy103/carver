@@ -46,9 +46,24 @@ function load() {
 export const state = load();
 const listeners = new Set();
 
+const savers = new Set();
 export function save() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); }
   catch (e) { console.warn('Could not save', e); }
+  savers.forEach((f) => f());
+}
+/** Runs after every save (sync uses it to know something changed). */
+export const onSaved = (fn) => { savers.add(fn); return () => savers.delete(fn); };
+
+/** Swap in data from another device. Keeps a workout that's live on this phone as it is. */
+export function replaceState(data, { quiet = true } = {}) {
+  const next = upgrade(data);
+  if (state.active && next.active?.id === state.active.id) next.active = state.active;
+  for (const k of Object.keys(state)) if (!(k in next)) delete state[k];
+  Object.assign(state, next);
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* full */ }
+  if (!quiet) savers.forEach((f) => f());
+  listeners.forEach((l) => l());
 }
 
 /** Change state, save it, and tell the screens to redraw. */
@@ -254,7 +269,18 @@ export function ymd(ts = Date.now()) {
 export const dayStart = (key) => { const [y, m, d] = key.split('-').map(Number); return new Date(y, m - 1, d).getTime(); };
 export const addDays = (key, n) => ymd(dayStart(key) + n * 864e5 + 36e5 * 3);   // +3 h dodges daylight-saving edges
 
-export const allFoods = () => [...state.food.custom, ...FOODS];
+// Foods other Carver users added (loaded by cloud.js, cached on the phone)
+let shared = [];
+try { shared = JSON.parse(localStorage.getItem('carver.shared') || '{}').foods || []; } catch { /* none yet */ }
+export function setSharedFoods(list) {
+  shared = list;
+  try { localStorage.setItem('carver.shared', JSON.stringify({ at: Date.now(), foods: list })); } catch { /* full */ }
+}
+export const sharedFoods = () => shared;
+export const allFoods = () => {
+  const mine = new Set(state.food.custom.map((f) => f.id));
+  return [...state.food.custom, ...shared.filter((f) => !mine.has(f.id)), ...FOODS];
+};
 export function food(id) { return allFoods().find((f) => f.id === id); }
 
 /** Nutrients for `grams` of a food (from its per-100 g values). */
