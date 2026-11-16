@@ -63,7 +63,7 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 - **Import from Cronometer:** in Settings, pick Cronometer's "Food & Recipe Entries" export (CSV). Every entry comes in with its nutrients, in the right meal, and pasting the same file twice is fine.
 - **Shared food database:** when you're signed in, foods you create (with the switch on) and foods you scan are added for everyone, under **Community**. For the beta they appear straight away. To review them first, see the note in `supabase/schema.sql`.
 - **Barcode scanner:** uses the camera and looks the product up in Open Food Facts, a free, open database. It checks your foods and the Carver database first. Scanned foods are saved to My foods. You can also type the barcode in.
-- **Goals:** calories, protein, carbs, fat, water, workouts per week, and your own daily goals. Calories and macros are linked: type any three and the one you changed longest ago fills itself in (marked *auto*).
+- **Goals:** calories, protein, carbs, fat, water, workouts per week (optionally on set days: Home then shows rest days, the next planned day, and planned days on the calendar), and your own daily goals. Calories and macros are linked: type any three and the one you changed longest ago fills itself in (marked *auto*).
 - **Week strip:** Monday to Sunday under the date, each day's calories against your goal (gold when on target). Tap a day to jump to it.
 - **Eaten or left:** tap the macro bars to switch between grams eaten and grams left.
 - **Per meal:** each meal shows its protein, carbs and fat.

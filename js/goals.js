@@ -2,7 +2,7 @@
 // (water, steps, anything). These drive the rings on Home.
 
 import { h, fill, icon, sheet, toast, promptBox, confirmBox } from './ui.js';
-import { state, commit, uid, ymd, toDisplay, unit } from './store.js';
+import { state, commit, uid, ymd, toDisplay, unit, DAY_SHORT } from './store.js';
 import { num } from './food-util.js';
 
 export function openGoals() {
@@ -47,9 +47,32 @@ export function openGoals() {
   }
   const hintEl = h('p.fine');
 
-  const wkSeg = h('div.segment', [1, 2, 3, 4, 5, 6, 7].map((n) => h('button' + (g.workoutsPerWeek === n ? '.on' : ''), {
-    onclick: (e) => { commit((s) => { s.goals.workoutsPerWeek = n; }); wkSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === e.currentTarget)); },
-  }, n)));
+  // Workouts per week, and (optional) which days. Picking days sets the number;
+  // picking a different number clears the days.
+  const wkSeg = h('div.segment');
+  const dayRow = h('div.day-pick');
+  const dayHint = h('p.fine');
+  function drawWeek() {
+    const n = state.goals.workoutsPerWeek, days = state.goals.workoutDays || [];
+    fill(wkSeg, [1, 2, 3, 4, 5, 6, 7].map((k) => h('button' + (n === k ? '.on' : ''), {
+      onclick: () => { commit((st) => { st.goals.workoutsPerWeek = k; if ((st.goals.workoutDays || []).length !== k) st.goals.workoutDays = []; }); drawWeek(); },
+    }, k)));
+    fill(dayRow, DAY_SHORT.map((d, i) => h('button' + (days.includes(i) ? '.on' : ''), {
+      'aria-label': d, 'aria-pressed': String(days.includes(i)),
+      onclick: () => {
+        commit((st) => {
+          const cur = st.goals.workoutDays || [];
+          st.goals.workoutDays = (cur.includes(i) ? cur.filter((x) => x !== i) : [...cur, i]).sort();
+          if (st.goals.workoutDays.length) st.goals.workoutsPerWeek = st.goals.workoutDays.length;
+        });
+        drawWeek();
+      },
+    }, d[0])));
+    dayHint.textContent = days.length
+      ? `${days.map((i) => DAY_SHORT[i]).join(', ')}. Home shows rest days, and the calendar marks the days you planned.`
+      : 'Optional. Pick days and Home shows which are workout days and which are rest days. Leave them off to train any day.';
+  }
+  drawWeek();
 
   const customList = h('div.group');
   const drawCustom = () => {
@@ -87,6 +110,7 @@ export function openGoals() {
     h('div.group', field('Water', 'water', 'ml', 50)),
     h('label.form-label', 'Workouts per week'), wkSeg,
     h('p.fine', 'Hit this and the week turns gold on your calendar.'),
+    h('label.form-label', 'Which days'), dayRow, dayHint,
     h('label.form-label', 'Your own daily goals (up to 2)'), customList,
     h('p.fine', 'Each one gets its own ring on Home. Tap the ring row to log it.'),
   ));

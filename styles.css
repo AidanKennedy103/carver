@@ -545,11 +545,18 @@ body.has-live .root .bottom-space { height: calc(160px + var(--safe-bottom)); }
 .cal-day.did span { background: var(--gold); color: #17110a; font-weight: 700; }
 .cal-week.gold .cal-day.did span { background: #17110a; color: var(--gold-hi); box-shadow: 0 0 0 1.5px var(--gold); }
 .cal-day.today span { box-shadow: 0 0 0 1.5px var(--text); }
-.cal-foot { display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--muted); padding: 8px 4px 0; }
-.cal-foot span { display: inline-flex; align-items: center; gap: 5px; }
-.cal-foot .link { margin-left: auto; font-size: 13px; padding: 0; }
+.cal-day.plan span { box-shadow: inset 0 0 0 1.5px rgba(227, 176, 75, .55); color: var(--gold-hi); }
+.cal-day.out.plan span { opacity: .5; }
+.cal-day.plan.today span { box-shadow: inset 0 0 0 1.5px var(--gold), 0 0 0 1.5px var(--text); }
+.cal-foot { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; font-size: 12px; color: var(--muted); padding: 8px 4px 0; }
+.cal-foot span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.cal-foot .link { margin-left: auto; font-size: 13px; padding: 0; white-space: nowrap; }
 .cal-key { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .cal-key.did { background: var(--gold); }
+.cal-key.plan { box-shadow: inset 0 0 0 1.5px rgba(227, 176, 75, .7); }
+.day-pick { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.day-pick button { aspect-ratio: 1; border-radius: 50%; background: var(--surface-2); color: var(--muted); font-weight: 600; font-size: 15px; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.day-pick button.on { background: var(--gold); color: #17110a; }
 .cal-key.gold { border-radius: 3px; background: rgba(227, 176, 75, .35); box-shadow: inset 0 0 0 1px rgba(227, 176, 75, .6); }
 
 /* Goal celebration */
@@ -722,7 +729,7 @@ body.has-live .root .bottom-space { height: calc(160px + var(--safe-bottom)); }
    little off on iPhone. text-box trims to the letters themselves (iOS 18.2+;
    older phones simply ignore it). */
 .cal-day span, .avatar, .feed-av, .set-num, .qty-btn, .stepper button, .stepper span,
-.chip, .btn, .segment button, .ring-plus, .vol-tag, .auto-tag, .water-minus {
+.chip, .btn, .segment button, .ring-plus, .vol-tag, .auto-tag, .water-minus, .day-pick button {
   text-box: trim-both cap alphabetic;
 }
 .cal-day span, .avatar, .feed-av, .set-num, .qty-btn, .stepper button, .water-minus { line-height: 1; }

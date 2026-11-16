@@ -2,7 +2,7 @@
 // calendar, your one-rep maxes, and your profile overview.
 
 import { h, fill, icon, push, sheet, toast, promptBox, fmtDate, fmtNum, fmtDurationWords } from './ui.js';
-import { state, commit, exercise, overview, toDisplay, unit, ymd, addDays, dayTotals, weekStart, workoutStats, waterOn, addWater } from './store.js';
+import { state, commit, exercise, overview, toDisplay, unit, ymd, addDays, dayTotals, weekStart, dayStart, dayPlan, workoutDays, DAY_SHORT, workoutStats, waterOn, addWater } from './store.js';
 import { workoutDetail } from './workout.js';
 import { openSettings } from './settings.js';
 import { goTab } from './tabs.js';
@@ -46,7 +46,12 @@ const WEIGH_COLOR = '#9aa3b2';
 function ringCatalog() {
   const g = state.goals;
   return [
-    { id: 'gym', label: 'Workout', color: COLORS.gym, cheer: 'Workout done!', day: (k) => { const n = state.workouts.filter((w) => ymd(w.start) === k).length; return { value: n, goal: 1, text: n ? `${n} workout${n > 1 ? 's' : ''} today` : 'Not yet today', hit: n > 0 }; } },
+    { id: 'gym', label: 'Workout', color: COLORS.gym, cheer: 'Workout done!', day: (k) => {
+      const n = state.workouts.filter((w) => ymd(w.start) === k).length;
+      if (n) return { value: n, goal: 1, text: `${n} workout${n > 1 ? 's' : ''} today`, hit: true };
+      if (dayPlan(k) === 'rest') return { value: 1, goal: 1, text: 'Rest day', hit: true, rest: true };   // a full ring: resting is the plan
+      return { value: 0, goal: 1, text: dayPlan(k) === 'planned' ? 'Planned today' : 'Not yet today', hit: false };
+    } },
     { id: 'kcal', label: 'Calories', color: COLORS.calories, cheer: 'Hit your calorie goal!', day: (k) => { const v = dayTotals(k).kcal; return { value: v, goal: g.kcal, text: `${fmtNum(v)} of ${fmtNum(g.kcal)} kcal`, hit: v >= g.kcal * 0.9 && v <= g.kcal * 1.1, over: v > g.kcal * 1.1 }; } },
     { id: 'protein', label: 'Protein', color: COLORS.protein, cheer: 'Hit your protein goal!', day: (k) => { const v = dayTotals(k).p; return { value: v, goal: g.p, text: `${Math.round(v)} of ${g.p} g`, hit: v >= g.p }; } },
     { id: 'water', label: 'Water', color: '#2e8bd8', cheer: 'Hit your water goal!', day: (k) => { const v = waterOn(k), gw = g.water || 2500; return { value: v, goal: gw, text: `${(v / 1000).toFixed(1)} of ${(gw / 1000).toFixed(1)} L`, hit: v >= gw }; } },
@@ -73,12 +78,23 @@ export function ringGoals(view = 'day') {
     if (id === 'gym') value = state.workouts.filter((w) => w.start >= weekStart()).length;
     else for (let k = ymd(weekStart()); k <= today; k = addDays(k, 1)) if (r.day(k).hit) value++;
     const word = id === 'gym' ? 'workout' : 'day';
+    const next = id === 'gym' && value < goal ? nextPlanned() : '';
     return {
       ...r, view, value, goal, hit: value >= goal,
-      text: value > goal ? `${value} ${word}s this week · goal ${goal}` : `${value} of ${goal} ${word}${goal === 1 ? '' : 's'} this week`,
+      text: (value > goal ? `${value} ${word}s this week · goal ${goal}` : `${value} of ${goal} ${word}${goal === 1 ? '' : 's'} this week`) + (next ? ` · next ${next}` : ''),
       cheer: id === 'gym' ? 'Weekly gym goal hit!' : `${r.label}: ${goal} day${goal === 1 ? '' : 's'} this week!`,
     };
   });
+}
+
+/** The next planned workout day this week ('today', 'Thu'), or '' if none is left or you haven't picked days. */
+function nextPlanned() {
+  const today = ymd(), sunday = addDays(ymd(weekStart()), 6);
+  const doneToday = state.workouts.some((w) => ymd(w.start) === today);
+  for (let k = doneToday ? addDays(today, 1) : today; k <= sunday; k = addDays(k, 1)) {
+    if (dayPlan(k) === 'planned') return k === today ? 'today' : DAY_SHORT[(new Date(dayStart(k)).getDay() + 6) % 7];
+  }
+  return '';
 }
 
 /** Pick which goals are rings, and how many days a week each should be hit. */
@@ -121,7 +137,7 @@ function celebrate() {
   const today = ymd(), wk = 'w' + ymd(weekStart());
   const doneD = new Set(state.celebrated?.[today] || []), doneW = new Set(state.celebrated?.[wk] || []);
   const fresh = [
-    ...ringGoals('day').filter((g) => g.hit && !doneD.has(g.id)),
+    ...ringGoals('day').filter((g) => g.hit && !g.rest && !doneD.has(g.id)),
     ...ringGoals('week').filter((g) => g.hit && !doneW.has(g.id)),
   ];
   if (!fresh.length) return;
@@ -171,7 +187,8 @@ function calendar(redraw) {
       count += ws.length;
       days.push({ d, k, ws, inMonth: d.getMonth() === month });
     }
-    rows.push(h('div.cal-week' + (count >= goal ? '.gold' : ''), days.map((x) => h('button.cal-day' + (x.inMonth ? '' : '.out') + (x.ws.length ? '.did' : '') + (x.k === ymd() ? '.today' : ''), {
+    const today = ymd();
+    rows.push(h('div.cal-week' + (count >= goal ? '.gold' : ''), days.map((x) => h('button.cal-day' + (x.inMonth ? '' : '.out') + (x.ws.length ? '.did' : '') + (x.k === today ? '.today' : '') + (!x.ws.length && x.k >= today && dayPlan(x.k) === 'planned' ? '.plan' : ''), {
       'aria-label': `${fmtDate(x.d, { weekday: 'long', month: 'long', day: 'numeric' })}${x.ws.length ? `, ${x.ws.length} workout${x.ws.length > 1 ? 's' : ''}` : ''}`,
       onclick: () => { if (x.ws.length) push(() => workoutDetail(x.ws[0])); },
     }, h('span', x.d.getDate())))));
@@ -188,6 +205,7 @@ function calendar(redraw) {
     h('div.cal-foot',
       h('span', h('i.cal-key.did'), 'Workout'),
       h('span', h('i.cal-key.gold'), `Week with ${goal}+`),
+      workoutDays().length ? h('span', h('i.cal-key.plan'), 'Planned') : null,
       h('button.link', { onclick: openGoals }, `${thisWeek}/${goal} this week`)));
 }
 
@@ -273,7 +291,7 @@ export function homePage() {
           h('span.today-ico', icon('dumbbell', 20)),
           h('span.today-text',
             h('span.today-k', 'Workout'),
-            h('span.today-v', todayWorkouts.length || todayActs.length ? [...todayWorkouts.map((w) => `${w.name} · ${fmtDurationWords(workoutStats(w).duration)}`), ...todayActs.map((a) => `${activityType(a.type).name} · ${fmtDurationWords(a.dur)}`)].join(', ') : state.active ? 'In progress' : 'Not yet')),
+            h('span.today-v', todayWorkouts.length || todayActs.length ? [...todayWorkouts.map((w) => `${w.name} · ${fmtDurationWords(workoutStats(w).duration)}`), ...todayActs.map((a) => `${activityType(a.type).name} · ${fmtDurationWords(a.dur)}`)].join(', ') : state.active ? 'In progress' : { rest: 'Rest day', planned: 'Planned today' }[dayPlan(today)] || 'Not yet')),
           todayWorkouts.length || todayActs.length ? h('span.ring-check.big', '✓') : h('button.btn.gold-soft.small', { onclick: () => goTab('workout') }, state.active ? 'Resume' : 'Start')),
         h('div.today-row',
           h('span.today-ico', '🍽️'),

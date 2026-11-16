@@ -255,6 +255,19 @@ export function weekStart(ts = Date.now()) {
   return d.getTime();
 }
 
+// ---------- Workout days (optional) ----------
+// goals.workoutDays: weekdays you plan to train, 0 = Monday … 6 = Sunday. Empty = any days.
+
+export const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const dow = (key) => { const [y, m, d] = key.split('-').map(Number); return (new Date(y, m - 1, d).getDay() + 6) % 7; };
+export const workoutDays = () => state.goals.workoutDays || [];
+/** 'planned', 'rest', or null when you haven't picked days. */
+export function dayPlan(key) {
+  const days = workoutDays();
+  if (!days.length) return null;
+  return days.includes(dow(key)) ? 'planned' : 'rest';
+}
+
 export function overview() {
   const ws = state.workouts;
   const thisWeek = weekStart();
