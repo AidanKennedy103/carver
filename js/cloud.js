@@ -7,7 +7,7 @@
 // the phone doing the sync keeps its own.
 
 import { CONFIG } from './config.js';
-import { state, onSaved, replaceState, setSharedFoods, sharedFoods } from './store.js';
+import { state, commit, onSaved, replaceState, setSharedFoods, sharedFoods } from './store.js';
 
 export const enabled = () => !!(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY);
 
@@ -83,6 +83,7 @@ async function signedIn(u) {
   tell();
   await sync();
   pullFoods();
+  import('./push.js').then((m) => m.refreshPush()).catch(() => {});
   return user;
 }
 
@@ -344,12 +345,15 @@ async function connect() {
     user = data.session?.user || null;
     db.auth.onAuthStateChange((_e, session) => { const was = user?.id; user = session?.user || null; if (user && user.id !== was) sync(); tell(); });
     tell();
-    if (user) sync();
+    if (user) { sync(); import('./push.js').then((m) => m.refreshPush()).catch(() => {}); }
   } catch { /* offline: try again when the app comes back */ }
 }
 
 export async function initCloud() {
   if (!enabled()) return;
+  // The server posts missed daily goals at 8 am your time, so it needs your time zone
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (tz && state.profile.tz !== tz) commit((s) => { s.profile.tz = tz; });
   onSaved(() => { if (applying) return; localVersion++; if (user) schedule(); });
   pullFoods();
   await connect();

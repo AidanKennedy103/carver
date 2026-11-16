@@ -10,4 +10,7 @@
 export const CONFIG = {
   SUPABASE_URL: 'https://hfayaseunuyfxlyebwzc.supabase.co',
   SUPABASE_ANON_KEY: 'sb_publishable_9xD49-BiQJQR5jVa0DISrw_nxnA62zL',
+  // Phone notifications (Web Push). The public half of the key pair; the private
+  // half is a secret in Supabase (Edge Functions → Secrets → VAPID_PRIVATE_KEY).
+  VAPID_PUBLIC_KEY: 'BBqKlCFu6kHUTpqMy9i5SP1NGm5xXw0MjFXtEh7fDdKP2to8S7s14I7qfzbTF7B2hSw8LFKEwypKKdilD-eN3HI',
 };

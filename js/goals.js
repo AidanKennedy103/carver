@@ -4,6 +4,7 @@
 import { h, fill, icon, sheet, toast, promptBox, confirmBox } from './ui.js';
 import { state, commit, uid, ymd, toDisplay, unit, DAY_SHORT } from './store.js';
 import { num } from './food-util.js';
+import { habits, MAX_HABITS } from './habits.js';
 
 export function openGoals() {
   const g = state.goals;
@@ -76,27 +77,31 @@ export function openGoals() {
 
   const customList = h('div.group');
   const drawCustom = () => {
-    customList.replaceChildren(
-      ...state.goals.custom.map((c) => h('div.group-row',
-        h('span', `${c.name}`, h('span.muted', ` · ${c.target} ${c.unit}`)),
+    const list = habits();
+    fill(customList,
+      list.map((c) => h('div.group-row',
+        h('button.habit-name', { onclick: () => renameHabit(c), 'aria-label': `Rename ${c.name}` }, c.name),
         h('button.icon-btn', {
-          'aria-label': 'Delete goal',
+          'aria-label': `Delete ${c.name}`,
           onclick: async () => {
-            if (!(await confirmBox(`Delete “${c.name}”?`, null, { ok: 'Delete', danger: true }))) return;
+            if (!(await confirmBox(`Delete “${c.name}”?`, 'Your groups stop hearing about it. Past days stay in your history.', { ok: 'Delete', danger: true }))) return;
             commit((s) => { s.goals.custom = s.goals.custom.filter((x) => x.id !== c.id); });
             drawCustom();
           },
         }, icon('trash', 18)))),
-      state.goals.custom.length < 2 ? h('button.group-row.gold-text', { onclick: addCustom }, h('span', '+ Add a daily goal')) : null,
+      list.length < MAX_HABITS ? h('button.group-row.gold-text', { onclick: addCustom }, h('span', '+ Add a daily goal')) : null,
     );
   };
   async function addCustom() {
-    const name = await promptBox('Daily goal', '', { placeholder: 'e.g. Water, Steps, Stretch' });
+    const name = (await promptBox('Daily goal', '', { placeholder: 'e.g. 50 pushups, Read 10 pages' }))?.trim();
     if (!name) return;
-    const target = num(await promptBox(`Daily target for ${name}`, '8', { inputmode: 'decimal', placeholder: 'e.g. 8' }));
-    if (!target) { toast('Enter a number'); return; }
-    const unit = (await promptBox('Unit', 'glasses', { placeholder: 'glasses, steps, min…' })) || '';
-    commit((s) => { s.goals.custom.push({ id: uid(), name, target, unit }); });
+    commit((s) => { s.goals.custom.push({ id: uid(), name: name.slice(0, 40), since: ymd() }); });
+    drawCustom();
+  }
+  async function renameHabit(c) {
+    const name = (await promptBox('Rename', c.name))?.trim();
+    if (!name) return;
+    commit((s) => { const x = s.goals.custom.find((y) => y.id === c.id); if (x) x.name = name.slice(0, 40); });
     drawCustom();
   }
   drawCustom();
@@ -111,8 +116,8 @@ export function openGoals() {
     h('label.form-label', 'Workouts per week'), wkSeg,
     h('p.fine', 'Hit this and the week turns gold on your calendar.'),
     h('label.form-label', 'Which days'), dayRow, dayHint,
-    h('label.form-label', 'Your own daily goals (up to 2)'), customList,
-    h('p.fine', 'Each one gets its own ring on Home. Tap the ring row to log it.'),
+    h('label.form-label', `Daily goals (up to ${MAX_HABITS})`), customList,
+    h('p.fine', 'Things you either do each day or don’t. Each one is a slider on Home: slide it when it’s done. Your groups see it right away, and at 8 am the next day if you missed it. You can also show one as a ring.'),
   ));
   balance(false);   // show which one fills in, without changing your saved goals
 }
@@ -160,12 +165,3 @@ async function suggestGoals() {
     box));
   draw();
 }
-
-/** Add to today's amount for a custom goal. */
-export function logCustom(goalId, amount, date = ymd()) {
-  commit((s) => {
-    s.checks[date] = s.checks[date] || {};
-    s.checks[date][goalId] = Math.max(0, (s.checks[date][goalId] || 0) + amount);
-  });
-}
-export const customAmount = (goalId, date = ymd()) => state.checks[date]?.[goalId] || 0;

@@ -1,14 +1,19 @@
-// Groups: friends who see each other's workouts and goal hits.
+// Groups: friends keeping each other accountable.
 //
 // Carver posts to your groups on its own after each sync: finished workouts
-// (with PRs), runs and other cardio, hitting your protein or calorie goal, and
-// closing your weekly gym goal. Each person picks what they share with each group.
+// (with PRs), runs and other cardio, finished daily goals, hitting your protein
+// or calorie goal, and closing your weekly gym goal. The server adds the rest
+// (supabase/functions/carver-push): missed daily goals at 8 am the next day and a
+// summary every Monday morning, and sends phone notifications for all of it.
+// Each person picks what they share with each group.
 
 import { h, fill, icon, push, navBar, sheet, toast, actionSheet, confirmBox, promptBox, fmtDate, fmtNum, fmtDurationWords } from './ui.js';
 import { state, commit, ymd, addDays, dayTotals, weekStart, workoutStats, exercise, toDisplay, unit } from './store.js';
 import { client, enabled, account } from './cloud.js';
 import { signInSheet } from './account.js';
 import { activityType } from './fitness.js';
+import { habits, isDone } from './habits.js';
+import { pushRow } from './push.js';
 
 export const SHARES = [
   { k: 'gym', label: 'At the gym', sub: 'When you start a workout' },
@@ -18,6 +23,8 @@ export const SHARES = [
   { k: 'protein', label: 'Hitting your protein goal' },
   { k: 'kcal', label: 'Hitting your calorie goal' },
   { k: 'week', label: 'Closing your weekly gym goal' },
+  { k: 'habits', label: 'Daily goals', sub: 'When you finish one, and at 8 am if you missed one yesterday' },
+  { k: 'weekly', label: 'Weekly summary', sub: 'Monday morning: workouts, protein, calories and daily goals' },
 ];
 const RECENT = 36 * 36e5;   // only things from the last day and a half get posted
 
@@ -148,6 +155,9 @@ function happenings() {
     if (t.p >= g.p) out.push({ kind: 'protein', ref: 'p:' + day, share: 'protein', data: { g: Math.round(t.p), goal: g.p, day } });
     if (t.kcal >= g.kcal * 0.9 && t.kcal <= g.kcal * 1.1) out.push({ kind: 'kcal', ref: 'k:' + day, share: 'kcal', data: { kcal: Math.round(t.kcal), goal: g.kcal, day } });
   }
+  for (const day of [addDays(ymd(), -1), ymd()]) {
+    for (const hb of habits()) if (isDone(hb, day)) out.push({ kind: 'habit', ref: `h:${hb.id}:${day}`, share: 'habits', data: { name: hb.name, day } });
+  }
   const n = state.workouts.filter((w) => w.start >= weekStart()).length;
   if (n >= g.workoutsPerWeek) out.push({ kind: 'week', ref: 'wk:' + ymd(weekStart()), share: 'week', data: { n, goal: g.workoutsPerWeek } });
   return out;
@@ -181,6 +191,15 @@ export async function publish() {
   } catch { /* offline: next sync tries again */ } finally { posting = false; }
 }
 
+/** Take back a post in every group (you unchecked a daily goal). */
+export async function unpublish(ref) {
+  const done = new Set(cache('carver.posted') || []);
+  for (const k of [...done]) if (k.endsWith('|' + ref)) done.delete(k);
+  cache('carver.posted', [...done]);
+  if (!account()) return;
+  try { const db = await client(); await db.from('carver_events').delete().eq('user_id', account().id).eq('ref', ref); } catch { /* offline */ }
+}
+
 // ---------- Showing posts ----------
 
 const ago = (iso) => {
@@ -208,8 +227,21 @@ function describe(e) {
     case 'protein': return { ico: '💪', text: `hit their protein goal${dayWord(d.day) ? ' ' + dayWord(d.day) : ''}`, sub: `${d.g} g of ${d.goal} g` };
     case 'kcal': return { ico: '🎯', text: `hit their calorie goal${dayWord(d.day) ? ' ' + dayWord(d.day) : ''}`, sub: `${fmtNum(d.kcal)} kcal` };
     case 'week': return { ico: '🔥', text: 'closed their weekly gym goal', sub: `${d.n} workout${d.n === 1 ? '' : 's'} this week` };
+    case 'habit': return { ico: '✅', text: `did ${d.name}`, sub: dayWord(d.day) === 'yesterday' ? 'yesterday' : '' };
+    case 'missed': return { ico: '❌', text: `missed ${d.name}`, sub: dayWord(d.day) || (d.day ? fmtDate(Date.parse(d.day + 'T12:00'), { weekday: 'long' }) : '') };
+    case 'weekly': return { ico: '📅', text: 'weekly update', sub: d.week ? `Week of ${fmtDate(Date.parse(d.week + 'T12:00'), { month: 'short', day: 'numeric' })}` : '', extra: weeklyLines(d) };
     default: return { ico: '•', text: 'did something', sub: '' };
   }
+}
+
+/** "Workouts 5/5", "Protein 5/7 days"… for a weekly summary. */
+export function weeklyLines(d) {
+  const out = [];
+  if (d.workouts) out.push(`🏋️ Workouts ${d.workouts.n}/${d.workouts.goal}`);
+  if (d.protein) out.push(`💪 Protein goal ${d.protein.days}/${d.protein.of} days`);
+  if (d.kcal) out.push(`🎯 Calorie goal ${d.kcal.days}/${d.kcal.of} days`);
+  for (const x of d.habits || []) out.push(`✅ ${x.name} ${x.days}/${x.of} days`);
+  return out;
 }
 
 export function eventRow(e, { showGroup = false } = {}) {
@@ -333,7 +365,7 @@ export function groupsScreen() {
         : !groups.length
           ? h('div.empty-groups',
             h('div.empty-title', 'Train with friends'),
-            h('div.empty-text', 'Make a group and share its invite code, or join a friend’s. Carver posts when you finish a workout, set a PR, go for a run, or hit your protein or calorie goal. You choose what each group sees.'),
+            h('div.empty-text', 'Make a group and share its invite code, or join a friend’s. Carver tells the group when you finish a workout or a daily goal, and at 8 am if you missed a daily goal yesterday. Every Monday everyone gets a weekly summary. You choose what each group sees.'),
             h('div.btn-pair', h('button.btn.gold', { onclick: () => createGroup().then((x) => { if (x) { selected = x.id; refresh(); } }) }, 'Make a group'), h('button.btn.dark', { onclick: () => joinGroup().then((x) => { if (x) { selected = x.id; refresh(); } }) }, 'Join with code')))
           : [
             groups.length > 1 ? h('div.chips.tight', groups.map((x) => h('button.chip' + (x.id === selected ? '.on' : ''), { onclick: () => { selected = x.id; draw(); } }, x.name))) : null,
@@ -344,6 +376,7 @@ export function groupsScreen() {
               h('div.btn-pair',
                 h('button.btn.gold-soft', { onclick: () => invite(g) }, 'Invite friends'),
                 h('button.btn.dark', { onclick: () => sharesSheet(g, draw) }, 'What I share'))),
+            h('section.card.push-card', pushRow()),
             h('div.section-head', h('h2.section-title', 'Activity'), loading ? h('span.section-count', 'Updating…') : null),
             list.length ? h('section.card.list-card', list.map((e) => (e.me ? h('button.own-post', { onclick: () => deletePost(e).then((ok) => ok && refresh()), 'aria-label': 'Your post. Tap to remove it.' }, eventRow(e)) : eventRow(e)))) : h('div.feed-empty.card', loading ? 'Loading…' : 'Nothing here yet. Posts show up as people train and hit goals.'),
             list.some((e) => e.me) ? h('p.fine', 'Tap one of your own posts to remove it.') : null,

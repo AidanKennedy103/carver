@@ -16,7 +16,9 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
   - Calories count as hit within ±10% of your goal.
   - Closing a ring plays a short celebration (daily rings once a day, weekly rings once a week). Banners say "Hit your protein goal!" or "Hit your calorie goal!".
 - **Today:** today's workout, food (calories and protein) and weigh-in, each with a quick button.
-- **Groups:** friends who see each other's training. Make a group and share its invite code, or join one. Carver posts when you're at the gym (start a workout), finish a workout (with PRs), go for a run or ride, hit your protein or calorie goal, or close your weekly gym goal. You choose what each group sees under **What I share**. The latest posts show on Home.
+- **Daily goals:** yes-or-no goals like "50 pushups", up to 6 (Goals → Daily goals). Each is a slider on Home: slide it across when it's done, tap it to undo. Before 8 am, yesterday's unfinished ones show too.
+- **Groups (accountability):** make a group and share its invite code, or join one. Carver posts when you're at the gym, finish a workout (with PRs), go for a run or ride, finish a daily goal, hit your protein or calorie goal, or close your weekly gym goal. At 8 am (your time) it posts the daily goals you missed yesterday, and every Monday morning a weekly summary: workouts, protein and calorie days, and each daily goal. You choose what each group sees under **What I share**. The latest posts show on Home.
+- **Notifications:** turn them on in Groups. You get a phone notification when someone in your groups finishes a workout, finishes or misses a daily goal, and for their Monday summary. On iPhone, Carver must be added to the Home Screen.
 - **Progress & trends cards:** your weight and 30-day change, and your maintenance calories, each with a mini graph. Tap one to open Progress or Trends.
 - **Monthly nudges:** set this month's goals, take this month's progress photo, and see last month's recap.
 - **Calendar:** workout days are gold. A week turns gold when you hit your workouts-per-week goal. Tap a day to open that workout.
@@ -131,6 +133,8 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 | `js/cloud.js`, `js/account.js`, `js/config.js` | Sign-in, syncing and merging, photo sync, shared food database; your Supabase settings |
 | `supabase/schema.sql` | Database setup for accounts, sync, shared foods and photos |
 | `js/groups.js`, `supabase/groups.sql` | Groups: invite codes, posting, the feed, what each person shares |
+| `js/habits.js` | Daily goals: the slide-to-complete sliders on Home |
+| `js/push.js`, `supabase/push.sql`, `supabase/functions/carver-push/` | Notifications, missed daily goals at 8 am and the Monday summary (server side) |
 | `js/trends.js`, `js/charts.js` | Trends tab and metabolism estimate; line, bar, sparkline and ring charts |
 | `js/settings.js`, `js/sound.js` | Settings, export/restore; the rest-timer chime |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Home-screen install, offline support, icons and launch screens |
@@ -153,6 +157,15 @@ Then open http://localhost:5181.
 4. Copy the Project URL and the publishable (or anon) key from **Project Settings → API Keys** into `js/config.js`, and push.
 
 Until then, Carver runs without accounts and everything stays on each phone.
+
+## Turn on notifications and the 8 am / Monday posts
+
+1. **Edge Functions → Secrets:** add `VAPID_PUBLIC_KEY` (the value in `js/config.js`), `VAPID_PRIVATE_KEY` (in `dev/vapid.json`, which isn't in git; keep it private) and `VAPID_SUBJECT` (`mailto:` plus the Carver Gmail address).
+2. **Edge Functions → Deploy a new function → Via editor:** name it `carver-push`, paste `supabase/functions/carver-push/index.ts`, and deploy. In its settings, turn **off** "Enforce JWT verification" (the database calls it without a login).
+3. **SQL Editor:** run `supabase/push.sql`.
+4. In the app: Home → Groups → Notifications → **Turn on**, then **Send a test**.
+
+If `dev/vapid.json` is lost, make a new key pair; everyone then turns notifications off and on again.
 
 ## Put it online (free)
 

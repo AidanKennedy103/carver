@@ -8,7 +8,8 @@ import { openSettings } from './settings.js';
 import { goTab } from './tabs.js';
 import { oneRmSection } from './onerm.js';
 import { rings, sparkline, COLORS } from './charts.js';
-import { openGoals, logCustom, customAmount } from './goals.js';
+import { openGoals } from './goals.js';
+import { habitsCard, isDone } from './habits.js';
 import { quickAdd } from './quickadd.js';
 import { takeProgressPhoto, progressPage } from './progress.js';
 import { trendsPage, metabolism } from './trends.js';
@@ -56,7 +57,7 @@ function ringCatalog() {
     { id: 'protein', label: 'Protein', color: COLORS.protein, cheer: 'Hit your protein goal!', day: (k) => { const v = dayTotals(k).p; return { value: v, goal: g.p, text: `${Math.round(v)} of ${g.p} g`, hit: v >= g.p }; } },
     { id: 'water', label: 'Water', color: '#2e8bd8', cheer: 'Hit your water goal!', day: (k) => { const v = waterOn(k), gw = g.water || 2500; return { value: v, goal: gw, text: `${(v / 1000).toFixed(1)} of ${(gw / 1000).toFixed(1)} L`, hit: v >= gw }; } },
     { id: 'weigh', label: 'Weigh-in', color: WEIGH_COLOR, cheer: 'Weighed in!', day: (k) => { const n = state.body.weights.some((w) => ymd(w.ts) === k) ? 1 : 0; return { value: n, goal: 1, text: n ? 'Done today' : 'Not yet today', hit: !!n }; } },
-    ...g.custom.map((c) => ({ id: c.id, custom: c, label: c.name, color: COLORS.custom, cheer: `${c.name} goal hit!`, day: (k) => { const v = customAmount(c.id, k); return { value: v, goal: c.target, text: `${fmtNum(v)} of ${fmtNum(c.target)} ${c.unit}`, hit: v >= c.target }; } })),
+    ...g.custom.map((c) => ({ id: c.id, custom: c, label: c.name, color: COLORS.custom, cheer: `${c.name}: done!`, day: (k) => { const d = isDone(c, k); return { value: d ? 1 : 0, goal: 1, text: d ? 'Done' : 'Not yet', hit: d }; } })),
   ];
 }
 export function ringIds() {
@@ -278,16 +279,18 @@ export function homePage() {
           h('div.rings-wrap', rings(goals, 132)),
           h('div.ring-legend', goals.map((g) => {
             const water = g.id === 'water';
-            const tap = view === 'day' && (g.custom || water);
-            const act = water ? { onclick: () => addWater(ymd(), 250), 'aria-label': 'Add 250 ml of water' } : tap ? { onclick: () => logCustom(g.id, 1), 'aria-label': `Add 1 ${g.custom.unit} to ${g.label}` } : {};
+            const tap = view === 'day' && water;
+            const act = tap ? { onclick: () => addWater(ymd(), 250), 'aria-label': 'Add 250 ml of water' } : {};
             return h(tap ? 'button.ring-row.tap' : 'div.ring-row', act,
               h('i.ring-dot', { style: { background: g.color } }),
               h('span.ring-text', h('span.ring-label', g.label, g.hit ? h('span.ring-check', ' ✓') : null), h('span.ring-val' + (g.over ? '.red-text' : ''), g.text)),
-              tap ? h('span.ring-plus', water ? '+250' : '+1') : null);
+              tap ? h('span.ring-plus', '+250') : null);
           })))
           : h('button.link', { onclick: editRings }, 'Pick your rings')),
       { left: view === 'day' ? setView('week') : null, right: view === 'week' ? setView('day') : null, target: () => body.querySelector('.rings-card') }),
       view === 'day' ? goals.filter((g) => g.hit && (g.id === 'protein' || g.id === 'kcal')).map((g) => h('div.hit-banner', h('span', '🏆'), g.cheer)) : null,
+
+      habitsCard(openGoals),
 
       // Today
       h('div.section-head', h('h2.section-title', 'Today')),
