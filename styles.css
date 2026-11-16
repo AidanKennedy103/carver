@@ -455,3 +455,46 @@ body.has-live .root .bottom-space { height: calc(160px + var(--safe-bottom)); }
 .scan-status { position: absolute; left: 0; right: 0; bottom: 10px; text-align: center; font-size: 14px; font-weight: 600; text-shadow: 0 1px 4px #000; padding: 0 12px; }
 .chips.tight { gap: 6px; }
 .chips.tight .chip { padding: 0 12px; height: 30px; font-size: 13px; }
+
+/* ---------- Fitness ---------- */
+.weight-card .chart { margin: 10px 0 4px; }
+.weight-card .btn-pair { margin-top: 12px; }
+.weight-change { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.empty-text.left { text-align: left; margin: 0 0 4px; max-width: none; }
+.photo-strip { display: grid; grid-auto-flow: column; grid-auto-columns: 112px; gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 0 16px 4px; scrollbar-width: none; }
+.photo-strip::-webkit-scrollbar { display: none; }
+.photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px; }
+.photo-thumb { position: relative; aspect-ratio: 3 / 4; border-radius: 12px; overflow: hidden; background: var(--surface); }
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-date { position: absolute; left: 6px; bottom: 6px; font-size: 11px; font-weight: 600; background: rgba(0, 0, 0, .6); padding: 2px 6px; border-radius: 6px; }
+.photo-full { width: 100%; border-radius: 16px; margin-top: 14px; display: block; background: var(--surface); min-height: 200px; }
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.compare-side { margin: 0; }
+.compare-side img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 12px; display: block; background: var(--surface); }
+.compare-side figcaption { display: flex; justify-content: space-between; font-size: 13px; margin-top: 6px; color: var(--muted); }
+.compare-side figcaption b { color: var(--text); }
+.segment.range { margin: 14px 0 10px; }
+.paste-box { height: auto; padding: 10px 14px; resize: vertical; margin-top: 8px; font-size: 15px; line-height: 1.4; }
+.howto { margin-top: 10px; background: var(--surface-2); border-radius: 12px; padding: 12px 14px; font-size: 14px; }
+.howto summary { font-weight: 600; color: var(--gold); cursor: pointer; }
+.howto ol { padding-left: 20px; margin: 10px 0 0; display: grid; gap: 6px; color: #d1d1d6; }
+.scale-box { text-align: center; padding: 30px 0 20px; }
+.scale-box .energy-v { font-size: 56px; }
+.scale-status { margin-top: 12px; color: var(--gold); font-weight: 600; }
+.qty-input.wide { width: 170px; }
+.form .btn.dark.wide { margin-top: 10px; }
+
+/* Monthly */
+.month-card { display: grid; gap: 10px; justify-items: start; }
+.month-line { font-size: 14px; display: flex; align-items: center; gap: 4px; color: #d1d1d6; }
+.month-line .icon { color: var(--gold); }
+.month-card .link { padding: 0; }
+.month-card .link .icon { transform: scaleX(-1); }
+.chips.static { padding: 0; }
+.chips.static .chip { cursor: default; }
+.goal-chips { padding-top: 6px; }
+.dot-new { width: 9px; height: 9px; border-radius: 50%; background: var(--gold); flex: none; }
+.recap-hero { padding: 18px 0 4px; }
+.recap-title { margin: 0 0 10px; font-size: 34px; font-weight: 800; letter-spacing: -.02em; }
+.recap-small { font-size: 14px; color: var(--muted); }
+.recap-list { margin-top: 10px; }

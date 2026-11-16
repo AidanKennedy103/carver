@@ -6,10 +6,11 @@ import { initTabs } from './tabs.js';
 import { homePage } from './home.js';
 import { workoutPage } from './workout.js';
 import { nutritionPage } from './nutrition.js';
+import { fitnessPage } from './fitness.js';
 import { openWorkout } from './session.js';
 
 initScreens(document.getElementById('app'));
-initTabs({ home: homePage, workout: workoutPage, nutrition: nutritionPage });
+initTabs({ home: homePage, workout: workoutPage, nutrition: nutritionPage, fitness: fitnessPage });
 
 // Redraw the main page when data changes (only if it's showing)
 onChange(() => top()?.refresh?.());
