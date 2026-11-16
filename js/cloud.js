@@ -64,7 +64,9 @@ export async function signOut() {
 function friendly(e) {
   const m = e.message || String(e);
   if (/expired|invalid|token/i.test(m)) return 'That code didn’t work. Check the newest email, or send a new code.';
-  if (/rate limit|too many|seconds/i.test(m)) return 'Too many codes sent. Wait a few minutes and try again.';
+  const secs = m.match(/after (\d+) seconds?/i);
+  if (secs) return `Wait ${secs[1]} seconds before asking for another code.`;
+  if (/rate limit|too many/i.test(m)) return 'Carver’s email sender has hit its hourly limit (a few emails an hour). Try again in an hour.';
   if (/fetch|network/i.test(m)) return 'No connection. Try again.';
   return m;
 }
