@@ -1,8 +1,8 @@
 // Home: today first (rings, workouts, food, weigh-in), then your week on the
 // calendar, your one-rep maxes, and your profile overview.
 
-import { h, fill, icon, push, promptBox, fmtDate, fmtNum, fmtDurationWords } from './ui.js';
-import { state, commit, exercise, overview, toDisplay, unit, ymd, dayTotals, weekStart, workoutStats } from './store.js';
+import { h, fill, icon, push, sheet, toast, promptBox, fmtDate, fmtNum, fmtDurationWords } from './ui.js';
+import { state, commit, exercise, overview, toDisplay, unit, ymd, addDays, dayTotals, weekStart, workoutStats } from './store.js';
 import { workoutDetail } from './workout.js';
 import { openSettings } from './settings.js';
 import { goTab } from './tabs.js';
@@ -32,36 +32,106 @@ function short(n) {
 }
 const fmtHours = (ms) => { const hrs = ms / 36e5; return hrs < 10 ? hrs.toFixed(1).replace(/\.0$/, '') : String(Math.round(hrs)); };
 
-// ---------- Goals for today ----------
+// ---------- Rings: you pick up to 4, each shown for today or for this week ----------
 
-/** Every ring for today, and whether it's closed. Calories count as hit within ±10% of the goal. */
-export function todayGoals() {
-  const today = ymd();
-  const t = dayTotals(today);
+export const MAX_RINGS = 4;
+const DEFAULT_RINGS = ['gym', 'kcal', 'protein'];
+const WEIGH_COLOR = '#9aa3b2';
+
+/** Every goal that can be a ring. day(key) says how that day went. */
+function ringCatalog() {
   const g = state.goals;
-  const weekCount = state.workouts.filter((w) => w.start >= weekStart()).length;
   return [
-    { id: 'gym', label: 'Gym', value: weekCount, goal: g.workoutsPerWeek, color: COLORS.gym, text: `${weekCount} of ${g.workoutsPerWeek} this week`, hit: weekCount >= g.workoutsPerWeek, cheer: 'Weekly gym goal hit!' },
-    { id: 'kcal', label: 'Calories', value: t.kcal, goal: g.kcal, color: COLORS.calories, text: `${fmtNum(t.kcal)} of ${fmtNum(g.kcal)} kcal`, hit: t.kcal >= g.kcal * 0.9 && t.kcal <= g.kcal * 1.1, over: t.kcal > g.kcal * 1.1, cheer: 'Hit your calorie goal!' },
-    { id: 'protein', label: 'Protein', value: t.p, goal: g.p, color: COLORS.protein, text: `${Math.round(t.p)} of ${g.p} g`, hit: t.p >= g.p, cheer: 'Hit your protein goal!' },
-    ...g.custom.map((c) => {
-      const v = customAmount(c.id, today);
-      return { id: c.id, custom: c, label: c.name, value: v, goal: c.target, color: COLORS.custom, text: `${fmtNum(v)} of ${fmtNum(c.target)} ${c.unit}`, hit: v >= c.target, cheer: `${c.name} goal hit!` };
-    }),
+    { id: 'gym', label: 'Workout', color: COLORS.gym, cheer: 'Workout done!', day: (k) => { const n = state.workouts.filter((w) => ymd(w.start) === k).length; return { value: n, goal: 1, text: n ? `${n} workout${n > 1 ? 's' : ''} today` : 'Not yet today', hit: n > 0 }; } },
+    { id: 'kcal', label: 'Calories', color: COLORS.calories, cheer: 'Hit your calorie goal!', day: (k) => { const v = dayTotals(k).kcal; return { value: v, goal: g.kcal, text: `${fmtNum(v)} of ${fmtNum(g.kcal)} kcal`, hit: v >= g.kcal * 0.9 && v <= g.kcal * 1.1, over: v > g.kcal * 1.1 }; } },
+    { id: 'protein', label: 'Protein', color: COLORS.protein, cheer: 'Hit your protein goal!', day: (k) => { const v = dayTotals(k).p; return { value: v, goal: g.p, text: `${Math.round(v)} of ${g.p} g`, hit: v >= g.p }; } },
+    { id: 'weigh', label: 'Weigh-in', color: WEIGH_COLOR, cheer: 'Weighed in!', day: (k) => { const n = state.body.weights.some((w) => ymd(w.ts) === k) ? 1 : 0; return { value: n, goal: 1, text: n ? 'Done today' : 'Not yet today', hit: !!n }; } },
+    ...g.custom.map((c) => ({ id: c.id, custom: c, label: c.name, color: COLORS.custom, cheer: `${c.name} goal hit!`, day: (k) => { const v = customAmount(c.id, k); return { value: v, goal: c.target, text: `${fmtNum(v)} of ${fmtNum(c.target)} ${c.unit}`, hit: v >= c.target }; } })),
   ];
 }
+export function ringIds() {
+  const ids = new Set(ringCatalog().map((r) => r.id));
+  return (state.goals.rings || [...DEFAULT_RINGS, ...state.goals.custom.map((c) => c.id)]).filter((id) => ids.has(id)).slice(0, MAX_RINGS);
+}
+/** Days a week you aim to hit a daily goal (the workout ring uses workouts per week). */
+export const weekTarget = (id) => (id === 'gym' ? state.goals.workoutsPerWeek : state.goals.ringWeek?.[id] ?? 7);
 
-/** Celebrate each goal once, the first time Home sees it closed today. */
-function celebrate(goals) {
+/** The rings you picked, for 'day' (today) or 'week' (Monday to today). */
+export function ringGoals(view = 'day') {
+  const cat = new Map(ringCatalog().map((r) => [r.id, r]));
   const today = ymd();
-  const done = new Set(state.celebrated?.[today] || []);
-  const fresh = goals.filter((g) => g.hit && !done.has(g.id));
+  return ringIds().map((id) => {
+    const r = cat.get(id);
+    if (view === 'day') return { ...r, ...r.day(today), view };
+    const goal = weekTarget(id);
+    let value = 0;
+    if (id === 'gym') value = state.workouts.filter((w) => w.start >= weekStart()).length;
+    else for (let k = ymd(weekStart()); k <= today; k = addDays(k, 1)) if (r.day(k).hit) value++;
+    const word = id === 'gym' ? 'workout' : 'day';
+    return {
+      ...r, view, value, goal, hit: value >= goal,
+      text: value > goal ? `${value} ${word}s this week · goal ${goal}` : `${value} of ${goal} ${word}${goal === 1 ? '' : 's'} this week`,
+      cheer: id === 'gym' ? 'Weekly gym goal hit!' : `${r.label}: ${goal} day${goal === 1 ? '' : 's'} this week!`,
+    };
+  });
+}
+
+/** Pick which goals are rings, and how many days a week each should be hit. */
+function editRings() {
+  let picked = ringIds();
+  const box = h('div');
+  const setWeek = (id, d) => { commit((st) => { st.goals.ringWeek = { ...(st.goals.ringWeek || {}), [id]: Math.min(7, Math.max(1, weekTarget(id) + d)) }; }); draw(); };
+  function draw() {
+    fill(box,
+      h('div.group', ringCatalog().map((r) => {
+        const on = picked.includes(r.id);
+        const full = !on && picked.length >= MAX_RINGS;
+        return h('div.group-row.ring-pick' + (full ? '.dim' : ''),
+          h('button.ring-pick-main', {
+            onclick: () => {
+              if (full) { toast(`Up to ${MAX_RINGS} rings`); return; }
+              picked = on ? picked.filter((x) => x !== r.id) : [...picked, r.id];
+              commit((st) => { st.goals.rings = picked; });
+              draw();
+            },
+          }, h('span.pick-check' + (on ? '.on' : ''), on ? icon('check', 16) : null), h('i.ring-dot', { style: { background: r.color } }), h('span', r.label)),
+          on && r.id !== 'gym' ? h('span.stepper',
+            h('button', { 'aria-label': 'Fewer days', onclick: () => setWeek(r.id, -1) }, '−'),
+            h('span', `${weekTarget(r.id)}×/wk`),
+            h('button', { 'aria-label': 'More days', onclick: () => setWeek(r.id, 1) }, '+')) : null,
+          on && r.id === 'gym' ? h('span.muted.small', `${weekTarget('gym')}×/wk`) : null);
+      })),
+      h('p.fine', `Pick up to ${MAX_RINGS}. Today shows how each goal is going today. Week counts the days you've hit it since Monday, against the days a week you set here. Workouts per week is set in Goals.`),
+      h('button.group-row.gold-text.plain', { onclick: () => { s.close(); openGoals(); } }, 'Goal amounts and your own goals…'),
+    );
+  }
+  draw();
+  const s = sheet(h('div.form',
+    h('div.sheet-head', h('span'), h('div.sheet-title', 'Your rings'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
+    box));
+}
+
+/** Celebrate each ring once when it closes: daily ones once a day, weekly ones once a week. */
+function celebrate() {
+  const today = ymd(), wk = 'w' + ymd(weekStart());
+  const doneD = new Set(state.celebrated?.[today] || []), doneW = new Set(state.celebrated?.[wk] || []);
+  const fresh = [
+    ...ringGoals('day').filter((g) => g.hit && !doneD.has(g.id)),
+    ...ringGoals('week').filter((g) => g.hit && !doneW.has(g.id)),
+  ];
   if (!fresh.length) return;
-  commit((s) => { s.celebrated = { [today]: [...done, ...fresh.map((g) => g.id)] }; });
+  commit((st) => {
+    st.celebrated = {
+      [today]: [...doneD, ...fresh.filter((g) => g.view === 'day').map((g) => g.id)],
+      [wk]: [...doneW, ...fresh.filter((g) => g.view === 'week').map((g) => g.id)],
+    };
+  });
+  const weekly = fresh.filter((g) => g.view === 'week');
+  const shown = weekly.length ? weekly : fresh;
   const overlay = h('div.cheer', h('div.cheer-card',
-    h('div.cheer-ring', rings(fresh.map((g) => ({ ...g, value: g.goal })), 96)),
-    h('div.cheer-title', fresh.length === 1 ? fresh[0].cheer : `${fresh.length} goals closed!`),
-    fresh.length > 1 ? h('div.cheer-sub', fresh.map((g) => g.label).join(' · ')) : null));
+    h('div.cheer-ring', rings(shown.map((g) => ({ ...g, value: g.goal })), 96)),
+    h('div.cheer-title', shown.length === 1 ? shown[0].cheer : `${shown.length} ${weekly.length ? 'weekly ' : ''}goals closed!`),
+    shown.length > 1 ? h('div.cheer-sub', shown.map((g) => g.label).join(' · ')) : null));
   overlay.addEventListener('click', () => overlay.remove());
   document.body.append(overlay);
   navigator.vibrate?.([30, 60, 30]);
@@ -128,7 +198,8 @@ export function homePage() {
     const first = state.workouts[state.workouts.length - 1];
     const since = Math.min(state.profile.joined || Date.now(), first?.start || Infinity);
     const today = ymd();
-    const goals = todayGoals();
+    const view = state.settings.ringView === 'week' ? 'week' : 'day';
+    const goals = ringGoals(view);
     const t = dayTotals(today);
     const todayWorkouts = state.workouts.filter((w) => ymd(w.start) === today);
     const todayWeigh = state.body.weights.filter((w) => ymd(w.ts) === today).pop();
@@ -144,13 +215,20 @@ export function homePage() {
 
       // Rings
       h('section.card.rings-card',
-        h('div.rings-wrap', rings(goals, 132)),
-        h('div.ring-legend', goals.map((g) => h(g.custom ? 'button.ring-row.tap' : 'div.ring-row', g.custom ? { onclick: () => logCustom(g.id, 1), 'aria-label': `Add 1 ${g.custom.unit} to ${g.label}` } : {},
-          h('i.ring-dot', { style: { background: g.color } }),
-          h('span.ring-text', h('span.ring-label', g.label, g.hit ? h('span.ring-check', ' ✓') : null), h('span.ring-val' + (g.over ? '.red-text' : ''), g.text)),
-          g.custom ? h('span.ring-plus', '+1') : null))),
-        h('button.rings-edit', { onclick: openGoals, 'aria-label': 'Edit goals' }, icon('edit', 16))),
-      goals.filter((g) => g.hit && (g.id === 'protein' || g.id === 'kcal')).map((g) => h('div.hit-banner', h('span', '🏆'), g.cheer)),
+        h('div.rings-top',
+          h('div.segment.ring-view', [['day', 'Today'], ['week', 'Week']].map(([v, l]) => h('button' + (view === v ? '.on' : ''), { onclick: () => commit((st) => { st.settings.ringView = v; }) }, l))),
+          h('button.rings-edit', { onclick: editRings, 'aria-label': 'Choose rings' }, icon('edit', 16))),
+        goals.length ? h('div.rings-body',
+          h('div.rings-wrap', rings(goals, 132)),
+          h('div.ring-legend', goals.map((g) => {
+            const tap = g.custom && view === 'day';
+            return h(tap ? 'button.ring-row.tap' : 'div.ring-row', tap ? { onclick: () => logCustom(g.id, 1), 'aria-label': `Add 1 ${g.custom.unit} to ${g.label}` } : {},
+              h('i.ring-dot', { style: { background: g.color } }),
+              h('span.ring-text', h('span.ring-label', g.label, g.hit ? h('span.ring-check', ' ✓') : null), h('span.ring-val' + (g.over ? '.red-text' : ''), g.text)),
+              tap ? h('span.ring-plus', '+1') : null);
+          })))
+          : h('button.link', { onclick: editRings }, 'Pick your rings')),
+      view === 'day' ? goals.filter((g) => g.hit && (g.id === 'protein' || g.id === 'kcal')).map((g) => h('div.hit-banner', h('span', '🏆'), g.cheer)) : null,
 
       // Today
       h('div.section-head', h('h2.section-title', 'Today')),
@@ -206,7 +284,7 @@ export function homePage() {
         h('span.pr-line-val', p.kg != null ? `${toDisplay(p.kg)} ${unit()}` : `${p.reps} reps`)))) : null,
       h('div.bottom-space'),
     );
-    celebrate(goals);
+    celebrate();
   }
 
   draw();

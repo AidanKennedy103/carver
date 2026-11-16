@@ -576,3 +576,20 @@ body.has-live .root .bottom-space { height: calc(160px + var(--safe-bottom)); }
 .lock-note { margin: 8px 0 0; }
 .lock-note.red { color: var(--red, #e5484d); }
 .slider-pct { min-width: 46px; display: inline-block; }
+
+/* Rings: picker and day/week view */
+.rings-card { flex-direction: column; align-items: stretch; gap: 12px; }
+.rings-top { display: flex; align-items: center; gap: 8px; }
+.ring-view { flex: 1; max-width: 200px; }
+.rings-top .rings-edit { position: static; margin-left: auto; }
+.rings-body { display: flex; align-items: center; gap: 16px; }
+.ring-pick { gap: 8px; }
+.ring-pick.dim { opacity: .45; }
+.ring-pick-main { flex: 1; display: flex; align-items: center; gap: 10px; text-align: left; min-height: 32px; }
+.pick-check { width: 22px; height: 22px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--faint); display: inline-flex; align-items: center; justify-content: center; color: #17110a; flex: none; }
+.pick-check.on { background: var(--gold); box-shadow: none; }
+.stepper { display: inline-flex; align-items: center; gap: 2px; background: var(--surface-3); border-radius: 9px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.stepper button { width: 30px; height: 30px; font-size: 18px; color: var(--gold); }
+.stepper span { min-width: 40px; text-align: center; }
+.small { font-size: 13px; }
+.plain { width: 100%; text-align: left; }
