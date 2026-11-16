@@ -87,7 +87,7 @@ export function historyCard(w) {
 
 // ---------- Workout detail ----------
 
-function workoutDetail(w) {
+export function workoutDetail(w) {
   const st = workoutStats(w);
   const el = h('div.page');
   const fmtSet = (info, s) => info.type === 'wr' ? `${toDisplay(s.weight)} ${unit()} × ${s.reps}` : info.type === 'bw' ? `${s.reps} reps` : fmtSecs(s.secs || 0);
