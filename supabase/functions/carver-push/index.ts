@@ -15,7 +15,9 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
-const VAPID = { publicKey: Deno.env.get('VAPID_PUBLIC_KEY') || '', privateKey: Deno.env.get('VAPID_PRIVATE_KEY') || '', subject: Deno.env.get('VAPID_SUBJECT') || 'mailto:carver@example.com' };
+// Keys are base64url; drop quotes, spaces or line breaks pasted along with them
+const key = (name: string) => (Deno.env.get(name) || '').replace(/[^A-Za-z0-9_-]/g, '');
+const VAPID = { publicKey: key('VAPID_PUBLIC_KEY'), privateKey: key('VAPID_PRIVATE_KEY'), subject: (Deno.env.get('VAPID_SUBJECT') || 'mailto:carver@example.com').trim().replace(/^["']|["']$/g, '') };
 
 const CARDIO: Record<string, string> = { run: 'run', walk: 'walk', cycle: 'ride', hike: 'hike', swim: 'swim', row: 'row', elliptical: 'elliptical session', hiit: 'HIIT session', sport: 'sport session', yoga: 'yoga session' };
 
@@ -130,7 +132,7 @@ async function send(subs: Sub[], msg: { title: string; body: string; tag?: strin
 }
 
 async function test(endpoint: string) {
-  if (!Deno.env.get('VAPID_PRIVATE_KEY') || !Deno.env.get('VAPID_PUBLIC_KEY')) return { ok: false, reason: 'secrets' };
+  if (VAPID.privateKey.length < 40 || VAPID.publicKey.length < 80) return { ok: false, reason: 'secrets' };
   const { data, error } = await db.from('carver_push').select('endpoint, p256dh, auth').eq('endpoint', endpoint);
   if (error) return { ok: false, reason: 'db', error: error.message };
   if (!data?.length) return { ok: false, reason: 'not-registered' };
