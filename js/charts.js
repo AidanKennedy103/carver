@@ -150,7 +150,9 @@ export function barChart(data, opts = {}) {
   if (goal != null) svg.append(s('line', { x1: padL, x2: W - padR, y1: py(goal), y2: py(goal), class: 'chart-goal' }));
   const every = Math.ceil(data.length / 6);
   pts.forEach((p, i) => {
-    if (i % every && i !== pts.length - 1) return;
+    const last = i === pts.length - 1;
+    if (i % every && !last) return;
+    if (!last && pts.length - 1 - i < every * 0.75) return;   // don't crowd the last label
     const lab = s('text', { x: p.px, y: H - 6, class: 'chart-axis', 'text-anchor': 'middle' });
     lab.textContent = fmtX(p.x);
     svg.append(lab);
