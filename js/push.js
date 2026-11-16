@@ -54,14 +54,15 @@ export async function testPush() {
   if (!sub) throw new Error('Turn notifications on first');
   await save(sub);   // make sure the server has this phone (fixes a sign-up that didn't save)
   const db = await client();
-  const { data, error } = await db.functions.invoke('carver-push', { body: { test: sub.endpoint } });
+  const timeout = new Promise((_, no) => setTimeout(() => no(new Error('No answer from the notification server after 20 seconds. Redeploy carver-push with the latest code.')), 20000));
+  const { data, error } = await Promise.race([db.functions.invoke('carver-push', { body: { test: sub.endpoint } }), timeout]);
   if (error) throw new Error(`The notification server didn’t answer (${error.message || 'error'}). Check it’s deployed as carver-push.`);
   const r = typeof data === 'string' ? (() => { try { return JSON.parse(data); } catch { return {}; } })() : data || {};
   if (r.ok) return 'Sent. It should arrive in a few seconds.';
   if (r.reason === 'secrets') throw new Error('The server is missing its VAPID secrets.');
   if (r.reason === 'not-registered') throw new Error('The server couldn’t find this phone. Turn notifications off and on, then try again.');
   if (r.reason === 'db') throw new Error(`Database error: ${r.error}`);
-  if (r.reason === 'apple') throw new Error(`Apple refused it (${r.status}): ${r.error}`);
+  if (r.reason === 'apple') throw new Error(r.status ? `The push service refused it (${r.status}): ${r.error || 'no reason given'}` : `Couldn’t reach the push service: ${r.error}`);
   return 'Sent (old server version: redeploy carver-push to see details).';
 }
 

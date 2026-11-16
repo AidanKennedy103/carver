@@ -13,10 +13,9 @@
 // Turn OFF "Enforce JWT verification" for this function: the database calls it without a login.
 
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
-import webpush from 'npm:web-push@3.6.7';
 
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
-webpush.setVapidDetails(Deno.env.get('VAPID_SUBJECT') || 'mailto:carver@example.com', Deno.env.get('VAPID_PUBLIC_KEY')!, Deno.env.get('VAPID_PRIVATE_KEY')!);
+const VAPID = { publicKey: Deno.env.get('VAPID_PUBLIC_KEY') || '', privateKey: Deno.env.get('VAPID_PRIVATE_KEY') || '', subject: Deno.env.get('VAPID_SUBJECT') || 'mailto:carver@example.com' };
 
 const CARDIO: Record<string, string> = { run: 'run', walk: 'walk', cycle: 'ride', hike: 'hike', swim: 'swim', row: 'row', elliptical: 'elliptical session', hiit: 'HIIT session', sport: 'sport session', yoga: 'yoga session' };
 
@@ -41,6 +40,74 @@ Deno.serve(async (req) => {
   }
 });
 
+// ---------- Web Push, with Web Crypto only ----------
+// Encrypts the message for one phone (RFC 8291, aes128gcm) and signs the request
+// with the VAPID key (RFC 8292). No library: Node-style ones can hang here.
+
+const enc = new TextEncoder();
+const b64u = {
+  decode: (s: string) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (s.length % 4)) % 4)), (c) => c.charCodeAt(0)),
+  encode: (b: ArrayBuffer | Uint8Array) => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+};
+const concat = (...parts: Uint8Array[]) => { const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0)); let i = 0; for (const p of parts) { out.set(p, i); i += p.length; } return out; };
+async function hkdf(salt: Uint8Array, ikm: Uint8Array, info: Uint8Array, bytes: number) {
+  const key = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, key, bytes * 8));
+}
+
+/** The encrypted body for one subscription. */
+export async function encryptPayload(p256dh: string, authSecret: string, payload: string, salt = crypto.getRandomValues(new Uint8Array(16)), local?: CryptoKeyPair) {
+  const uaPublic = b64u.decode(p256dh), auth = b64u.decode(authSecret);
+  const pair = local || await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']) as CryptoKeyPair;
+  const asPublic = new Uint8Array(await crypto.subtle.exportKey('raw', pair.publicKey));
+  const uaKey = await crypto.subtle.importKey('raw', uaPublic, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const shared = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: uaKey }, pair.privateKey, 256));
+  const ikm = await hkdf(auth, shared, concat(enc.encode('WebPush: info\0'), uaPublic, asPublic), 32);
+  const cek = await hkdf(salt, ikm, enc.encode('Content-Encoding: aes128gcm\0'), 16);
+  const nonce = await hkdf(salt, ikm, enc.encode('Content-Encoding: nonce\0'), 12);
+  const key = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
+  const cipher = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, key, concat(enc.encode(payload), new Uint8Array([2]))));
+  const header = new Uint8Array(21 + asPublic.length);
+  header.set(salt, 0);
+  new DataView(header.buffer).setUint32(16, 4096);
+  header[20] = asPublic.length;
+  header.set(asPublic, 21);
+  return concat(header, cipher);
+}
+
+const signers = new Map<string, CryptoKey>();
+/** "vapid t=…, k=…" for the push service at this endpoint. */
+async function vapidAuth(endpoint: string, v: { publicKey: string; privateKey: string; subject: string }) {
+  const pub = b64u.decode(v.publicKey);
+  let key = signers.get(v.privateKey);
+  if (!key) {
+    key = await crypto.subtle.importKey('jwk', { kty: 'EC', crv: 'P-256', d: v.privateKey, x: b64u.encode(pub.slice(1, 33)), y: b64u.encode(pub.slice(33, 65)), ext: true }, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+    signers.set(v.privateKey, key);
+  }
+  const head = b64u.encode(enc.encode(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
+  const claims = b64u.encode(enc.encode(JSON.stringify({ aud: new URL(endpoint).origin, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: v.subject })));
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, enc.encode(`${head}.${claims}`));
+  return `vapid t=${head}.${claims}.${b64u.encode(sig)}, k=${v.publicKey}`;
+}
+
+/** Send one notification. Gives up after 10 seconds. */
+export async function webPush(sub: { endpoint: string; p256dh: string; auth: string }, payload: string, v: { publicKey: string; privateKey: string; subject: string }, opts: { ttl?: number; urgency?: string } = {}) {
+  const body = await encryptPayload(sub.p256dh, sub.auth, payload);
+  const res = await fetch(sub.endpoint, {
+    method: 'POST',
+    headers: {
+      Authorization: await vapidAuth(sub.endpoint, v),
+      'Content-Encoding': 'aes128gcm',
+      'Content-Type': 'application/octet-stream',
+      TTL: String(opts.ttl ?? 43200),
+      Urgency: opts.urgency || 'normal',
+    },
+    body,
+    signal: AbortSignal.timeout(10000),
+  });
+  return { ok: res.ok, status: res.status, body: res.ok ? '' : await res.text().catch(() => '') };
+}
+
 // ---------- Sending ----------
 
 type Sub = { endpoint: string; p256dh: string; auth: string };
@@ -49,13 +116,15 @@ type Sub = { endpoint: string; p256dh: string; auth: string };
 async function send(subs: Sub[], msg: { title: string; body: string; tag?: string }) {
   return await Promise.all(subs.map(async (s) => {
     try {
-      const r = await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(msg), { TTL: 60 * 60 * 12, urgency: 'high' });
-      return { ok: true, status: r?.statusCode };
-    } catch (e) {
+      const r = await webPush(s, JSON.stringify(msg), VAPID, { ttl: 60 * 60 * 12, urgency: 'high' });
+      if (r.ok) return { ok: true, status: r.status };
       // The phone unsubscribed or the app was removed: forget it
-      if (e?.statusCode === 404 || e?.statusCode === 410) await db.from('carver_push').delete().eq('endpoint', s.endpoint);
-      console.error('push failed', e?.statusCode, e?.body || e?.message);
-      return { ok: false, status: e?.statusCode, error: String(e?.body || e?.message || e).slice(0, 200) };
+      if (r.status === 404 || r.status === 410) await db.from('carver_push').delete().eq('endpoint', s.endpoint);
+      console.error('push refused', r.status, r.body);
+      return { ok: false, status: r.status, error: r.body.slice(0, 200) };
+    } catch (e) {
+      console.error('push failed', e);
+      return { ok: false, status: 0, error: String(e?.message || e).slice(0, 200) };
     }
   }));
 }
