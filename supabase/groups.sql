@@ -1,4 +1,4 @@
--- >>> CARVER GROUPS SETUP. If you can read this line, you pasted the right thing. <<<
+-- >>> CARVER GROUPS + ACCOUNT SETUP. If you can read this line, you pasted the right thing. <<<
 -- Paste this whole file into Supabase → SQL Editor → New query, then click Run.
 -- Run it after schema.sql. It's safe to run again.
 --
@@ -111,3 +111,18 @@ create policy "carver group photos: sharer deletes" on storage.objects for delet
 
 grant execute on function public.carver_create_group(text, text) to authenticated;
 grant execute on function public.carver_join_group(text, text) to authenticated;
+
+-- ============================================================
+-- Delete my account (Settings → Delete account)
+-- The app first removes your photos from storage, then calls this. Deleting the
+-- user removes your synced data, group memberships and posts (they cascade).
+-- Foods you added to the shared database stay, without your name on them.
+-- ============================================================
+create or replace function public.carver_delete_account() returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'Sign in first'; end if;
+  delete from auth.users where id = auth.uid();
+end $$;
+revoke all on function public.carver_delete_account() from public, anon;
+grant execute on function public.carver_delete_account() to authenticated;

@@ -744,3 +744,4 @@ button.macro-rows { width: 100%; text-align: left; }
 .facts summary::after { content: ' ›'; }
 .facts[open] summary::after { content: ' ⌄'; }
 .facts-row { display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0; border-bottom: .5px solid var(--line); font-variant-numeric: tabular-nums; }
+.about-card { padding: 4px 16px; } .about-card p { font-size: 14px; line-height: 1.5; color: #d1d1d6; margin: 12px 0; } .about-card a { color: var(--gold); }

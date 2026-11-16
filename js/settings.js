@@ -1,9 +1,10 @@
 // Settings: units, default rest, back up / restore, reset.
 
-import { h, sheet, toast, confirmBox, promptBox, fmtSecs, actionSheet, refreshAll } from './ui.js';
+import { h, sheet, toast, confirmBox, promptBox, fmtSecs, actionSheet, refreshAll, push } from './ui.js';
 import { state, commit, exportJSON, importJSON, resetAll } from './store.js';
 import { REST_CHOICES } from './block.js';
 import { accountSection } from './account.js';
+import { aboutScreen } from './about.js';
 import { clearPhotos } from './photos.js';
 import { importCronometer } from './cronometer.js';
 import { account } from './cloud.js';
@@ -76,7 +77,8 @@ export function openSettings() {
           resetAll(); await clearPhotos(); refreshAll(); s.close(); toast('Erased');
         },
       }, h('span', 'Erase all data'))),
-    h('p.fine.center', 'Carver beta · v0.4'),
+    h('div.group', h('button.group-row', { onclick: () => { s.close(); push(aboutScreen); } }, h('span', 'About & privacy'), h('span.row-val', '›'))),
+    h('p.fine.center', 'Carver beta · v0.5'),
   ));
 }
 

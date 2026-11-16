@@ -63,7 +63,12 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 - **Import from Cronometer:** in Settings, pick Cronometer's "Food & Recipe Entries" export (CSV). Every entry comes in with its nutrients, in the right meal, and pasting the same file twice is fine.
 - **Shared food database:** when you're signed in, foods you create (with the switch on) and foods you scan are added for everyone, under **Community**. For the beta they appear straight away. To review them first, see the note in `supabase/schema.sql`.
 - **Barcode scanner:** uses the camera and looks the product up in Open Food Facts, a free, open database. It checks your foods and the Carver database first. Scanned foods are saved to My foods. You can also type the barcode in.
-- **Goals:** calories, protein, carbs, fat, workouts per week, and your own daily goals.
+- **Goals:** calories, protein, carbs, fat, water, workouts per week, and your own daily goals. Calories and macros are linked: type any three and the one you changed longest ago fills itself in (marked *auto*).
+- **Week strip:** Monday to Sunday under the date, each day's calories against your goal (gold when on target). Tap a day to jump to it.
+- **Eaten or left:** tap the macro bars to switch between grams eaten and grams left.
+- **Per meal:** each meal shows its protein, carbs and fat.
+- **Nutrition facts:** the amount screen opens a full list of nutrients with % of daily targets.
+- **Food icons:** emoji, plus small drawings for foods no emoji fits (protein bars, shakes, powder, tofu…).
 
 ### Fitness: runs, rides and other cardio
 - **Import from Apple Health:** a Shortcut copies your workouts (Apple Watch, Strava, Nike Run Club, anything that saves to Health) and you tap **Paste from Health**. It reads the Shortcut's lines, CSV, or JSON from export apps, skips ones already imported, and leaves out strength workouts (log those in Workout).
@@ -96,6 +101,8 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 ### Everywhere
 - **Accounts and sync:** sign in with your email (Home → Settings → Sign in with email, then type the code you're emailed) on each device and they share one account. Workouts, food, weights, activities, goals and progress photos sync. Changes from both devices are merged, so nothing logged on either is lost, and deleting something on one removes it on the other.
 - **Export / restore** everything (except photos) as a JSON backup in Settings.
+- **Delete account** (Settings → Account) removes your synced data, photos, group memberships and posts.
+- **About & privacy** (Settings): what's stored where, food-data credits (USDA; Open Food Facts under ODbL), open-source licenses, and a not-medical-advice note.
 - Works offline once opened (gyms often have bad signal). Updates itself when you come back to the app.
 
 ## Files
@@ -112,6 +119,8 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 | `js/workout.js`, `js/session.js`, `js/block.js`, `js/picker.js`, `js/exercises.js` | Workout page, live workout, sets, exercise picker, exercise library |
 | `js/nutrition.js` | The food diary page and meal shortcuts |
 | `js/foodpicker.js`, `js/quickadd.js`, `js/recipes.js` | Finding foods and amounts, favorites, creating and editing foods; quick add; recipes |
+| `js/food-icons.js` | Drawn icons for foods with no good emoji |
+| `js/about.js` | About & privacy screen |
 | `js/nutrition-report.js`, `js/food-util.js` | Day micronutrients and the 7/30-day report; shared nutrition helpers |
 | `js/foods.js`, `js/barcode.js`, `js/cronometer.js` | Food list, barcode scanner, Cronometer import |
 | `js/goals.js` | Goals sheet and custom daily goals |
@@ -138,7 +147,7 @@ Then open http://localhost:5181.
 
 1. Create a free project at supabase.com. Then open **SQL Editor**, paste `supabase/schema.sql`, and click **Run**.
 2. Sign-in is by email code, with no password. In **Authentication → Emails → Templates → Magic Link**, put `{{ .Token }}` in the email (for example "Your Carver code is {{ .Token }}") so it contains the code. A link can't be used, because on iPhone it opens Safari instead of the home-screen app.
-3. For groups, also run `supabase/groups.sql` the same way.
+3. For groups and account deletion, also run `supabase/groups.sql` the same way.
 4. Copy the Project URL and the publishable (or anon) key from **Project Settings → API Keys** into `js/config.js`, and push.
 
 Until then, Carver runs without accounts and everything stays on each phone.
@@ -152,6 +161,12 @@ It's on GitHub (`AidanKennedy103/carver`, private) and Cloudflare Workers. Every
 ```bash
 cd scripts && npm install && cd .. && node scripts/make-icons.mjs
 ```
+
+## Before charging money
+
+- **Open Food Facts** data is under the ODbL: keep the credit (it's on About & privacy), and the shared food database must stay open under the same license if you share it.
+- Add a **privacy policy** and **terms of service** (health data: PIPEDA in Canada, US state health-data laws, GDPR for EU users), a minimum age, and a business entity before taking payments. Account deletion is already built in.
+- Check the **"Carver" trademark** for apps and fitness.
 
 ## Known limits (beta)
 

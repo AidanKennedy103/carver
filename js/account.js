@@ -1,9 +1,9 @@
 // Sign in / create an account, so your phones (and iPad) share the same data.
 
-import { h, fill, sheet, toast, actionSheet, refreshAll } from './ui.js';
+import { h, fill, sheet, toast, actionSheet, confirmBox, refreshAll } from './ui.js';
 import { resetAll } from './store.js';
 import { clearPhotos } from './photos.js';
-import { enabled, account, sendCode, verifyCode, signOut, sync, syncStatus, onStatus } from './cloud.js';
+import { enabled, account, sendCode, verifyCode, signOut, deleteAccount, sync, syncStatus, onStatus } from './cloud.js';
 
 const ago = (ts) => {
   if (!ts) return 'not yet';
@@ -28,7 +28,8 @@ export function accountSection(closeSettings) {
               { label: 'Sign out', onClick: () => out(false) },
               { label: 'Sign out and clear this phone', danger: true, onClick: () => out(true) },
             ]),
-          }, h('span', 'Sign out')))
+          }, h('span', 'Sign out')),
+          h('button.group-row.danger', { onclick: removeAccount }, h('span', 'Delete account')))
         : h('div.group', h('button.group-row.gold-text', { onclick: () => { closeSettings?.(); signInSheet(); } }, h('span', 'Sign in with email'), h('span.row-val', '›'))),
       st.error && u ? h('p.fine.red-text', st.error) : null,
       h('p.fine', u ? 'Everything you log syncs to every device signed in to this account, including progress photos.' : 'Sign in on each device to share one account: workouts, food, weight and photos sync between them.'),
@@ -39,6 +40,18 @@ export function accountSection(closeSettings) {
   // Settings is a sheet: stop listening once it's gone
   setTimeout(function check() { if (box.isConnected) setTimeout(check, 2000); else off(); }, 2000);
   return box;
+}
+
+/** Delete the account for good (asks twice). */
+async function removeAccount() {
+  if (!(await confirmBox('Delete your account?', 'This permanently deletes your synced data, progress photos, groups you’re in and your posts, on every device. Export a backup first if you want a copy. This cannot be undone.', { ok: 'Continue', danger: true }))) return;
+  if (!(await confirmBox('Are you sure?', 'Your Carver account will be gone.', { ok: 'Delete account', danger: true }))) return;
+  try {
+    toast('Deleting…');
+    await deleteAccount();
+    resetAll(); await clearPhotos(); refreshAll();
+    toast('Account deleted');
+  } catch (e) { toast(e.message || 'Couldn’t delete it. Check your connection.'); }
 }
 
 /** Sign out. Clearing the phone suits a shared device; your account keeps everything either way. */

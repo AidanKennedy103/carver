@@ -126,7 +126,7 @@ async function suggestGoals() {
       sug ? [
         h('div.group',
           [['Calories', sug.kcal, 'kcal'], ['Protein', sug.p, 'g'], ['Carbs', sug.c, 'g'], ['Fat', sug.f, 'g']].map(([l, v, u]) => h('div.goal-row', h('span', l), h('span.row-val', `${v.toLocaleString()} ${u}`)))),
-        h('p.fine', `Calories come from ${sug.from}. Protein is about 1 g per lb of body weight${sug.kg ? ` (${toDisplay(sug.kg)} ${unit()})` : ''}, fat about 27% of calories, and carbs fill the rest.`),
+        h('p.fine', `Calories come from ${sug.from}. Protein is about 1 g per lb of body weight${sug.kg ? ` (${toDisplay(sug.kg)} ${unit()})` : ''}, fat about 27% of calories, and carbs fill the rest. A starting point, not medical advice.`),
         h('button.btn.gold.wide', { onclick: () => { commit((st) => { Object.assign(st.goals, { kcal: sug.kcal, p: sug.p, c: sug.c, f: sug.f }); }); s.close(); toast('Goals updated'); } }, 'Use these goals'),
       ] : h('p.fine', 'Log your weight first (Home → Progress), and Carver can suggest goals.'),
     );

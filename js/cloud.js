@@ -64,6 +64,32 @@ export async function signOut() {
   tell();
 }
 
+/**
+ * Delete the account and everything in it: photos in storage (yours and any you
+ * shared to groups), then the account itself, which removes synced data, group
+ * memberships and posts. Foods you shared stay in the database without your name.
+ */
+export async function deleteAccount() {
+  const db = await client();
+  if (!user) throw new Error('Sign in first');
+  const bucket = db.storage.from('carver-photos');
+  const mine = await bucket.list(user.id, { limit: 1000 });
+  if (mine.data?.length) await bucket.remove(mine.data.map((f) => `${user.id}/${f.name}`));
+  const groups = await db.from('carver_members').select('group_id').eq('user_id', user.id);
+  for (const g of groups.data || []) {
+    const files = await bucket.list(`groups/${g.group_id}`, { limit: 1000, search: user.id });
+    const own = (files.data || []).filter((f) => f.name.startsWith(user.id + '-')).map((f) => `groups/${g.group_id}/${f.name}`);
+    if (own.length) await bucket.remove(own);
+  }
+  const { error } = await db.rpc('carver_delete_account');
+  if (error) throw new Error(friendly(error));
+  await db.auth.signOut().catch(() => {});
+  user = null;
+  for (const k of ['carver.base', 'carver.synced', 'carver.photoUp', 'carver.groups', 'carver.feed', 'carver.members', 'carver.posted']) { try { localStorage.removeItem(k); } catch { /* fine */ } }
+  status.last = 0;
+  tell();
+}
+
 function friendly(e) {
   const m = e.message || String(e);
   if (/expired|invalid|token/i.test(m)) return 'That code didn’t work. Check the newest email, or send a new code.';

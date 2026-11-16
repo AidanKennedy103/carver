@@ -78,7 +78,7 @@ export function addFood({ date = ymd(), meal = null, cat: startCat = null, onPic
     if (res === 'loading') return h('div.empty-small', 'Searching Open Food Facts…');
     if (res === 'error') return h('button.ex-row.online-row', { onclick: () => searchOnline(q) }, h('span.ex-badge.food-badge', '⚠️'), h('span.ex-text', h('span.ex-name', 'Couldn’t search online'), h('span.ex-sub', 'Check your connection, then tap to try again')));
     if (!res.length) return h('div.empty-small', 'Nothing online either. Try fewer words, scan the barcode, or create the food.');
-    return [h('div.list-label', 'From Open Food Facts'), ...res.map((f) => {
+    return [h('div.list-label', 'From Open Food Facts (ODbL)'), ...res.map((f) => {
       const sv = f.servings[0];
       return h('button.ex-row', { onclick: () => choose(keepFood(f)) },
         h('span.ex-badge.food-badge', '🏷️'),
