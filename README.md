@@ -16,6 +16,7 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
   - Calories count as hit within ±10% of your goal.
   - Closing a ring plays a short celebration (daily rings once a day, weekly rings once a week). Banners say "Hit your protein goal!" or "Hit your calorie goal!".
 - **Today:** today's workout, food (calories and protein) and weigh-in, each with a quick button.
+- **Groups:** friends who see each other's training. Make a group and share its invite code, or join one. Carver posts when you're at the gym (start a workout), finish a workout (with PRs), go for a run or ride, hit your protein or calorie goal, or close your weekly gym goal. You choose what each group sees under **What I share**. The latest posts show on Home.
 - **Progress & trends cards:** your weight and 30-day change, and your maintenance calories, each with a mini graph. Tap one to open Progress or Trends.
 - **Monthly nudges:** set this month's goals, take this month's progress photo, and see last month's recap.
 - **Calendar:** workout days are gold. A week turns gold when you hit your workouts-per-week goal. Tap a day to open that workout.
@@ -93,6 +94,7 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 | `js/progress.js`, `js/body.js`, `js/photos.js`, `js/monthly.js` | Progress tab, weight and imports, progress photos, monthly goals and recaps |
 | `js/cloud.js`, `js/account.js`, `js/config.js` | Sign-in, syncing and merging, photo sync, shared food database; your Supabase settings |
 | `supabase/schema.sql` | Database setup for accounts, sync, shared foods and photos |
+| `js/groups.js`, `supabase/groups.sql` | Groups: invite codes, posting, the feed, what each person shares |
 | `js/trends.js`, `js/charts.js` | Trends tab and metabolism estimate; line, bar, sparkline and ring charts |
 | `js/settings.js`, `js/sound.js` | Settings, export/restore; the rest-timer chime |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Home-screen install, offline support, icons and launch screens |
@@ -111,7 +113,8 @@ Then open http://localhost:5181.
 
 1. Create a free project at supabase.com. Then open **SQL Editor**, paste `supabase/schema.sql`, and click **Run**.
 2. Sign-in is by email code, with no password. In **Authentication → Emails → Templates → Magic Link**, put `{{ .Token }}` in the email (for example "Your Carver code is {{ .Token }}") so it contains the code. A link can't be used, because on iPhone it opens Safari instead of the home-screen app.
-3. Copy the Project URL and the publishable (or anon) key from **Project Settings → API Keys** into `js/config.js`, and push.
+3. For groups, also run `supabase/groups.sql` the same way.
+4. Copy the Project URL and the publishable (or anon) key from **Project Settings → API Keys** into `js/config.js`, and push.
 
 Until then, Carver runs without accounts and everything stays on each phone.
 

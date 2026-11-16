@@ -15,6 +15,8 @@ import { takeProgressPhoto, progressPage } from './progress.js';
 import { trendsPage, metabolism } from './trends.js';
 import { latestWeight, change, trend } from './body.js';
 import { sparkline } from './charts.js';
+import { groupsCard } from './groups.js';
+import { enabled as cloudOn } from './cloud.js';
 import { monthlyPrompts } from './monthly.js';
 
 function greeting() {
@@ -286,6 +288,10 @@ export function homePage() {
       // Monthly nudges
       prompts.map((p) => h('button.card.prompt', { onclick: p.action },
         h('span.prompt-ico', p.icon), h('span.today-text', h('span.today-k.strong', p.text), h('span.today-v', p.sub)), h('span.prompt-go', icon('back', 16)))),
+
+      // Groups
+      cloudOn() ? h('div.section-head', h('h2.section-title', 'Groups')) : null,
+      groupsCard(),
 
       // Progress and Trends live here instead of in the tab bar
       h('div.section-head', h('h2.section-title', 'Progress & trends')),

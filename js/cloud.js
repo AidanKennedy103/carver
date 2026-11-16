@@ -12,7 +12,7 @@ import { state, onSaved, replaceState, setSharedFoods, sharedFoods } from './sto
 export const enabled = () => !!(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY);
 
 let clientP = null;
-function client() {
+export function client() {
   if (clientP) return clientP;
   if (!enabled()) return Promise.resolve(null);
   return (clientP = import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm')
@@ -141,6 +141,7 @@ export function sync() {
       status.last = Date.now();
       localStorage.setItem('carver.synced', String(status.last));
       syncPhotos().catch(() => {});
+      import('./groups.js').then((g) => g.publish()).catch(() => {});
     } catch (e) {
       status.error = /fetch|network|Failed/i.test(e.message || '') ? 'Offline. Will sync when you’re back online.' : (e.message || 'Sync failed');
     } finally {
