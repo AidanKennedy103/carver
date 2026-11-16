@@ -22,10 +22,15 @@ export const latestWeight = () => weights()[weights().length - 1] || null;
 
 /** Smoothed weight: each point averaged with the 7 days before it, so daily water swings don't hide the trend. */
 export function trend(list = weights()) {
-  return list.map((w) => {
-    const win = list.filter((x) => x.ts <= w.ts && x.ts > w.ts - 7 * 864e5);
-    return { x: w.ts, y: win.reduce((n, x) => n + x.kg, 0) / win.length, raw: w.kg, id: w.id };
-  });
+  // Sliding window over the sorted list: one pass, however long your history
+  const out = [];
+  let lo = 0, sum = 0;
+  for (let i = 0; i < list.length; i++) {
+    sum += list[i].kg;
+    while (list[lo].ts <= list[i].ts - 7 * 864e5) sum -= list[lo++].kg;
+    out.push({ x: list[i].ts, y: sum / (i - lo + 1), raw: list[i].kg, id: list[i].id });
+  }
+  return out;
 }
 
 /** Weight change (kg) over the last `days`, using the smoothed trend. */
@@ -62,6 +67,33 @@ export function logWeightSheet() {
 
 // ---------- Import: Apple Health (paste) and Bluetooth scales ----------
 
+const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+/** Finds a date in text: ISO, "2026/11/14", "Nov 14, 2026 at 7:30 AM" or "11/14/2026 7:30". Returns { ts, match }. */
+export function findDate(text) {
+  let m = text.match(/(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{1,2}):(\d{2})(?::\d{2})?(?:[.,]\d+)?(Z|[+-]\d{2}:?\d{2})?)?/);
+  if (m) {
+    const t = m[6] ? Date.parse(m[0].replace(' ', 'T')) : new Date(+m[1], m[2] - 1, +m[3], +(m[4] || 12), +(m[5] || 0)).getTime();
+    if (!isNaN(t)) return { ts: t, match: m[0] };
+  }
+  m = text.match(/([A-Za-z]{3,9})\.? (\d{1,2}),? (\d{4})(?:,? (?:at )?(\d{1,2}):(\d{2})(?::\d{2})? ?([AaPp]\.?[Mm]\.?)?)?/);
+  if (m && MONTHS.includes(m[1].slice(0, 3).toLowerCase())) {
+    let hr = +(m[4] || 12);
+    if (m[6]) { const pm = /p/i.test(m[6]); if (pm && hr < 12) hr += 12; if (!pm && hr === 12) hr = 0; }
+    return { ts: new Date(+m[3], MONTHS.indexOf(m[1].slice(0, 3).toLowerCase()), +m[2], hr, +(m[5] || 0)).getTime(), match: m[0] };
+  }
+  m = text.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})(?:,? (\d{1,2}):(\d{2}))?/) || null;
+  if (m) return { ts: new Date(+m[1], m[2] - 1, +m[3], +(m[4] || 12), +(m[5] || 0)).getTime(), match: m[0] };
+  m = text.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:,? (\d{1,2}):(\d{2}) ?([AaPp][Mm])?)?/);
+  if (m) {
+    let hr = +(m[4] || 12);
+    if (m[6]) { const pm = /p/i.test(m[6]); if (pm && hr < 12) hr += 12; if (!pm && hr === 12) hr = 0; }
+    const y = +m[3] < 100 ? 2000 + +m[3] : +m[3];
+    return { ts: new Date(y, m[1] - 1, +m[2], hr, +(m[5] || 0)).getTime(), match: m[0] };
+  }
+  return null;
+}
+
+
 /**
  * Pull weigh-ins out of pasted text. Each line can be "date value" or just a value
  * (which means now). Handles "2026-11-14 182.4", "Nov 14, 2026 at 7:02 AM, 182.4 lb", "82.7 kg".
@@ -74,12 +106,8 @@ export function parseWeights(text, defaultUnit = unit()) {
     const u = /\bkg\b/i.test(line) ? 'kg' : /\blbs?\b/i.test(line) ? 'lb' : defaultUnit;
     // Take the date part off before reading the weight
     let ts = Date.now(), rest = line;
-    const iso = line.match(/\d{4}-\d{2}-\d{2}(?:[T ]\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?/);
-    if (iso) { const t = Date.parse(iso[0].replace(' ', 'T')); if (!isNaN(t)) ts = t; rest = line.replace(iso[0], ' '); }
-    else {
-      const words = line.match(/[A-Za-z]{3,9}\.? \d{1,2},? \d{4}(?:,? (?:at )?\d{1,2}:\d{2}(?: ?[AP]M)?)?/i);
-      if (words) { const t = Date.parse(words[0].replace(' at ', ' ')); if (!isNaN(t)) ts = t; rest = line.replace(words[0], ' '); }
-    }
+    const d = findDate(line);
+    if (d) { ts = d.ts; rest = line.replace(d.match, ' '); }
     const nums = [...rest.matchAll(/\d+(?:[.,]\d+)?/g)].map((m) => parseFloat(m[0].replace(',', '.')));
     const v = nums.find((n) => (u === 'kg' ? n >= 25 && n <= 300 : n >= 55 && n <= 660));
     if (v == null) continue;
@@ -147,7 +175,7 @@ export async function connectScale() {
   const s = sheet(h('div.form',
     h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', dev.name || 'Scale'), h('span')),
     h('div.scale-box', val, h('div.energy-k', unit()), status),
-  ), { onClose: () => { try { dev.gatt.disconnect(); } catch { /* fine */ } } });
+  ), { onClose: () => { clearTimeout(timer); timer = 0; try { dev.gatt.disconnect(); } catch { /* fine */ } } });
   try {
     const server = await dev.gatt.connect();
     const ch = await (await server.getPrimaryService(0x181d)).getCharacteristic(0x2a9d);

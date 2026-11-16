@@ -2,7 +2,7 @@
 // every set you log, at any rep count, shows your strength trend.
 
 import { h, icon, push, navBar, fmtDate } from './ui.js';
-import { state, commit, exercise, e1rmHistory, oneRmExercises, toDisplay, unit } from './store.js';
+import { commit, exercise, e1rmHistory, oneRmExercises, toDisplay, unit } from './store.js';
 import { lineChart, sparkline } from './charts.js';
 import { pickExercises } from './picker.js';
 
@@ -35,10 +35,10 @@ export function oneRmSection() {
     return h('button.card.orm-card', { onclick: () => push(() => oneRmDetail(id)) },
       h('div.orm-name', info.name),
       hist.length
-        ? [h('div.orm-val', toDisplay(cur).split('.')[0], h('span.orm-unit', unit())),
+        ? [h('div.orm-val', Math.round(+toDisplay(cur)), h('span.orm-unit', unit())),
           h('div.orm-sub', hist.length < 2 ? 'First entry' : Math.round(+toDisplay(diff)) === 0 ? 'No change yet' : `${diff > 0 ? '+' : ''}${Math.round(+toDisplay(diff))} ${unit()} since start`),
           sparkline(hist.slice(-12).map((p) => p.y)),
-          best > cur + 1e-6 ? h('div.orm-best', `Best ${toDisplay(best).split('.')[0]}`) : null]
+          best > cur + 1e-6 ? h('div.orm-best', `Best ${Math.round(+toDisplay(best))}`) : null]
         : h('div.orm-sub', 'Log it to start the graph'));
   }))];
 }
@@ -46,7 +46,7 @@ export function oneRmSection() {
 function oneRmDetail(id) {
   const info = exercise(id);
   const hist = e1rmHistory(id);
-  const fmt = (kg) => `${toDisplay(kg).split('.')[0]} ${unit()}`;
+  const fmt = (kg) => `${Math.round(+toDisplay(kg))} ${unit()}`;
   const best = hist.reduce((m, p) => (p.y > (m?.y || 0) ? p : m), null);
   const el = h('div.page',
     navBar({ title: 'One-rep max', backLabel: 'Home' }),

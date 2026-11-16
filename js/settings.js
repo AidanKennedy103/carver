@@ -4,6 +4,7 @@ import { h, sheet, toast, confirmBox, promptBox, fmtSecs, actionSheet, refreshAl
 import { state, commit, exportJSON, importJSON, resetAll } from './store.js';
 import { REST_CHOICES } from './block.js';
 import { accountSection } from './account.js';
+import { clearPhotos } from './photos.js';
 import { importCronometer } from './cronometer.js';
 import { account } from './cloud.js';
 
@@ -20,6 +21,7 @@ export function openSettings() {
   const nameVal = h('span.row-val', state.profile.name || 'Add');
   const fileIn = h('input', { type: 'file', accept: 'application/json,.json', hidden: true, onchange: async (e) => {
     const f = e.target.files[0];
+    e.target.value = '';
     if (!f) return;
     try {
       const text = await f.text();
@@ -71,10 +73,10 @@ export function openSettings() {
       h('button.group-row.danger', {
         onclick: async () => {
           if (!(await confirmBox('Erase everything?', account() ? 'Deletes all your data on this phone and on every device signed in to your account. This cannot be undone.' : 'Deletes all your data on this phone. This cannot be undone.', { ok: 'Erase', danger: true }))) return;
-          resetAll(); refreshAll(); s.close(); toast('Erased');
+          resetAll(); await clearPhotos(); refreshAll(); s.close(); toast('Erased');
         },
       }, h('span', 'Erase all data'))),
-    h('p.fine.center', 'Carver beta · v0.3'),
+    h('p.fine.center', 'Carver beta · v0.4'),
   ));
 }
 
@@ -91,5 +93,6 @@ async function exportData() {
   document.body.append(a);
   a.click();
   a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
   toast('Backup downloaded');
 }

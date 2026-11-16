@@ -1,9 +1,9 @@
 // The Workout page: quick start, My plans (up to 5), and History.
 // Also the plan editor and the workout detail screen.
 
-import { h, fill, icon, push, pop, navBar, actionSheet, confirmBox, promptBox, toast, fmtDate, fmtDurationWords, fmtDuration, fmtNum, fmtSecs } from './ui.js';
+import { h, fill, icon, push, pop, navBar, actionSheet, confirmBox, promptBox, toast, fmtDate, fmtDurationWords, fmtNum, fmtSecs } from './ui.js';
 import { state, commit, save, uid, exercise, savePlan, deletePlan, workoutStats, toDisplay, unit, e1rm, MAX_PLANS } from './store.js';
-import { startWorkout, openWorkout, repeatWorkout, saveAsPlan } from './session.js';
+import { startWorkout, repeatWorkout, saveAsPlan } from './session.js';
 import { exerciseCard, newSet } from './block.js';
 import { pickExercises } from './picker.js';
 import { openSettings } from './settings.js';
@@ -111,7 +111,7 @@ export function workoutDetail(w) {
         onclick: () => actionSheet(w.name, [
           { label: 'Repeat this workout', onClick: () => { pop(); repeatWorkout(w); } },
           { label: 'Save as a plan', onClick: () => saveAsPlan(w) },
-          { label: 'Rename', onClick: async () => { const n = await promptBox('Rename workout', w.name); if (n) { commit(() => { w.name = n; }); pop(); } } },
+          { label: 'Rename', onClick: async () => { const n = await promptBox('Rename workout', w.name); if (n) { commit((s) => { const x = s.workouts.find((y) => y.id === w.id); if (x) x.name = n; }); pop(); } } },
           { label: 'Delete workout', danger: true, onClick: async () => {
             if (await confirmBox('Delete this workout?', 'This cannot be undone.', { ok: 'Delete', danger: true })) { commit((s) => { s.workouts = s.workouts.filter((x) => x.id !== w.id); }); pop(); }
           } },

@@ -23,7 +23,9 @@ export function client() {
 // ---------- Account ----------
 
 let user = null;
-const status = { syncing: false, last: +localStorage.getItem('carver.synced') || 0, error: '' };
+let lastSynced = 0;
+try { lastSynced = +localStorage.getItem('carver.synced') || 0; } catch { /* storage blocked */ }
+const status = { syncing: false, last: lastSynced, error: '' };
 const statusListeners = new Set();
 export const onStatus = (fn) => { statusListeners.add(fn); return () => statusListeners.delete(fn); };
 const tell = () => statusListeners.forEach((f) => f());
@@ -54,9 +56,10 @@ export async function verifyCode(email, code) {
 
 export async function signOut() {
   const db = await client();
-  await db.auth.signOut();
+  const { error } = await db.auth.signOut();
+  if (error) throw new Error(friendly(error));
   user = null;
-  for (const k of ['carver.base', 'carver.synced', 'carver.photoUp']) localStorage.removeItem(k);
+  for (const k of ['carver.base', 'carver.synced', 'carver.photoUp', 'carver.groups', 'carver.feed', 'carver.members', 'carver.posted']) { try { localStorage.removeItem(k); } catch { /* fine */ } }
   status.last = 0;
   tell();
 }
@@ -137,7 +140,9 @@ export function sync() {
   running = (async () => {
     status.syncing = true; status.error = ''; tell();
     try {
-      for (let tries = 0; tries < 4; tries++) if (await syncOnce()) break;
+      let ok = false;
+      for (let tries = 0; tries < 4 && !ok; tries++) ok = await syncOnce();
+      if (!ok) throw new Error('Busy syncing. Will try again shortly.');
       status.last = Date.now();
       localStorage.setItem('carver.synced', String(status.last));
       syncPhotos().catch(() => {});

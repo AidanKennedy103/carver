@@ -675,3 +675,4 @@ body.has-live .root .bottom-space { height: calc(160px + var(--safe-bottom)); }
 .feed-photo { display: block; width: 100%; max-width: 260px; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 12px; margin-top: 8px; background: var(--surface-2); }
 .own-post { cursor: pointer; }
 .plan-muscles { margin-top: 8px; }
+.own-post { display: block; width: 100%; text-align: left; } .own-post + .own-post .feed-row, .own-post + .feed-row, .feed-row + .own-post .feed-row { border-top: .5px solid var(--line); }

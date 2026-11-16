@@ -106,7 +106,7 @@ function mealMenu(meal, list, date) {
   const actions = [];
   if (prev.length) actions.push({ label: `Copy yesterday’s ${meal.name.toLowerCase()} (${kcal(prev)} kcal)`, onClick: () => { prev.forEach((e) => logFood(copyEntry(e, date, meal.id))); toast(`Copied ${prev.length} item${prev.length > 1 ? 's' : ''}`); } });
   if (list.length) actions.push({ label: 'Save as a meal', onClick: () => saveMeal(list, meal) });
-  if (state.food.meals?.length) actions.push({ label: 'Add a saved meal', onClick: () => addFood({ date, meal: meal.id, cat: 'Meals' }) });
+  if (state.food.meals?.length) actions.push({ label: 'Add a saved meal', onClick: () => addFood({ date, meal: meal.id, cat: 'Saved meals' }) });
   if (list.length) actions.push({ label: `Clear ${meal.name.toLowerCase()}`, danger: true, onClick: async () => { if (await confirmBox(`Clear ${meal.name.toLowerCase()}?`, `Removes ${list.length} item${list.length > 1 ? 's' : ''}.`, { ok: 'Clear', danger: true })) commit((s) => { const ids = new Set(list.map((e) => e.id)); s.food.log = s.food.log.filter((e) => !ids.has(e.id)); }); } });
   if (!actions.length) { toast(`Nothing in yesterday’s ${meal.name.toLowerCase()} to copy`); return; }
   actionSheet(meal.name, actions);
@@ -116,7 +116,7 @@ async function saveMeal(list, meal) {
   const name = await promptBox('Name this meal', list.length === 1 ? list[0].name : `My ${meal.name.toLowerCase()}`, { placeholder: 'e.g. Usual breakfast' });
   if (!name?.trim()) return;
   commit((s) => { s.food.meals = [...(s.food.meals || []), { id: uid(), name: name.trim(), items: list.map((e) => copyEntry(e, null, null)) }]; });
-  toast('Saved. Find it under Meals when you add food.');
+  toast('Saved. Find it under Saved meals when you add food.');
 }
 
 function logMeal(m, date, meal) {
@@ -203,7 +203,7 @@ export function quickAdd({ date = ymd(), meal = null, entry = null } = {}) {
     lockBtn[m.k] = h('button.lock-btn', { 'aria-label': `Lock ${m.name}`, onclick: () => (st.lock === m.k ? setLock(null) : setLock(m.k, Math.round(gramsOf(m.k)))) });
     return h('div.slider-row',
       h('div.slider-head', h('span.macro-name', h('i.swatch', { style: { background: MACRO_COLOR[m.k] } }), m.name),
-        h('span.slider-g', gramIn[m.k], h('span', '00a0g'), h('span.slider-pct'), lockBtn[m.k])),
+        h('span.slider-g', gramIn[m.k], h('span', '\u00a0g'), h('span.slider-pct'), lockBtn[m.k])),
       input);
   }));
   const presetRow = h('div.chips.tight', PRESETS.map((p) => h('button.chip', { onclick: () => { st.lock = null; st.p = p.p; st.c = p.c; st.f = p.f; syncSliders(); update(); } }, p.name)));
@@ -251,7 +251,7 @@ export function quickAdd({ date = ymd(), meal = null, entry = null } = {}) {
     for (const m of MACROS) {
       const locked = st.lock === m.k;
       if (document.activeElement !== gramIn[m.k]) gramIn[m.k].value = r0(gramsOf(m.k));
-      gramIn[m.k].parentNode.querySelector('.slider-pct').textContent = `00a0· ${Math.round(st[m.k])}%`;
+      gramIn[m.k].parentNode.querySelector('.slider-pct').textContent = `\u00a0· ${Math.round(st[m.k])}%`;
       sliders[m.k].disabled = locked;
       sliders[m.k].closest('.slider-row').classList.toggle('locked', locked);
       lockBtn[m.k].classList.toggle('on', locked);
@@ -311,11 +311,11 @@ export function addFood({ date = ymd(), meal = null, cat: startCat = null } = {}
     oninput: () => { q = search.value.toLowerCase().trim(); draw(); },
   });
   const chips = h('div.chips.no-drag');
-  const drawChips = () => chips.replaceChildren(...['Recent', ...(state.food.meals?.length ? ['Meals'] : []), 'All', 'My foods', ...(sharedFoods().length ? ['Community'] : []), ...CATEGORIES].map((c) => h('button.chip' + (c === cat ? '.on' : ''), { onclick: () => { cat = c; drawChips(); draw(); } }, c)));
+  const drawChips = () => chips.replaceChildren(...['Recent', ...(state.food.meals?.length ? ['Saved meals'] : []), 'All', 'My foods', ...(sharedFoods().length ? ['Community'] : []), ...CATEGORIES].map((c) => h('button.chip' + (c === cat ? '.on' : ''), { onclick: () => { cat = c; drawChips(); draw(); } }, c)));
 
   function draw() {
     let items;
-    if (cat === 'Meals' && !q) {
+    if (cat === 'Saved meals' && !q) {
       const meals = state.food.meals || [];
       list.replaceChildren(...meals.map((m) => h('button.ex-row', {
         onclick: () => actionSheet(m.name, [

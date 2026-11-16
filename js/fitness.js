@@ -1,10 +1,10 @@
 // Fitness: runs, walks, rides and other cardio. Imported from Apple Health (a
 // Shortcut copies them, you paste) or added by hand. Gym workouts live in Workout.
 
-import { h, fill, icon, navBar, sheet, toast, actionSheet, confirmBox, fmtDate, fmtNum, fmtDurationWords } from './ui.js';
+import { h, fill, icon, navBar, sheet, toast, confirmBox, fmtDate, fmtNum, fmtDurationWords } from './ui.js';
 import { state, commit, uid, unit, weekStart } from './store.js';
 import { barChart, COLORS } from './charts.js';
-import { latestWeight } from './body.js';
+import { latestWeight, findDate } from './body.js';
 
 export const ACTIVITY_TYPES = [
   { id: 'run', name: 'Run', icon: '🏃', met: 9.8, words: ['run', 'running', 'jog'] },
@@ -63,32 +63,6 @@ function addImported(list) {
 }
 
 // ---------- Reading pasted text ----------
-
-const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-/** Finds a date in text: ISO, "2026/11/14", "Nov 14, 2026 at 7:30 AM" or "11/14/2026 7:30". Returns { ts, match }. */
-export function findDate(text) {
-  let m = text.match(/(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{1,2}):(\d{2})(?::\d{2})?(?:[.,]\d+)?(Z|[+-]\d{2}:?\d{2})?)?/);
-  if (m) {
-    const t = m[6] ? Date.parse(m[0].replace(' ', 'T')) : new Date(+m[1], m[2] - 1, +m[3], +(m[4] || 12), +(m[5] || 0)).getTime();
-    if (!isNaN(t)) return { ts: t, match: m[0] };
-  }
-  m = text.match(/([A-Za-z]{3,9})\.? (\d{1,2}),? (\d{4})(?:,? (?:at )?(\d{1,2}):(\d{2})(?::\d{2})? ?([AaPp]\.?[Mm]\.?)?)?/);
-  if (m && MONTHS.includes(m[1].slice(0, 3).toLowerCase())) {
-    let hr = +(m[4] || 12);
-    if (m[6]) { const pm = /p/i.test(m[6]); if (pm && hr < 12) hr += 12; if (!pm && hr === 12) hr = 0; }
-    return { ts: new Date(+m[3], MONTHS.indexOf(m[1].slice(0, 3).toLowerCase()), +m[2], hr, +(m[5] || 0)).getTime(), match: m[0] };
-  }
-  m = text.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})(?:,? (\d{1,2}):(\d{2}))?/) || null;
-  if (m) return { ts: new Date(+m[1], m[2] - 1, +m[3], +(m[4] || 12), +(m[5] || 0)).getTime(), match: m[0] };
-  m = text.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:,? (\d{1,2}):(\d{2}) ?([AaPp][Mm])?)?/);
-  if (m) {
-    let hr = +(m[4] || 12);
-    if (m[6]) { const pm = /p/i.test(m[6]); if (pm && hr < 12) hr += 12; if (!pm && hr === 12) hr = 0; }
-    const y = +m[3] < 100 ? 2000 + +m[3] : +m[3];
-    return { ts: new Date(y, m[1] - 1, +m[2], hr, +(m[5] || 0)).getTime(), match: m[0] };
-  }
-  return null;
-}
 
 function typeFrom(text) {
   const t = text.toLowerCase();

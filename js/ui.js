@@ -124,7 +124,7 @@ export function navBar({ title = '', back = true, backLabel = 'Back', right = []
 /** A bottom sheet that slides up. Returns { el, close }. */
 export function sheet(content, { full = false, onClose } = {}) {
   const backdrop = h('div.backdrop');
-  const panel = h('div.sheet' + (full ? '.full' : ''), h('div.grabber'), content);
+  const panel = h('div.sheet' + (full ? '.full' : ''), { role: 'dialog', 'aria-modal': 'true' }, h('div.grabber'), content);
   const wrap = h('div.sheet-wrap', backdrop, panel);
   document.body.append(wrap);
   requestAnimationFrame(() => requestAnimationFrame(() => wrap.classList.add('open')));
@@ -217,7 +217,7 @@ export function promptBox(title, value = '', { placeholder = '', ok = 'Save', in
 let toastTimer;
 export function toast(text) {
   let t = document.querySelector('.toast');
-  if (!t) { t = h('div.toast'); document.body.append(t); }
+  if (!t) { t = h('div.toast', { role: 'status', 'aria-live': 'polite' }); document.body.append(t); }
   t.textContent = text;
   t.classList.add('show');
   clearTimeout(toastTimer);

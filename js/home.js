@@ -7,14 +7,12 @@ import { workoutDetail } from './workout.js';
 import { openSettings } from './settings.js';
 import { goTab } from './tabs.js';
 import { oneRmSection } from './onerm.js';
-import { rings, COLORS } from './charts.js';
+import { rings, sparkline, COLORS } from './charts.js';
 import { openGoals, logCustom, customAmount } from './goals.js';
 import { quickAdd } from './nutrition.js';
-import { logWeightSheet } from './body.js';
 import { takeProgressPhoto, progressPage } from './progress.js';
 import { trendsPage, metabolism } from './trends.js';
-import { latestWeight, change, trend } from './body.js';
-import { sparkline } from './charts.js';
+import { logWeightSheet, latestWeight, change, trend } from './body.js';
 import { groupsCard } from './groups.js';
 import { activityType } from './fitness.js';
 import { enabled as cloudOn } from './cloud.js';
@@ -327,7 +325,7 @@ export function homePage() {
         h('span.pr-line-val', p.kg != null ? `${toDisplay(p.kg)} ${unit()}` : `${p.reps} reps`)))) : null,
       h('div.bottom-space'),
     );
-    celebrate();
+    setTimeout(celebrate, 0);   // it may save, which redraws: do that after this draw
   }
 
   draw();

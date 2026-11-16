@@ -72,7 +72,7 @@ export function exerciseCard(opts) {
 
     const row = h('div.set-row' + (set.done ? '.done' : ''));
     const num = h('button.set-num.t-' + set.type, {
-      'aria-label': 'Set type',
+      'aria-label': `Set ${label}: change set type`,
       onclick: () => actionSheet('Set ' + label, [
         ...Object.entries(SET_TYPES).map(([k, v]) => ({ label: (set.type === k ? '✓ ' : '') + v, onClick: () => { set.type = k; opts.redraw(); } })),
         { label: 'Delete set', danger: true, onClick: () => { ex.sets.splice(si, 1); opts.redraw(); } },
@@ -86,6 +86,7 @@ export function exerciseCard(opts) {
       const shown = v == null ? '' : field === 'weight' ? toDisplay(v) : field === 'secs' ? fmtSecs(v) : String(v);
       return h('input.set-input', {
         value: shown, placeholder: ph, inputmode: mode2, enterkeyhint: 'next', autocomplete: 'off',
+        'aria-label': `Set ${label} ${field === 'weight' ? `weight (${unit()})` : field === 'secs' ? 'time' : 'reps'}`,
         onfocus: (e) => e.target.select(),
         oninput: (e) => {
           const t = e.target.value.replace(',', '.');

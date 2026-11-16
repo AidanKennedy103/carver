@@ -231,9 +231,10 @@ const signed = new Map();
 function groupPhoto(path) {
   const img = h('img.feed-photo', { alt: 'Progress photo', loading: 'lazy' });
   const show = (u) => { img.src = u; };
-  if (signed.has(path)) show(signed.get(path));
+  const hit = signed.get(path);
+  if (hit && hit.until > Date.now()) show(hit.url);
   else client().then((db) => db.storage.from('carver-photos').createSignedUrl(path, 3600)).then(({ data }) => {
-    if (data?.signedUrl) { signed.set(path, data.signedUrl); show(data.signedUrl); }
+    if (data?.signedUrl) { signed.set(path, { url: data.signedUrl, until: Date.now() + 50 * 6e4 }); show(data.signedUrl); }
   }).catch(() => {});
   return img;
 }
@@ -344,7 +345,7 @@ export function groupsScreen() {
                 h('button.btn.gold-soft', { onclick: () => invite(g) }, 'Invite friends'),
                 h('button.btn.dark', { onclick: () => sharesSheet(g, draw) }, 'What I share'))),
             h('div.section-head', h('h2.section-title', 'Activity'), loading ? h('span.section-count', 'Updating…') : null),
-            list.length ? h('section.card.list-card', list.map((e) => (e.me ? h('div.own-post', { onclick: () => deletePost(e).then((ok) => ok && refresh()) }, eventRow(e)) : eventRow(e)))) : h('div.feed-empty.card', loading ? 'Loading…' : 'Nothing here yet. Posts show up as people train and hit goals.'),
+            list.length ? h('section.card.list-card', list.map((e) => (e.me ? h('button.own-post', { onclick: () => deletePost(e).then((ok) => ok && refresh()), 'aria-label': 'Your post. Tap to remove it.' }, eventRow(e)) : eventRow(e)))) : h('div.feed-empty.card', loading ? 'Loading…' : 'Nothing here yet. Posts show up as people train and hit goals.'),
             list.some((e) => e.me) ? h('p.fine', 'Tap one of your own posts to remove it.') : null,
             h('button.link.red-text.leave', { onclick: () => leaveGroup(g).then((ok) => ok && refresh()) }, 'Leave group'),
           ],

@@ -121,7 +121,7 @@ export function recapScreen(key) {
         tile(r.prs.length, 'Records', 'personal bests')),
       r.gains.length ? h('section.card.list-card.recap-list', r.gains.map((g) => h('div.pr-line',
         h('span.pr-icon', icon('trophy', 16)),
-        h('span.pr-line-text', h('span.pr-line-name', exercise(g.exId).name), h('span.pr-line-kind', `Est. 1RM ${toDisplay(g.from).split('.')[0]} → ${toDisplay(g.to).split('.')[0]} ${unit()}`)),
+        h('span.pr-line-text', h('span.pr-line-name', exercise(g.exId).name), h('span.pr-line-kind', `Est. 1RM ${Math.round(+toDisplay(g.from))} → ${Math.round(+toDisplay(g.to))} ${unit()}`)),
         h('span.pr-line-val', `+${Math.round(+toDisplay(g.to - g.from))}`)))) : null,
 
       r.cardio ? [h('div.section-head', h('h2.section-title', 'Cardio')),

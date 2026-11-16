@@ -28,8 +28,10 @@ const tx = async (mode, fn) => {
 async function resize(file, max) {
   const img = await createImageBitmap(file).catch(async () => {
     const el = new Image();
-    el.src = URL.createObjectURL(file);
+    const u = URL.createObjectURL(file);
+    el.src = u;
     await el.decode();
+    URL.revokeObjectURL(u);
     return el;
   });
   const scale = Math.min(1, max / Math.max(img.width, img.height));
@@ -50,6 +52,7 @@ export async function addPhoto(file, ts = Date.now()) {
 
 export async function deletePhoto(id) {
   await tx('readwrite', (s) => s.delete(id));
+  for (const size of ['thumb', 'full']) { const u = urls.get(id + size); if (u) { URL.revokeObjectURL(u); urls.delete(id + size); } }
   commit((st) => { st.body.photos = (st.body.photos || []).filter((p) => p.id !== id); });
 }
 
@@ -66,6 +69,13 @@ export async function photoURL(id, size = 'thumb') {
 }
 
 export const photos = () => state.body.photos || [];
+
+/** Remove every photo image from this phone (used by Erase and sign-out). */
+export async function clearPhotos() {
+  await tx('readwrite', (s) => s.clear());
+  urls.forEach((u) => URL.revokeObjectURL(u));
+  urls.clear();
+}
 
 /** Raw stored photo (for sync), or undefined. */
 export const getRecord = (id) => tx('readonly', (s) => s.get(id));

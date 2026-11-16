@@ -59,7 +59,7 @@ export function readCronometer(text) {
   if (iDay < 0 || col(/^energy \(kcal\)/i) < 0) throw new Error('That isn’t a Cronometer export. Use “Food & Recipe Entries” or “Daily Nutrition”.');
   const nut = [];
   COLS.forEach(([re, key, mult = 1]) => { const i = col(re); if (i >= 0 && !nut.some((n) => n.key === key)) nut.push({ i, key, mult }); });
-  const entries = [];
+  const entries = [], seen = new Map();
   for (const r of rows.slice(1)) {
     const day = (r[iDay] || '').trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) continue;
@@ -68,8 +68,11 @@ export function readCronometer(text) {
     if (!n.kcal) continue;
     const name = iName >= 0 ? (r[iName] || 'Food').trim() : 'Cronometer day total';
     const amount = iAmt >= 0 ? (r[iAmt] || '').trim() : '';
+    const key = [day, iTime >= 0 ? r[iTime] : '', name, amount, n.kcal].join('|');
+    const nth = (seen.get(key) || 0) + 1;   // the same food twice in one day gets two entries
+    seen.set(key, nth);
     entries.push({
-      id: 'cr-' + hash([day, iTime >= 0 ? r[iTime] : '', name, amount, n.kcal].join('|')),
+      id: 'cr-' + hash(key + '#' + nth),
       date: day, meal: iName >= 0 ? MEAL_OF(iGroup >= 0 ? r[iGroup] : '') : 'snacks',
       name: name.length > 60 ? name.slice(0, 57) + '…' : name, icon: '📥', quick: true, imported: 'cronometer', note: amount, n,
       ts: new Date(day + 'T12:00:00').getTime(),

@@ -1,6 +1,8 @@
 // Sign in / create an account, so your phones (and iPad) share the same data.
 
-import { h, fill, sheet, toast, confirmBox } from './ui.js';
+import { h, fill, sheet, toast, actionSheet, refreshAll } from './ui.js';
+import { resetAll } from './store.js';
+import { clearPhotos } from './photos.js';
 import { enabled, account, sendCode, verifyCode, signOut, sync, syncStatus, onStatus } from './cloud.js';
 
 const ago = (ts) => {
@@ -22,10 +24,10 @@ export function accountSection(closeSettings) {
           h('div.group-row', h('span', u.email), h('span.row-val', st.syncing ? 'Syncing…' : '✓')),
           h('button.group-row', { onclick: () => sync() }, h('span', 'Sync now'), h('span.row-val', st.error ? '⚠︎' : `Synced ${ago(st.last)}`)),
           h('button.group-row.danger', {
-            onclick: async () => {
-              if (!(await confirmBox('Sign out?', 'Your data stays on this phone and in your account. Sign in again to keep syncing.', { ok: 'Sign out' }))) return;
-              await signOut(); toast('Signed out');
-            },
+            onclick: () => actionSheet('Sign out?', [
+              { label: 'Sign out', onClick: () => out(false) },
+              { label: 'Sign out and clear this phone', danger: true, onClick: () => out(true) },
+            ]),
           }, h('span', 'Sign out')))
         : h('div.group', h('button.group-row.gold-text', { onclick: () => { closeSettings?.(); signInSheet(); } }, h('span', 'Sign in with email'), h('span.row-val', '›'))),
       st.error && u ? h('p.fine.red-text', st.error) : null,
@@ -34,7 +36,18 @@ export function accountSection(closeSettings) {
   };
   draw();
   const off = onStatus(() => (box.isConnected ? draw() : off()));
+  // Settings is a sheet: stop listening once it's gone
+  setTimeout(function check() { if (box.isConnected) setTimeout(check, 2000); else off(); }, 2000);
   return box;
+}
+
+/** Sign out. Clearing the phone suits a shared device; your account keeps everything either way. */
+async function out(clear) {
+  try {
+    await signOut();
+    if (clear) { resetAll(); await clearPhotos(); refreshAll(); }
+    toast(clear ? 'Signed out and cleared this phone' : 'Signed out');
+  } catch (e) { toast(e.message || 'Couldn’t sign out. Check your connection.'); }
 }
 
 export function signInSheet() {

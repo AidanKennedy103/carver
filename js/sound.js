@@ -13,6 +13,7 @@ document.addEventListener('click', unlockAudio, { once: true });
 
 export function beep() {
   if (!ctx) return;
+  if (ctx.state !== 'running') ctx.resume().catch(() => {});   // iOS pauses audio while the app is in the background
   const t = ctx.currentTime;
   [0, 0.18].forEach((d, i) => {
     const o = ctx.createOscillator(), g = ctx.createGain();

@@ -10,7 +10,8 @@ export function openGoals() {
   const g = state.goals;
   const field = (label, key, unit, step = 1) => {
     const input = h('input.field.goal-input', { value: g[key] ?? '', inputmode: 'decimal', 'aria-label': label });
-    input.addEventListener('input', () => { const v = num(input.value); if (v != null && v >= 0) { commit((s) => { s.goals[key] = Math.round(v / step) * step; }); hint(); } });
+    // Save when you leave the field (saving on every keystroke redraws the whole app)
+    input.addEventListener('change', () => { const v = num(input.value); if (v != null && v >= 0) { commit((s) => { s.goals[key] = Math.round(v / step) * step; }); hint(); } });
     return h('label.goal-row', h('span', label), h('span.goal-field', input, h('span.goal-unit', unit)));
   };
   const hintEl = h('p.fine');
