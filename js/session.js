@@ -60,7 +60,7 @@ function workoutScreen() {
     back: true, backLabel: 'Hide',
     right: [h('button.btn.gold.small', { onclick: finish }, 'Finish')],
   });
-  nav.querySelector('.nav-title').append(h('div.nav-title-stack', h('span', 'Workout'), elapsed));
+  nav.querySelector('.nav-title').textContent = 'Workout';
 
   const title = h('input.workout-name', {
     value: w.name, enterkeyhint: 'done', 'aria-label': 'Workout name',
@@ -79,7 +79,7 @@ function workoutScreen() {
     const y = body.scrollTop;
     fill(body, 
       title,
-      h('div.stats-row',
+      h('div.stats-inline',
         h('div.stat', h('span.stat-k', 'Duration'), elapsed),
         h('div.stat', h('span.stat-k', 'Volume'), volumeEl),
         h('div.stat', h('span.stat-k', 'Sets'), setsEl)),
@@ -101,9 +101,9 @@ function workoutScreen() {
         onReplace: (id) => { ex.exId = id; ex.sets.forEach((s) => { s.tWeight = s.tReps = s.tSecs = null; }); save(); draw(); },
       })),
       h('button.btn.gold.wide', { onclick: addExercises }, icon('plus', 18), 'Add exercise'),
-      h('div.btn-pair',
-        h('button.btn.dark', { onclick: workoutMenu }, 'Options'),
-        h('button.btn.danger-soft', { onclick: discard }, 'Discard workout')),
+      h('div.text-actions',
+        h('button.link.plain', { onclick: workoutMenu }, 'Workout options'),
+        h('button.link.red', { onclick: discard }, 'Discard workout')),
       h('div.bottom-space'),
     );
     updateStats();

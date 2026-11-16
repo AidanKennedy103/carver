@@ -28,12 +28,12 @@ export function exerciseCard(opts) {
       label: sec ? fmtSecs(sec) : 'Off',
       onClick: () => { ex.rest = sec; opts.save(); restBtn.lastChild.textContent = ex.rest ? `Rest ${fmtSecs(ex.rest)}` : 'Rest off'; },
     }))),
-  }, icon('timer', 15), h('span', ex.rest ? `Rest ${fmtSecs(ex.rest)}` : 'Rest off'));
+  }, icon('timer', 13), h('span', ex.rest ? `Rest ${fmtSecs(ex.rest)}` : 'Rest off'));
 
   const head = h('div.card-head',
     h('div.card-title-wrap',
       h('div.ex-title', info.name),
-      h('div.ex-meta', `${info.muscle} · ${info.equipment}`)),
+      h('div.ex-meta', h('span', info.muscle), restBtn)),
     h('button.icon-btn', {
       'aria-label': 'Exercise options',
       onclick: () => actionSheet(info.name, [
@@ -156,7 +156,7 @@ export function exerciseCard(opts) {
     },
   }, icon('plus', 16), 'Add set');
 
-  return h('section.card.ex-card', head, note, h('div.rest-line', restBtn), table, addSet);
+  return h('section.ex-card', head, note, table, addSet);
 }
 
 function autoGrow(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }

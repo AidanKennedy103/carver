@@ -28,21 +28,20 @@ export function workoutPage() {
         h('span.resume-text', h('b', a.name || 'Workout'), h('span.resume-time', fmtDuration(Date.now() - a.start))),
         h('span.resume-go', 'Resume')) : null,
 
-      h('div.section-label', 'Quick start'),
-      h('button.btn.gold.wide.tall', { onclick: () => startWorkout() }, icon('plus', 20), 'Start empty workout'),
+      a ? null : h('button.quick-start', { onclick: () => startWorkout() }, icon('plus', 18), 'Start empty workout'),
 
       h('div.section-head',
-        h('div.section-label', 'My plans', h('span.count', `${state.plans.length}/${MAX_PLANS}`)),
+        h('h2.section-title', 'Plans', h('span.section-count', `${state.plans.length} of ${MAX_PLANS}`)),
         h('button.link' + (plansFull ? '.off' : ''), {
           onclick: () => plansFull ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor()),
-        }, icon('plus', 16), 'New plan')),
+        }, icon('plus', 16), 'New')),
       state.plans.length ? h('div.plan-grid', state.plans.map(planCard)) : h('button.card.empty-plan', { onclick: () => push(() => planEditor()) },
         h('div.empty-title', 'Make your first plan'),
         h('div.empty-text', 'Save up to 5 routines, like Push, Pull and Legs, and start them in one tap.')),
 
-      h('div.section-head', h('div.section-label', 'History', state.workouts.length ? h('span.count', state.workouts.length) : null)),
+      h('div.section-head', h('h2.section-title', 'History')),
       state.workouts.length ? h('div.history', state.workouts.map(historyCard))
-        : h('div.card.empty-small', 'Finished workouts show up here.'),
+        : h('div.empty-small', 'Finished workouts show up here.'),
       h('div.bottom-space'),
     );
   }
@@ -65,10 +64,9 @@ export function workoutPage() {
             { label: 'Delete plan', danger: true, onClick: async () => { if (await confirmBox(`Delete “${p.name}”?`, 'Your past workouts stay in History.', { ok: 'Delete', danger: true })) deletePlan(p.id); } },
           ]),
         }, icon('more'))),
-      h('div.plan-ex', names.length ? names.join(', ') : 'No exercises yet'),
-      h('div.plan-foot',
-        h('span.plan-meta', `${names.length} exercise${names.length === 1 ? '' : 's'} · ${sets} sets`),
-        h('button.btn.gold.small', { onclick: () => startWorkout(p), disabled: !names.length }, icon('play', 14), 'Start')),
+      h('div.plan-meta', `${names.length} exercise${names.length === 1 ? '' : 's'} · ${sets} sets`),
+      h('div.plan-ex', names.length ? names.join(' · ') : 'No exercises yet'),
+      h('button.btn.gold-soft.plan-start', { onclick: () => startWorkout(p), disabled: !names.length }, 'Start'),
     );
   }
 
@@ -86,11 +84,11 @@ function historyCard(w) {
   return h('button.card.hist-card', { onclick: () => push(() => workoutDetail(w)) },
     h('div.hist-top', h('span.hist-name', w.name), h('span.hist-date', fmtDate(w.start))),
     h('div.hist-stats',
-      h('span', icon('timer', 14), fmtDurationWords(st.duration)),
-      st.volume ? h('span', icon('dumbbell', 14), `${fmtNum(+toDisplay(st.volume))} ${unit()}`) : null,
-      w.prs ? h('span.gold-text', icon('trophy', 14), `${w.prs} PR${w.prs > 1 ? 's' : ''}`) : null),
-    h('div.hist-ex', w.exercises.slice(0, 5).map((e) => h('div', `${e.sets.length} × ${exercise(e.exId).name}`)),
-      w.exercises.length > 5 ? h('div.muted', `+${w.exercises.length - 5} more`) : null),
+      h('span', fmtDurationWords(st.duration)),
+      st.volume ? h('span', `${fmtNum(+toDisplay(st.volume))} ${unit()}`) : null,
+      h('span', `${st.sets} sets`),
+      w.prs ? h('span.gold-text', icon('trophy', 13), `${w.prs} PR${w.prs > 1 ? 's' : ''}`) : null),
+    h('div.hist-ex', w.exercises.map((e) => exercise(e.exId).name).join(' · ')),
   );
 }
 
