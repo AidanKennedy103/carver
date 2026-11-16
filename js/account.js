@@ -1,7 +1,7 @@
 // Sign in / create an account, so your phones (and iPad) share the same data.
 
 import { h, fill, sheet, toast, confirmBox } from './ui.js';
-import { enabled, account, signIn, signUp, signOut, sync, syncStatus, onStatus } from './cloud.js';
+import { enabled, account, sendCode, verifyCode, signOut, sync, syncStatus, onStatus } from './cloud.js';
 
 const ago = (ts) => {
   if (!ts) return 'not yet';
@@ -27,7 +27,7 @@ export function accountSection(closeSettings) {
               await signOut(); toast('Signed out');
             },
           }, h('span', 'Sign out')))
-        : h('div.group', h('button.group-row.gold-text', { onclick: () => { closeSettings?.(); signInSheet(); } }, h('span', 'Sign in or create an account'), h('span.row-val', '›'))),
+        : h('div.group', h('button.group-row.gold-text', { onclick: () => { closeSettings?.(); signInSheet(); } }, h('span', 'Sign in with email'), h('span.row-val', '›'))),
       st.error && u ? h('p.fine.red-text', st.error) : null,
       h('p.fine', u ? 'Everything you log syncs to every device signed in to this account, including progress photos.' : 'Sign in on each device to share one account: workouts, food, weight and photos sync between them.'),
     );
@@ -38,44 +38,51 @@ export function accountSection(closeSettings) {
 }
 
 export function signInSheet() {
-  let mode = 'in';
-  const email = h('input.field', { type: 'email', placeholder: 'Email', autocomplete: 'email', autocapitalize: 'off', inputmode: 'email' });
-  const pass = h('input.field', { type: 'password', placeholder: 'Password (6+ characters)', autocomplete: 'current-password' });
+  let sentTo = '';
+  const email = h('input.field', { type: 'email', placeholder: 'Email', autocomplete: 'email', autocapitalize: 'off', inputmode: 'email', enterkeyhint: 'send' });
+  const code = h('input.field.code-input', { placeholder: '••••••', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 8, enterkeyhint: 'done', 'aria-label': 'Code from the email' });
   const msg = h('p.fine');
   const go = h('button.btn.gold.wide');
-  const swap = h('button.link');
-  const title = h('div.sheet-title');
-  const draw = () => {
-    title.textContent = mode === 'in' ? 'Sign in' : 'Create account';
-    go.textContent = mode === 'in' ? 'Sign in' : 'Create account';
-    swap.textContent = mode === 'in' ? 'New here? Create an account' : 'Have an account? Sign in';
-    pass.autocomplete = mode === 'in' ? 'current-password' : 'new-password';
-    msg.textContent = mode === 'in' ? '' : 'Anything already on this phone moves into your new account.';
-    msg.classList.remove('red-text');
-  };
-  swap.onclick = () => { mode = mode === 'in' ? 'up' : 'in'; draw(); };
-  const submit = async () => {
-    const e = email.value.trim(), p = pass.value;
-    if (!/.+@.+\..+/.test(e)) { msg.textContent = 'Enter your email.'; msg.classList.add('red-text'); return; }
-    if (p.length < 6) { msg.textContent = 'Passwords need at least 6 characters.'; msg.classList.add('red-text'); return; }
-    go.disabled = true; go.textContent = 'One moment…';
-    try {
-      if (mode === 'in') { await signIn(e, p); s.close(); toast('Signed in. Your data is syncing.'); }
-      else {
-        const r = await signUp(e, p);
-        if (r === 'confirm') { mode = 'in'; draw(); msg.textContent = 'Check your email and tap the link to confirm, then come back here and sign in.'; }
-        else { s.close(); toast('Account created. Your data is syncing.'); }
-      }
-    } catch (err) {
-      msg.textContent = err.message || 'Something went wrong.'; msg.classList.add('red-text');
-    } finally { go.disabled = false; if (go.textContent === 'One moment…') go.textContent = mode === 'in' ? 'Sign in' : 'Create account'; }
-  };
-  go.onclick = submit;
-  pass.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') submit(); });
+  const back = h('button.link', { onclick: () => { sentTo = ''; draw(); } }, 'Use a different email');
+  const resend = h('button.link', { onclick: () => send(true) }, 'Send a new code');
+  const body = h('div.form-steps');
+  const say = (t, bad = false) => { msg.textContent = t; msg.classList.toggle('red-text', bad); };
+
+  function draw() {
+    if (!sentTo) {
+      go.textContent = 'Email me a code';
+      go.onclick = () => send();
+      fill(body, h('p.fine', 'Enter your email and Carver sends you a sign-in code. No password. Use the same email on each device to share one account.'), email, go, msg);
+      say('');
+      setTimeout(() => email.focus(), 350);
+    } else {
+      go.textContent = 'Sign in';
+      go.onclick = verify;
+      code.value = '';
+      fill(body, h('p.fine', `We emailed a code to ${sentTo}. Type it here (check spam if it’s not there in a minute).`), code, go, msg, h('div.center.link-row', resend, back));
+      setTimeout(() => code.focus(), 100);
+    }
+  }
+  async function send(again = false) {
+    const e = (sentTo && again ? sentTo : email.value).trim().toLowerCase();
+    if (!/.+@.+\..+/.test(e)) { say('Enter your email.', true); return; }
+    go.disabled = true; go.textContent = 'Sending…';
+    try { await sendCode(e); sentTo = e; draw(); if (again) say('New code sent.'); }
+    catch (err) { say(err.message || 'Could not send the code.', true); go.textContent = again ? 'Sign in' : 'Email me a code'; }
+    finally { go.disabled = false; }
+  }
+  async function verify() {
+    const c = code.value.replace(/\D/g, '');
+    if (c.length < 6) { say('Enter the code from the email.', true); return; }
+    go.disabled = true; go.textContent = 'Signing in…';
+    try { await verifyCode(sentTo, c); s.close(); toast('Signed in. Your data is syncing.'); }
+    catch (err) { say(err.message || 'That code didn’t work.', true); go.textContent = 'Sign in'; }
+    finally { go.disabled = false; }
+  }
+  email.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') send(); });
+  code.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') verify(); });
   draw();
   const s = sheet(h('div.form',
-    h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), title, h('span')),
-    email, pass, go, msg, h('div.center', swap),
-  ));
-  setTimeout(() => email.focus(), 350);
+    h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', 'Sign in'), h('span')),
+    body));
 }

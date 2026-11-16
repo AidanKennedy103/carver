@@ -71,7 +71,7 @@ Six tabs: **Home, Workout, Nutrition, Fitness, Progress, Trends**. A gold bar ab
 - **Charts:** weight trend, calories and protein (with goal lines), workouts per week and weekly volume. Ranges are 4W, 3M, 6M and 1Y. Tap or drag any chart to read the values.
 
 ### Everywhere
-- **Accounts and sync:** sign in (Home → Settings) on each device and they share one account. Workouts, food, weights, activities, goals and progress photos sync. Changes from both devices are merged, so nothing logged on either is lost, and deleting something on one removes it on the other.
+- **Accounts and sync:** sign in with your email (Home → Settings → Sign in with email, then type the code you're emailed) on each device and they share one account. Workouts, food, weights, activities, goals and progress photos sync. Changes from both devices are merged, so nothing logged on either is lost, and deleting something on one removes it on the other.
 - **Export / restore** everything (except photos) as a JSON backup in Settings.
 - Works offline once opened (gyms often have bad signal). Updates itself when you come back to the app.
 
@@ -109,8 +109,8 @@ Then open http://localhost:5181.
 ## Turn on accounts (free)
 
 1. Create a free project at supabase.com. Then open **SQL Editor**, paste `supabase/schema.sql`, and click **Run**.
-2. In **Authentication → Sign In / Providers → Email**, you can turn off **Confirm email** so friends can sign in straight away. If you leave it on, the confirmation link opens in Safari, and they then sign in inside the app. In **Authentication → URL Configuration**, set the Site URL to the live app link.
-3. Copy the Project URL and anon key from **Project Settings → API** into `js/config.js`, and push.
+2. Sign-in is by email code, with no password. In **Authentication → Emails → Templates → Magic Link**, put `{{ .Token }}` in the email (for example "Your Carver code is {{ .Token }}") so it contains the code. A link can't be used, because on iPhone it opens Safari instead of the home-screen app.
+3. Copy the Project URL and the publishable (or anon) key from **Project Settings → API Keys** into `js/config.js`, and push.
 
 Until then, Carver runs without accounts and everything stays on each phone.
 
@@ -128,6 +128,7 @@ cd scripts && npm install && cd .. && node scripts/make-icons.mjs
 
 - **Without an account, data is saved only on that phone.** Export a backup now and then (photos aren't included). Friends and accountability mode can build on the same accounts.
 - **Apple Health and Cronometer can't sync automatically into a web app.** Health weights and workouts come in through Shortcuts and paste.
+- **Supabase's built-in email sends only a few emails an hour.** Once signed in you stay signed in, so that's fine for a beta. If friends hit the limit, connect a free email service (like Resend) under Authentication → Emails → SMTP.
 - **If both devices change the same setting before syncing**, the device that syncs last keeps its own. Lists (workouts, food, weights, activities, photos) are always merged.
 - **Nutrition values are approximate.** The starter foods use USDA figures, and scanned foods come from Open Food Facts.
 - **The metabolism estimate needs at least 10 days of food logs and 2 weigh-ins in the last 4 weeks.** It gets more accurate the more consistently you log.

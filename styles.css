@@ -603,3 +603,5 @@ body.has-live .root .bottom-space { height: calc(160px + var(--safe-bottom)); }
 .toggle:disabled { opacity: .4; }
 .share-row span { flex: 1; }
 .center { text-align: center; }
+.code-input { font-size: 28px; letter-spacing: 8px; text-align: center; font-variant-numeric: tabular-nums; }
+.link-row { display: flex; justify-content: space-between; gap: 12px; }

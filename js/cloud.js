@@ -30,27 +30,26 @@ const tell = () => statusListeners.forEach((f) => f());
 export const account = () => user;
 export const syncStatus = () => status;
 
-export async function signIn(email, password) {
+/**
+ * Email sign-in, no password: Supabase emails a code, you type it in the app.
+ * (A link wouldn't work: on iPhone it opens Safari, which can't reach the home-screen app's storage.)
+ * New emails get an account automatically.
+ */
+export async function sendCode(email) {
   const db = await client();
-  const { data, error } = await db.auth.signInWithPassword({ email, password });
+  const { error } = await db.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+  if (error) throw new Error(friendly(error));
+}
+
+export async function verifyCode(email, code) {
+  const db = await client();
+  const { data, error } = await db.auth.verifyOtp({ email, token: code, type: 'email' });
   if (error) throw new Error(friendly(error));
   user = data.user;
   tell();
   await sync();
   pullFoods();
   return user;
-}
-
-/** Returns 'signed-in', or 'confirm' when the project asks people to confirm their email first. */
-export async function signUp(email, password) {
-  const db = await client();
-  const { data, error } = await db.auth.signUp({ email, password, options: { emailRedirectTo: location.origin } });
-  if (error) throw new Error(friendly(error));
-  if (!data.session) return 'confirm';
-  user = data.user;
-  tell();
-  await sync();
-  return 'signed-in';
 }
 
 export async function signOut() {
@@ -64,10 +63,8 @@ export async function signOut() {
 
 function friendly(e) {
   const m = e.message || String(e);
-  if (/invalid login/i.test(m)) return 'Wrong email or password.';
-  if (/not confirmed/i.test(m)) return 'Confirm your email first (check your inbox), then sign in.';
-  if (/already registered|already exists/i.test(m)) return 'There’s already an account with that email. Sign in instead.';
-  if (/at least 6/i.test(m) || /password/i.test(m)) return m;
+  if (/expired|invalid|token/i.test(m)) return 'That code didn’t work. Check the newest email, or send a new code.';
+  if (/rate limit|too many|seconds/i.test(m)) return 'Too many codes sent. Wait a few minutes and try again.';
   if (/fetch|network/i.test(m)) return 'No connection. Try again.';
   return m;
 }
