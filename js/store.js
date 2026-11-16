@@ -18,7 +18,7 @@ const fresh = () => ({
   workouts: [],      // finished workouts, newest first
   active: null,      // the workout in progress, if any
   goals: { kcal: 2500, p: 180, c: 250, f: 80, workoutsPerWeek: 3, custom: [] },
-  food: { log: [], custom: [] },   // log entries keep their own nutrient totals
+  food: { log: [], custom: [], meals: [] },   // log entries keep their own nutrient totals; meals = saved groups of entries
   activities: [],    // runs, walks, rides…: { id, type, start, dur (ms), dist (m), kcal, source }
   body: { weights: [], photos: [] }, // weights: { id, ts, kg, source }; photos: { id, ts } (images in IndexedDB)
   checks: {},                      // custom daily goals: { 'YYYY-MM-DD': { goalId: amount } }

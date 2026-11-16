@@ -2,7 +2,7 @@
 // micronutrient page. Quick add ("dinner 1000 calories") with macro sliders
 // for when you just know the calories.
 
-import { h, fill, icon, push, navBar, sheet, toast, actionSheet, fmtDate } from './ui.js';
+import { h, fill, icon, push, navBar, sheet, toast, actionSheet, confirmBox, promptBox, fmtDate } from './ui.js';
 import { state, commit, uid, ymd, addDays, dayLog, dayTotals, allFoods, food, nutrientsFor, logFood, updateLog, deleteLog, recentFoods, sharedFoods } from './store.js';
 import { enabled as cloudOn, account, shareFood } from './cloud.js';
 import { MACROS, MICROS, CATEGORIES } from './foods.js';
@@ -80,10 +80,11 @@ export function nutritionPage() {
           h('div.meal-head',
             h('span.meal-name', meal.name),
             h('span.meal-kcal', list.length ? `${r0(kcal)} kcal` : ''),
+            h('button.icon-btn', { onclick: () => mealMenu(meal, list, viewDate), 'aria-label': `${meal.name} options` }, icon('more', 20)),
             h('button.icon-btn.gold-text', { onclick: () => addFood({ date: viewDate, meal: meal.id }), 'aria-label': `Add to ${meal.name}` }, icon('plus', 20))),
           list.length ? h('div.card.list-card', list.map((e) => h('button.food-line', { onclick: () => editEntry(e) },
             h('span.food-ico', e.icon || (e.quick ? '⚡' : '🍽️')),
-            h('span.food-text', h('span.food-name', e.name), h('span.food-sub', e.quick ? `P ${r0(e.n.p)} · C ${r0(e.n.c)} · F ${r0(e.n.f)} g` : `${fmtAmt(e.qty)} × ${e.servingLabel}`)),
+            h('span.food-text', h('span.food-name', e.name), h('span.food-sub', e.quick ? `${e.note ? e.note + ' · ' : ''}P ${r0(e.n.p)} · C ${r0(e.n.c)} · F ${r0(e.n.f)} g` : `${fmtAmt(e.qty)} × ${e.servingLabel}`)),
             h('span.food-kcal', r0(e.n.kcal))))) : null);
       }),
       h('div.bottom-space'),
@@ -93,6 +94,34 @@ export function nutritionPage() {
   draw();
   el.append(body);
   return { el, refresh: draw };
+}
+
+// ---------- Meal shortcuts: copy yesterday, saved meals ----------
+
+const copyEntry = (e, date, meal) => { const { id, ts, ...rest } = e; return { ...rest, date, meal, n: { ...e.n } }; };
+
+function mealMenu(meal, list, date) {
+  const prev = dayLog(addDays(date, -1)).filter((e) => e.meal === meal.id);
+  const kcal = (arr) => r0(arr.reduce((n, e) => n + (e.n.kcal || 0), 0));
+  const actions = [];
+  if (prev.length) actions.push({ label: `Copy yesterday’s ${meal.name.toLowerCase()} (${kcal(prev)} kcal)`, onClick: () => { prev.forEach((e) => logFood(copyEntry(e, date, meal.id))); toast(`Copied ${prev.length} item${prev.length > 1 ? 's' : ''}`); } });
+  if (list.length) actions.push({ label: 'Save as a meal', onClick: () => saveMeal(list, meal) });
+  if (state.food.meals?.length) actions.push({ label: 'Add a saved meal', onClick: () => addFood({ date, meal: meal.id, cat: 'Meals' }) });
+  if (list.length) actions.push({ label: `Clear ${meal.name.toLowerCase()}`, danger: true, onClick: async () => { if (await confirmBox(`Clear ${meal.name.toLowerCase()}?`, `Removes ${list.length} item${list.length > 1 ? 's' : ''}.`, { ok: 'Clear', danger: true })) commit((s) => { const ids = new Set(list.map((e) => e.id)); s.food.log = s.food.log.filter((e) => !ids.has(e.id)); }); } });
+  if (!actions.length) { toast(`Nothing in yesterday’s ${meal.name.toLowerCase()} to copy`); return; }
+  actionSheet(meal.name, actions);
+}
+
+async function saveMeal(list, meal) {
+  const name = await promptBox('Name this meal', list.length === 1 ? list[0].name : `My ${meal.name.toLowerCase()}`, { placeholder: 'e.g. Usual breakfast' });
+  if (!name?.trim()) return;
+  commit((s) => { s.food.meals = [...(s.food.meals || []), { id: uid(), name: name.trim(), items: list.map((e) => copyEntry(e, null, null)) }]; });
+  toast('Saved. Find it under Meals when you add food.');
+}
+
+function logMeal(m, date, meal) {
+  m.items.forEach((e) => logFood({ ...e, date, meal, n: { ...e.n } }));
+  toast(`Added ${m.name}`);
 }
 
 function bar(v, goal, color, big = false) {
@@ -274,19 +303,35 @@ function pctFrom(n) {
 
 // ---------- Search and add a food ----------
 
-export function addFood({ date = ymd(), meal = null } = {}) {
-  let cat = recentFoods().length ? 'Recent' : 'All', q = '';
+export function addFood({ date = ymd(), meal = null, cat: startCat = null } = {}) {
+  let cat = startCat || (recentFoods().length ? 'Recent' : 'All'), q = '';
   const list = h('div.ex-list');
   const search = h('input.search-input', {
     type: 'search', placeholder: 'Search foods', autocomplete: 'off', enterkeyhint: 'search',
     oninput: () => { q = search.value.toLowerCase().trim(); draw(); },
   });
   const chips = h('div.chips.no-drag');
-  const drawChips = () => chips.replaceChildren(...['Recent', 'All', 'My foods', ...(sharedFoods().length ? ['Community'] : []), ...CATEGORIES].map((c) => h('button.chip' + (c === cat ? '.on' : ''), { onclick: () => { cat = c; drawChips(); draw(); } }, c)));
+  const drawChips = () => chips.replaceChildren(...['Recent', ...(state.food.meals?.length ? ['Meals'] : []), 'All', 'My foods', ...(sharedFoods().length ? ['Community'] : []), ...CATEGORIES].map((c) => h('button.chip' + (c === cat ? '.on' : ''), { onclick: () => { cat = c; drawChips(); draw(); } }, c)));
 
   function draw() {
     let items;
-    if (q) items = allFoods().filter((f) => f.name.toLowerCase().includes(q) || (f.brand || '').toLowerCase().includes(q));
+    if (cat === 'Meals' && !q) {
+      const meals = state.food.meals || [];
+      list.replaceChildren(...meals.map((m) => h('button.ex-row', {
+        onclick: () => actionSheet(m.name, [
+          { label: `Add to ${MEALS.find((x) => x.id === (meal || mealNow())).name}`, onClick: () => { logMeal(m, date, meal || mealNow()); s.close(); } },
+          { label: 'Delete saved meal', danger: true, onClick: () => { commit((st) => { st.food.meals = st.food.meals.filter((x) => x.id !== m.id); }); draw(); } },
+        ]),
+      },
+      h('span.ex-badge.food-badge', '🍱'),
+      h('span.ex-text', h('span.ex-name', m.name), h('span.ex-sub', `${m.items.length} item${m.items.length > 1 ? 's' : ''} · ${r0(m.items.reduce((n, e) => n + (e.n.kcal || 0), 0))} kcal · ${m.items.map((e) => e.name).join(', ')}`)))),
+      meals.length ? null : h('div.empty-small', 'Save a meal from the ⋯ menu on any meal in your diary.'));
+      return;
+    }
+    // Every word has to match somewhere in the name or brand ("greek yog" finds Greek yogurt)
+    const words = q.split(/\s+/).filter(Boolean);
+    const hit = (f) => { const t = `${f.name} ${f.brand || ''}`.toLowerCase(); return words.every((w) => t.includes(w)); };
+    if (q) items = allFoods().filter(hit);
     else if (cat === 'Recent') items = recentFoods(30);
     else if (cat === 'All') items = allFoods();
     else if (cat === 'My foods') items = state.food.custom;

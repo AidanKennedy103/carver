@@ -4,6 +4,7 @@ import { h, sheet, toast, confirmBox, promptBox, fmtSecs, actionSheet, refreshAl
 import { state, commit, exportJSON, importJSON, resetAll } from './store.js';
 import { REST_CHOICES } from './block.js';
 import { accountSection } from './account.js';
+import { importCronometer } from './cronometer.js';
 import { account } from './cloud.js';
 
 export function openSettings() {
@@ -30,6 +31,16 @@ export function openSettings() {
     } catch (err) { toast(err.message || 'Could not read that file'); }
   } });
 
+  const cronIn = h('input', { type: 'file', accept: '.csv,text/csv', hidden: true, onchange: async (e) => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    try {
+      const r = importCronometer(await f.text());
+      toast(r.added ? `Imported ${r.added} entr${r.added === 1 ? 'y' : 'ies'} over ${r.days} day${r.days === 1 ? '' : 's'}` : r.total ? 'Those are already in Carver' : 'No food entries found in that file');
+    } catch (err) { toast(err.message || 'Could not read that file'); }
+  } });
+
   const s = sheet(h('div.form',
     h('div.sheet-head', h('span'), h('div.sheet-title', 'Settings'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
     accountSection(() => s.close()),
@@ -51,8 +62,10 @@ export function openSettings() {
     h('label.form-label', 'Your data'),
     h('div.group',
       h('button.group-row', { onclick: exportData }, h('span', 'Export all data'), h('span.row-val', 'JSON')),
-      h('button.group-row', { onclick: () => fileIn.click() }, h('span', 'Restore from a backup'), h('span.row-val', '›'))),
-    fileIn,
+      h('button.group-row', { onclick: () => fileIn.click() }, h('span', 'Restore from a backup'), h('span.row-val', '›')),
+      h('button.group-row', { onclick: () => cronIn.click() }, h('span', 'Import food from Cronometer'), h('span.row-val', 'CSV'))),
+    fileIn, cronIn,
+    h('p.fine', 'Cronometer: on cronometer.com go to More → Account → Export Data, export “Food & Recipe Entries”, then pick that file here. Entries already imported are skipped.'),
     h('p.fine', account() ? 'Carver is a free beta. Your data is saved on this phone and in your account. The export is a JSON file of everything except progress photos.' : 'Carver is a free beta. Without an account, everything is saved only on this phone, so export a backup now and then. Progress photos aren’t in the backup.'),
     h('div.group',
       h('button.group-row.danger', {

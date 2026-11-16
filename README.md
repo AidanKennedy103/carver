@@ -45,7 +45,9 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 - **Quick add**: type "dinner 1000 calories" (or "chipotle bowl 850", "1200 cal lunch"). It picks the meal and fills in the calories. Three linked sliders split the calories into protein, carbs and fat and always add up to 100%. **Lock a macro** by typing its grams (or tapping its lock): it stays fixed when the calories change, and the other two share what's left. Presets: Balanced, High protein, Low carb.
 - **Diary** for any day, by meal (breakfast, lunch, dinner, snacks). Macros come first, each with a bar toward its goal.
 - **Micronutrients page:** your energy split, plus vitamins and minerals against adult targets. Things to stay under (sodium, saturated fat, cholesterol) turn red when you go over.
-- **77 starter foods with emoji icons and real serving sizes**, a Recent list, category filters, and **Create food**.
+- **149 starter foods with emoji icons and real serving sizes**, a Recent list, category filters, and **Create food**. Search matches every word you type, so "greek yog" finds Greek yogurt.
+- **Meal shortcuts:** each meal's ⋯ menu can copy yesterday's meal, save the meal to reuse it (it appears under **Meals** when you add food), or clear it.
+- **Import from Cronometer:** in Settings, pick Cronometer's "Food & Recipe Entries" export (CSV). Every entry comes in with its nutrients, in the right meal, and pasting the same file twice is fine.
 - **Shared food database:** when you're signed in, foods you create (with the switch on) and foods you scan are added for everyone, under **Community**. For the beta they appear straight away. To review them first, see the note in `supabase/schema.sql`.
 - **Barcode scanner:** uses the camera and looks the product up in Open Food Facts, a free, open database. It checks your foods and the Carver database first. Scanned foods are saved to My foods. You can also type the barcode in.
 - **Goals:** calories, protein, carbs, fat, workouts per week, and your own daily goals.
@@ -95,7 +97,7 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 | `js/onerm.js` | One-rep max tracker |
 | `js/volume.js` | Weekly sets per muscle group (program and logged) |
 | `js/workout.js`, `js/session.js`, `js/block.js`, `js/picker.js`, `js/exercises.js` | Workout page, live workout, sets, exercise picker, exercise library |
-| `js/nutrition.js`, `js/foods.js`, `js/barcode.js` | Food diary, quick add, micronutrients, food list, barcode scanner |
+| `js/nutrition.js`, `js/foods.js`, `js/barcode.js`, `js/cronometer.js` | Food diary, quick add, saved meals, micronutrients, food list, barcode scanner, Cronometer import |
 | `js/goals.js` | Goals sheet and custom daily goals |
 | `js/fitness.js` | Fitness tab: cardio activities, Health import |
 | `js/progress.js`, `js/body.js`, `js/photos.js`, `js/monthly.js` | Progress tab, weight and imports, progress photos, monthly goals and recaps |
@@ -138,7 +140,7 @@ cd scripts && npm install && cd .. && node scripts/make-icons.mjs
 ## Known limits (beta)
 
 - **Without an account, data is saved only on that phone.** Export a backup now and then (photos aren't included). Friends and accountability mode can build on the same accounts.
-- **Apple Health and Cronometer can't sync automatically into a web app.** Health weights and workouts come in through Shortcuts and paste.
+- **Apple Health and Cronometer can't sync automatically into a web app.** Health weights and workouts come in through Shortcuts and paste. Cronometer history comes in from its CSV export.
 - **Supabase's built-in email sends only a few emails an hour.** Once signed in you stay signed in, so that's fine for a beta. If friends hit the limit, connect a free email service (like Resend) under Authentication → Emails → SMTP.
 - **If both devices change the same setting before syncing**, the device that syncs last keeps its own. Lists (workouts, food, weights, activities, photos) are always merged.
 - **Nutrition values are approximate.** The starter foods use USDA figures, and scanned foods come from Open Food Facts.
