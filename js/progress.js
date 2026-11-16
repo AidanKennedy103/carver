@@ -6,7 +6,8 @@ import { lineChart } from './charts.js';
 import { weights, latestWeight, trend, change, logWeightSheet, importSheet, weightRow } from './body.js';
 import { photos, addPhoto, deletePhoto, loadInto } from './photos.js';
 import { monthlySection } from './monthly.js';
-import { account } from './cloud.js';
+import { account, enabled as cloudOn } from './cloud.js';
+import { sharePhoto } from './groups.js';
 
 const fmtW = (kg) => `${toDisplay(kg)} ${unit()}`;
 const signed = (kg) => { const v = +toDisplay(Math.abs(kg)); return `${kg > 0 ? '+' : kg < 0 ? '−' : ''}${v} ${unit()}`; };
@@ -128,6 +129,7 @@ function photoScreen(id) {
         'aria-label': 'Photo options',
         onclick: () => actionSheet('Progress photo', [
           { label: 'Compare with another', onClick: () => pickCompare(id) },
+          ...(cloudOn() ? [{ label: 'Share with a group', onClick: () => sharePhoto(p) }] : []),
           { label: 'Delete photo', danger: true, onClick: async () => { if (await confirmBox('Delete this photo?', 'This cannot be undone.', { ok: 'Delete', danger: true })) { await deletePhoto(id); pop(); } } },
         ]),
       }, icon('more'))],

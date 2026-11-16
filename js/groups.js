@@ -197,6 +197,7 @@ const dayWord = (d) => (d === ymd() ? 'today' : d === addDays(ymd(), -1) ? 'yest
 function describe(e) {
   const d = e.data || {};
   switch (e.kind) {
+    case 'photo': return { ico: '📸', text: 'shared a progress photo', sub: d.ts ? fmtDate(d.ts, { month: 'short', day: 'numeric' }) : '', photo: d.path };
     case 'started': return { ico: '📍', text: 'is at the gym', sub: d.name && d.name !== 'Workout' ? `Started ${d.name}` : 'Started a workout' };
     case 'workout': return {
       ico: '🏋️', text: `finished ${d.name}`,
@@ -220,8 +221,55 @@ export function eventRow(e, { showGroup = false } = {}) {
       h('div.feed-line', h('b', e.me ? 'You' : e.who), ' ', x.ico, ' ', x.text),
       x.sub ? h('div.feed-sub', x.sub) : null,
       (x.extra || []).map((t) => h('div.feed-pr', t)),
+      x.photo ? groupPhoto(x.photo) : null,
       grp ? h('div.feed-sub', grp) : null),
     h('span.feed-when', ago(e.created_at)));
+}
+
+const signed = new Map();
+/** A shared progress photo, loaded through a short-lived private link. */
+function groupPhoto(path) {
+  const img = h('img.feed-photo', { alt: 'Progress photo', loading: 'lazy' });
+  const show = (u) => { img.src = u; };
+  if (signed.has(path)) show(signed.get(path));
+  else client().then((db) => db.storage.from('carver-photos').createSignedUrl(path, 3600)).then(({ data }) => {
+    if (data?.signedUrl) { signed.set(path, data.signedUrl); show(data.signedUrl); }
+  }).catch(() => {});
+  return img;
+}
+
+/** Share one of your progress photos with a group (asks which one). */
+export async function sharePhoto(photo) {
+  if (!account()) { signInSheet(); return; }
+  const groups = myGroups().length ? myGroups() : await loadGroups().catch(() => []);
+  if (!groups.length) { toast('Make or join a group first (Home → Groups)'); return; }
+  const go = async (g) => {
+    if (!(await confirmBox(`Share with ${g.name}?`, 'Everyone in the group can see this photo. You can delete it from the group later.', { ok: 'Share' }))) return;
+    try {
+      const { getRecord } = await import('./photos.js');
+      const rec = await getRecord(photo.id);
+      if (!rec) throw new Error('missing');
+      const db = await client();
+      const path = `groups/${g.id}/${account().id}-${photo.id}.jpg`;
+      const up = await db.storage.from('carver-photos').upload(path, rec.full, { upsert: true, contentType: 'image/jpeg' });
+      if (up.error) throw up.error;
+      const { error } = await db.from('carver_events').upsert({ group_id: g.id, user_id: account().id, kind: 'photo', ref: 'ph:' + photo.id, data: { path, ts: photo.ts } }, { onConflict: 'group_id,user_id,ref', ignoreDuplicates: true });
+      if (error) throw error;
+      toast(`Shared with ${g.name}`);
+    } catch { toast('Couldn’t share it. Check your connection.'); }
+  };
+  if (groups.length === 1) go(groups[0]);
+  else actionSheet('Share with', groups.map((g) => ({ label: g.name, onClick: () => go(g) })));
+}
+
+/** Remove one of your own posts (and its photo) from a group. */
+async function deletePost(e) {
+  if (!(await confirmBox('Remove this post?', 'It disappears for everyone in the group.', { ok: 'Remove', danger: true }))) return false;
+  const db = await client();
+  if (e.kind === 'photo' && e.data?.path) await db.storage.from('carver-photos').remove([e.data.path]).catch(() => {});
+  const { error } = await db.from('carver_events').delete().eq('id', e.id);
+  if (error) { toast('Couldn’t remove it'); return false; }
+  return true;
 }
 
 // ---------- Home card ----------
@@ -296,7 +344,8 @@ export function groupsScreen() {
                 h('button.btn.gold-soft', { onclick: () => invite(g) }, 'Invite friends'),
                 h('button.btn.dark', { onclick: () => sharesSheet(g, draw) }, 'What I share'))),
             h('div.section-head', h('h2.section-title', 'Activity'), loading ? h('span.section-count', 'Updating…') : null),
-            list.length ? h('section.card.list-card', list.map((e) => eventRow(e))) : h('div.feed-empty.card', loading ? 'Loading…' : 'Nothing here yet. Posts show up as people train and hit goals.'),
+            list.length ? h('section.card.list-card', list.map((e) => (e.me ? h('div.own-post', { onclick: () => deletePost(e).then((ok) => ok && refresh()) }, eventRow(e)) : eventRow(e)))) : h('div.feed-empty.card', loading ? 'Loading…' : 'Nothing here yet. Posts show up as people train and hit goals.'),
+            list.some((e) => e.me) ? h('p.fine', 'Tap one of your own posts to remove it.') : null,
             h('button.link.red-text.leave', { onclick: () => leaveGroup(g).then((ok) => ok && refresh()) }, 'Leave group'),
           ],
       h('div.bottom-space'),

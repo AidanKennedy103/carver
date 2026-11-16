@@ -672,3 +672,5 @@ body.has-live .root .bottom-space { height: calc(160px + var(--safe-bottom)); }
 .prog { padding: 0 16px; margin-bottom: 12px; }
 .prog-head { font-size: 13px; color: var(--muted); padding: 12px 0 4px; }
 .prog .group-row { padding-left: 0; padding-right: 0; }
+.feed-photo { display: block; width: 100%; max-width: 260px; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 12px; margin-top: 8px; background: var(--surface-2); }
+.own-post { cursor: pointer; }

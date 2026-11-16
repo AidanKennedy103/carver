@@ -26,7 +26,7 @@ create table if not exists public.carver_events (
   id         uuid primary key default gen_random_uuid(),
   group_id   uuid not null references public.carver_groups on delete cascade,
   user_id    uuid not null default auth.uid() references auth.users on delete cascade,
-  kind       text not null check (kind in ('started', 'workout', 'cardio', 'protein', 'kcal', 'week')),
+  kind       text not null check (kind in ('started', 'workout', 'cardio', 'protein', 'kcal', 'week', 'photo')),
   ref        text not null,                               -- what it's about (workout id, day…): each thing posts once
   data       jsonb not null default '{}',
   created_at timestamptz not null default now(),
@@ -93,6 +93,21 @@ begin
   on conflict (group_id, user_id) do nothing;
   return g;
 end $$;
+
+-- Progress photos shared to a group live at carver-photos/groups/<group id>/…
+-- Members of that group can see them; only the person who shared one can delete it.
+create or replace function public.carver_group_file_ok(path text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select (storage.foldername(path))[1] = 'groups' and exists (
+    select 1 from public.carver_members
+    where group_id::text = (storage.foldername(path))[2] and user_id = auth.uid())
+$$;
+drop policy if exists "carver group photos: members read" on storage.objects;
+drop policy if exists "carver group photos: members add" on storage.objects;
+drop policy if exists "carver group photos: sharer deletes" on storage.objects;
+create policy "carver group photos: members read"  on storage.objects for select to authenticated using (bucket_id = 'carver-photos' and public.carver_group_file_ok(name));
+create policy "carver group photos: members add"   on storage.objects for insert to authenticated with check (bucket_id = 'carver-photos' and public.carver_group_file_ok(name));
+create policy "carver group photos: sharer deletes" on storage.objects for delete to authenticated using (bucket_id = 'carver-photos' and owner = auth.uid() and public.carver_group_file_ok(name));
 
 grant execute on function public.carver_create_group(text, text) to authenticated;
 grant execute on function public.carver_join_group(text, text) to authenticated;
