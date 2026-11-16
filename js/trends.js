@@ -1,7 +1,7 @@
 // Trends: your numbers over time, and your estimated metabolism worked out
 // from what you eat and how your weight moves.
 
-import { h, fill, navBar, fmtNum, fmtDate } from './ui.js';
+import { h, fill, navBar, fmtNum, fmtDate, swipeSegment } from './ui.js';
 import { state, ymd, dayTotals, weekStart, workoutStats, toDisplay, unit } from './store.js';
 import { lineChart, barChart, COLORS } from './charts.js';
 import { trend, latestWeight } from './body.js';
@@ -47,7 +47,7 @@ export function metabolism(days = 28) {
 
 export function trendsPage() {
   const el = h('div.page');
-  const body = h('div.scroll-body');
+  const body = swipeSegment(h('div.scroll-body'));
 
   function draw() {
     const now = Date.now();

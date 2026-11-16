@@ -99,6 +99,7 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 - **Charts:** weight trend, calories and protein (with goal lines), workouts per week and weekly volume. Ranges are 4W, 3M, 6M and 1Y. Tap or drag any chart to read the values.
 
 ### Everywhere
+- **Swipes:** swipe right from the left edge to go back. Swipe the rings for Today / Week, the calendar for months, Nutrition for days (the week strip for weeks), progress photos for the next one, and Trends, Report, Weight and Volume to change the range.
 - **Accounts and sync:** sign in with your email (Home → Settings → Sign in with email, then type the code you're emailed) on each device and they share one account. Workouts, food, weights, activities, goals and progress photos sync. Changes from both devices are merged, so nothing logged on either is lost, and deleting something on one removes it on the other.
 - **Export / restore** everything (except photos) as a JSON backup in Settings.
 - **Delete account** (Settings → Account) removes your synced data, photos, group memberships and posts.

@@ -1,7 +1,7 @@
 // Nutrition: a Cronometer-style food diary with macros up front. The food
 // picker, quick add, recipes and reports live in their own files.
 
-import { h, fill, icon, push, toast, actionSheet, confirmBox, promptBox, navBar } from './ui.js';
+import { h, fill, icon, push, toast, actionSheet, confirmBox, promptBox, navBar, swipe } from './ui.js';
 import { state, commit, uid, ymd, addDays, dayStart, dayLog, dayTotals, food, logFood, deleteLog, waterOn, addWater } from './store.js';
 import { MACROS } from './foods.js';
 import { COLORS } from './charts.js';
@@ -20,6 +20,9 @@ let viewDate = ymd();
 export function nutritionPage() {
   const el = h('div.page');
   const body = h('div.scroll-body');
+  // Swipe the page for the next or previous day; swipe the week strip for a week at a time
+  const go = (d) => { viewDate = addDays(viewDate, d); draw(); };
+  swipe(body, { left: () => go(1), right: () => go(-1), ignore: '.week-strip' });
 
   function draw() {
     const t = dayTotals(viewDate);
@@ -35,7 +38,7 @@ export function nutritionPage() {
         h('button.icon-btn', { onclick: () => { viewDate = addDays(viewDate, -1); draw(); }, 'aria-label': 'Previous day' }, icon('back')),
         h('button.date-label', { onclick: () => { viewDate = ymd(); draw(); } }, dayLabel(viewDate)),
         h('button.icon-btn.flip', { onclick: () => { viewDate = addDays(viewDate, 1); draw(); }, 'aria-label': 'Next day' }, icon('back'))),
-      weekStrip(viewDate, (k) => { viewDate = k; draw(); }),
+      swipe(weekStrip(viewDate, (k) => { viewDate = k; draw(); }), { left: () => go(7), right: () => go(-7), target: () => body.querySelector('.week-strip') }),
 
       // Energy and macros
       h('section.card.energy',

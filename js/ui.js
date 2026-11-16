@@ -103,6 +103,93 @@ export function pop() {
   setTimeout(() => screen.el.remove(), 450);
 }
 
+// Swipe right from the left edge to go back, like iOS (the home-screen app has no system back gesture).
+let edge = null;
+addEventListener('touchstart', (e) => {
+  const scr = stack[stack.length - 1];
+  if (stack.length < 2 || e.touches.length > 1 || e.touches[0].clientX > 28 || document.querySelector('.sheet-wrap')) return;
+  edge = { x0: e.touches[0].clientX, y0: e.touches[0].clientY, t0: Date.now(), scr, on: false };
+}, { passive: true });
+addEventListener('touchmove', (e) => {
+  if (!edge) return;
+  const dx = e.touches[0].clientX - edge.x0, dy = e.touches[0].clientY - edge.y0;
+  if (!edge.on) {
+    if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { edge = null; return; }
+    if (dx < 10) return;
+    edge.on = true;
+    edge.scr.el.style.transition = 'none';
+  }
+  edge.dx = Math.max(0, dx);
+  edge.scr.el.style.transform = `translateX(${edge.dx}px)`;
+}, { passive: true });
+const edgeEnd = () => {
+  if (!edge) return;
+  const { scr, on, dx = 0, t0 } = edge;
+  edge = null;
+  if (!on) return;
+  scr.el.style.transition = '';
+  const go = dx > innerWidth * 0.33 || (dx > 40 && dx / (Date.now() - t0) > 0.5);
+  if (go && stack[stack.length - 1] === scr) { scr.el.style.transform = ''; pop(); }
+  else scr.el.style.transform = '';
+};
+addEventListener('touchend', edgeEnd);
+addEventListener('touchcancel', edgeEnd);
+
+/**
+ * Horizontal swipes on an element: left() / right() run on a clear sideways swipe.
+ * The element follows your finger a little; after it switches, the new content
+ * (target(), or the element itself) slides in from the side you swiped toward.
+ * Vertical scrolling, charts, inputs and sideways-scrolling rows are left alone.
+ */
+const NO_SWIPE = 'input, textarea, select, .chips, .photo-strip, .chart-svg, .no-swipe';
+export function swipe(el, { left, right, target, ignore } = {}) {
+  let t = null;
+  el.addEventListener('touchstart', (e) => {
+    t = null;
+    if (e.touches.length > 1 || e.target.closest(NO_SWIPE) || (ignore && e.target.closest(ignore)) || e.touches[0].clientX < 28) return;   // edge = back gesture
+    t = { x0: e.touches[0].clientX, y0: e.touches[0].clientY, t0: Date.now(), dir: null, dx: 0 };
+  }, { passive: true });
+  el.addEventListener('touchmove', (e) => {
+    if (!t) return;
+    const dx = e.touches[0].clientX - t.x0, dy = e.touches[0].clientY - t.y0;
+    if (!t.dir) {
+      if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+      t.dir = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'x' : 'y';
+      if (t.dir === 'y') { t = null; return; }
+      el.style.transition = 'none';
+    }
+    t.dx = dx;
+    const can = dx < 0 ? left : right;
+    el.style.transform = `translateX(${dx * (can ? 0.35 : 0.08)}px)`;
+  }, { passive: true });
+  const end = () => {
+    if (!t?.dir) { t = null; return; }
+    const { dx, t0 } = t;
+    t = null;
+    el.style.transition = 'transform .2s ease-out';
+    el.style.transform = '';
+    const fn = dx < 0 ? left : right;
+    if (!fn || !(Math.abs(dx) > 60 || (Math.abs(dx) > 30 && Math.abs(dx) / (Date.now() - t0) > 0.4))) return;
+    if (fn() === false) return;   // nothing further that way
+    const now = target?.() || el;
+    if (now.isConnected) now.animate?.([{ transform: `translateX(${dx < 0 ? 36 : -36}px)`, opacity: 0.35 }, { transform: 'none', opacity: 1 }], { duration: 220, easing: 'ease-out' });
+  };
+  el.addEventListener('touchend', end);
+  el.addEventListener('touchcancel', end);
+  return el;
+}
+
+/** Swipe a page to step through its range buttons (4W → 3M → 6M…), as if you tapped the next one. */
+export function swipeSegment(el, sel = '.segment.range') {
+  const step = (d) => () => {
+    const bs = [...(el.querySelector(sel)?.querySelectorAll('button') || [])];
+    const next = bs[bs.findIndex((b) => b.classList.contains('on')) + d];
+    if (!next) return false;
+    next.click();
+  };
+  return swipe(el, { left: step(1), right: step(-1) });
+}
+
 export const top = () => stack[stack.length - 1];
 export const depth = () => stack.length;
 export const refreshAll = () => stack.forEach((s) => s.refresh?.());

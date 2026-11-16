@@ -1,6 +1,6 @@
 // Progress: body weight, progress photos, and your monthly goals and recaps.
 
-import { h, fill, icon, push, pop, navBar, toast, actionSheet, confirmBox, fmtDate } from './ui.js';
+import { h, fill, icon, push, pop, navBar, toast, actionSheet, confirmBox, fmtDate, swipe, swipeSegment } from './ui.js';
 import { toDisplay, unit } from './store.js';
 import { lineChart } from './charts.js';
 import { weights, latestWeight, trend, change, logWeightSheet, importSheet, weightRow } from './body.js';
@@ -79,7 +79,7 @@ export function progressPage() {
 
 function weightScreen() {
   const el = h('div.page');
-  const body = h('div.scroll-body');
+  const body = swipeSegment(h('div.scroll-body'));
   let range = 90;
   function draw() {
     const all = trend();
@@ -140,6 +140,15 @@ function photoScreen(id) {
       h('button.btn.dark.wide', { onclick: () => pickCompare(id) }, 'Compare with another photo'),
       h('div.bottom-space')),
   );
+  // Swipe for the next or previous photo (the list is newest first: swipe left for older)
+  const at = () => photos().findIndex((x) => x.id === id);
+  const show = (d) => () => {
+    const next = photos()[at() + d];
+    if (!next) return false;
+    el.replaceChildren(...photoScreen(next.id).el.childNodes);
+    id = next.id;
+  };
+  swipe(el, { left: show(1), right: show(-1) });
   return { el };
 }
 

@@ -2,7 +2,7 @@
 // actually logged. Sets for the main muscle count fully; muscles that help
 // (triceps on bench press, biceps on rows…) count half, a common way to tally it.
 
-import { h, fill, icon, push, navBar } from './ui.js';
+import { h, fill, icon, push, navBar, swipeSegment } from './ui.js';
 import { state, commit, exercise, weekStart } from './store.js';
 
 export const MUSCLE_ORDER = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Forearms', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Core'];
@@ -102,7 +102,7 @@ let view = null;   // 'program' | 'week' | 'avg'
 
 export function volumeScreen() {
   const el = h('div.page');
-  const body = h('div.scroll-body');
+  const body = swipeSegment(h('div.scroll-body'));
   if (!view) view = state.plans.length ? 'program' : 'week';
 
   function draw() {

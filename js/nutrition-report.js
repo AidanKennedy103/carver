@@ -2,7 +2,7 @@
 // averages over 7 or 30 days (macros against goals, where calories come from,
 // your top foods, and the vitamins and minerals you tend to run low on).
 
-import { h, fill, navBar } from './ui.js';
+import { h, fill, navBar, swipeSegment } from './ui.js';
 import { state, ymd, addDays, dayLog, dayTotals, food } from './store.js';
 import { MACROS, MICROS, NUTRIENT_KEYS } from './foods.js';
 import { COLORS } from './charts.js';
@@ -113,7 +113,7 @@ let range = 7;
 
 export function reportScreen() {
   const el = h('div.page');
-  const body = h('div.scroll-body');
+  const body = swipeSegment(h('div.scroll-body'));
 
   function draw() {
     const r = report(range);

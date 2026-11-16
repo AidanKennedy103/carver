@@ -1,7 +1,7 @@
 // Home: today first (rings, workouts, food, weigh-in), then your week on the
 // calendar, your one-rep maxes, and your profile overview.
 
-import { h, fill, icon, push, sheet, toast, promptBox, fmtDate, fmtNum, fmtDurationWords } from './ui.js';
+import { h, fill, icon, push, sheet, toast, promptBox, fmtDate, fmtNum, fmtDurationWords, swipe } from './ui.js';
 import { state, commit, exercise, overview, toDisplay, unit, ymd, addDays, dayTotals, weekStart, dayStart, dayPlan, workoutDays, DAY_SHORT, workoutStats, waterOn, addWater } from './store.js';
 import { workoutDetail } from './workout.js';
 import { openSettings } from './settings.js';
@@ -195,7 +195,8 @@ function calendar(redraw) {
     const next = new Date(cur); next.setDate(next.getDate() + 7); cur = weekStart(next.getTime() + 36e5 * 3);
   }
   const thisWeek = state.workouts.filter((w) => w.start >= weekStart()).length;
-  return h('section.card.cal',
+  const moveMonth = (d) => { calMonth = new Date(year, month + d, 1).getTime(); redraw(); };
+  return swipe(h('section.card.cal',
     h('div.cal-head',
       h('button.icon-btn', { 'aria-label': 'Previous month', onclick: () => { calMonth = new Date(year, month - 1, 1).getTime(); redraw(); } }, icon('back', 20)),
       h('div.cal-title', m.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })),
@@ -206,7 +207,8 @@ function calendar(redraw) {
       h('span', h('i.cal-key.did'), 'Workout'),
       h('span', h('i.cal-key.gold'), `Week with ${goal}+`),
       workoutDays().length ? h('span', h('i.cal-key.plan'), 'Planned') : null,
-      h('button.link', { onclick: openGoals }, `${thisWeek}/${goal} this week`)));
+      h('button.link', { onclick: openGoals }, `${thisWeek}/${goal} this week`))),
+  { left: () => moveMonth(1), right: () => moveMonth(-1), target: () => document.querySelector('.card.cal') });
 }
 
 // ---------- Progress and Trends cards ----------
@@ -243,6 +245,8 @@ export function homePage() {
   const el = h('div.page');
   const body = h('div.scroll-body');
 
+  const setView = (v) => () => commit((st) => { st.settings.ringView = v; });
+
   function draw() {
     const o = overview();
     const name = state.profile.name.trim();
@@ -265,8 +269,8 @@ export function homePage() {
           h('h1.home-title', name ? `${greeting()}, ${name}` : greeting())),
         h('button.icon-btn', { onclick: openSettings, 'aria-label': 'Settings' }, icon('gear'))),
 
-      // Rings
-      h('section.card.rings-card',
+      // Rings (swipe for Today / Week)
+      swipe(h('section.card.rings-card',
         h('div.rings-top',
           h('div.segment.ring-view', [['day', 'Today'], ['week', 'Week']].map(([v, l]) => h('button' + (view === v ? '.on' : ''), { onclick: () => commit((st) => { st.settings.ringView = v; }) }, l))),
           h('button.rings-edit', { onclick: editRings, 'aria-label': 'Choose rings' }, icon('edit', 16))),
@@ -282,6 +286,7 @@ export function homePage() {
               tap ? h('span.ring-plus', water ? '+250' : '+1') : null);
           })))
           : h('button.link', { onclick: editRings }, 'Pick your rings')),
+      { left: view === 'day' ? setView('week') : null, right: view === 'week' ? setView('day') : null, target: () => body.querySelector('.rings-card') }),
       view === 'day' ? goals.filter((g) => g.hit && (g.id === 'protein' || g.id === 'kcal')).map((g) => h('div.hit-banner', h('span', '🏆'), g.cheer)) : null,
 
       // Today
