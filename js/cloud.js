@@ -124,6 +124,7 @@ export async function deleteAccount() {
 
 function friendly(e) {
   const m = e.message || String(e);
+  if (/sending|smtp|email.*(send|deliver)/i.test(m)) return 'Carver couldn’t send the email right now (a problem with its email setup, not your address). Try again later.';
   if (/expired|invalid|token/i.test(m)) return 'That code didn’t work. Check the newest email, or send a new code.';
   const secs = m.match(/after (\d+) seconds?/i);
   if (secs) return `Wait ${secs[1]} seconds before asking for another code.`;
