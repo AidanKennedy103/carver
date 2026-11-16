@@ -604,6 +604,7 @@ body.has-live .root .bottom-space { height: calc(160px + var(--safe-bottom)); }
 .share-row span { flex: 1; }
 .center { text-align: center; }
 .code-input { font-size: 28px; letter-spacing: 8px; text-align: center; font-variant-numeric: tabular-nums; }
+.code-input.is-link, .code-input:placeholder-shown { font-size: 16px; letter-spacing: 0; text-align: left; }
 .link-row { display: flex; justify-content: space-between; gap: 12px; }
 .link-card { text-align: left; width: 100%; }
 .link-card .orm-name { display: flex; justify-content: space-between; align-items: center; }

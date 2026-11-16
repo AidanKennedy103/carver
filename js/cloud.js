@@ -22,7 +22,11 @@ export function client() {
 
 // ---------- Account ----------
 
+// Start signed in if this device has a saved session (Supabase keeps it under
+// 'carver.auth'), so you show as signed in right away, even offline, before the
+// sign-in library has loaded. It checks the session properly once it loads.
 let user = null;
+try { user = JSON.parse(localStorage.getItem('carver.auth'))?.user || null; } catch { /* none */ }
 let lastSynced = 0;
 try { lastSynced = +localStorage.getItem('carver.synced') || 0; } catch { /* storage blocked */ }
 const status = { syncing: false, last: lastSynced, error: '' };
@@ -47,7 +51,35 @@ export async function verifyCode(email, code) {
   const db = await client();
   const { data, error } = await db.auth.verifyOtp({ email, token: code, type: 'email' });
   if (error) throw new Error(friendly(error));
-  user = data.user;
+  return signedIn(data.user);
+}
+
+/**
+ * Sign in with the link from the email, pasted into the app (press and hold the
+ * link, Copy). Tapping it would open Safari, which on iPhone has separate storage
+ * from the home-screen app. Accepts the email's link or the page it leads to.
+ */
+export async function verifyLink(text) {
+  const raw = String(text).match(/https?:\/\/\S+/)?.[0];
+  if (!raw) throw new Error('Paste the whole link from the email.');
+  let url;
+  try { url = new URL(raw); } catch { throw new Error('That link didn’t work. Copy it again from the email.'); }
+  const q = url.searchParams, hash = new URLSearchParams(url.hash.slice(1));
+  const db = await client();
+  let res;
+  if (hash.get('access_token') && hash.get('refresh_token')) {
+    res = await db.auth.setSession({ access_token: hash.get('access_token'), refresh_token: hash.get('refresh_token') });
+  } else if (q.get('token_hash') || q.get('token')) {
+    res = await db.auth.verifyOtp({ token_hash: q.get('token_hash') || q.get('token'), type: q.get('type') || 'magiclink' });
+  } else throw new Error('That isn’t a sign-in link. Copy the link from the Carver email.');
+  if (res.error) throw new Error(/expired|invalid|token/i.test(res.error.message || '')
+    ? 'That link was already used or has expired (each one works once, so don’t tap it first). Send a new one.'
+    : friendly(res.error));
+  return signedIn(res.data.user || res.data.session?.user);
+}
+
+async function signedIn(u) {
+  user = u;
   tell();
   await sync();
   pullFoods();
@@ -219,7 +251,7 @@ async function syncOnce() {
 
 function schedule(ms = 1500) {
   clearTimeout(timer);
-  timer = setTimeout(() => sync(), ms);
+  timer = setTimeout(() => { timer = 0; sync(); }, ms);
 }
 
 // ---------- Progress photos ----------
@@ -299,21 +331,34 @@ export async function sharedByBarcode(code) {
 
 // ---------- Start ----------
 
-export async function initCloud() {
-  if (!enabled()) return;
-  onSaved(() => { if (applying) return; localVersion++; if (user) schedule(); });
-  pullFoods();
+let connected = false;
+/** Load the sign-in library and check the saved session. Retried until it works (it needs a connection the first time). */
+async function connect() {
+  if (connected) return;
   try {
     const db = await client();
-    const { data } = await db.auth.getSession();
+    const { data, error } = await db.auth.getSession();
+    if (error && /fetch|network/i.test(error.message || '')) return;   // offline: keep the saved sign-in, try later
+    connected = true;
     user = data.session?.user || null;
     db.auth.onAuthStateChange((_e, session) => { const was = user?.id; user = session?.user || null; if (user && user.id !== was) sync(); tell(); });
     tell();
     if (user) sync();
   } catch { /* offline: try again when the app comes back */ }
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { if (user) sync(); pullFoods(); } });
-  addEventListener('online', () => user && sync());
-  setInterval(() => { if (user && document.visibilityState === 'visible') sync(); }, 60000);
+}
+
+export async function initCloud() {
+  if (!enabled()) return;
+  onSaved(() => { if (applying) return; localVersion++; if (user) schedule(); });
+  pullFoods();
+  await connect();
+  const wake = () => (connected ? user && sync() : connect());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') { wake(); pullFoods(); }
+    else if (user && timer) { clearTimeout(timer); timer = 0; sync(); }   // leaving the app: send what's waiting now
+  });
+  addEventListener('online', wake);
+  setInterval(() => { if (document.visibilityState === 'visible') wake(); }, 60000);
 }
 
 // For tests only: use a stand-in database.
