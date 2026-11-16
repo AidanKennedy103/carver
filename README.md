@@ -4,7 +4,12 @@ A free iPhone web app for tracking workouts, built in steps as a beta for friend
 
 Black and gold. The logo is a carved gold **C**.
 
-## What it does (step 1: workout tracker)
+## What it does
+
+- **Five tabs:** Home, Workout, Nutrition, Fitness, Trends (the last three are coming soon). A gold bar above the tabs shows a workout in progress, with Resume.
+- **Home:** your profile (name, "carving since", week streak), all-time workouts, weight lifted, records and hours trained, your recent personal records, and your last workout.
+
+### Workout tracker
 
 - **Start empty workout** or start one of your **plans** in one tap.
 - **My plans:** keep up to **5** routines (e.g. Push, Pull, Legs). Each one lists its exercises, sets, target weight and reps, rest time and notes. You can edit, rename, duplicate or delete a plan, or save any workout as a new plan.
@@ -25,6 +30,8 @@ Black and gold. The logo is a carved gold **C**.
 |---|---|
 | `index.html`, `styles.css` | The page and the black-and-gold iPhone look |
 | `js/app.js` | Start-up and automatic updates |
+| `js/tabs.js` | The bottom tab bar and the workout-in-progress bar |
+| `js/home.js` | The Home page |
 | `js/ui.js` | Screens, sheets, alerts and other building blocks |
 | `js/store.js` | Saving (on this phone), units, PRs, estimated 1RM, backups |
 | `js/exercises.js` | The exercise library |

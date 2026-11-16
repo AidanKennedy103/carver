@@ -159,6 +159,7 @@ function workoutScreen() {
     };
     const prs = findPRs(done);
     done.prs = prs.length;
+    done.prList = prs;
     commit((s) => { s.workouts.unshift(done); s.active = null; });
     pop();
     showSummary(done, prs);

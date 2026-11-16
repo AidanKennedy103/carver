@@ -11,7 +11,6 @@ import { openSettings } from './settings.js';
 export function workoutPage() {
   const el = h('div.page');
   const body = h('div.scroll-body');
-  let tick;
 
   const nav = navBar({
     title: 'Workout', back: false, large: true,
@@ -23,10 +22,6 @@ export function workoutPage() {
     const plansFull = state.plans.length >= MAX_PLANS;
     fill(body, 
       nav,
-      a ? h('button.resume', { onclick: openWorkout },
-        h('span.pulse'),
-        h('span.resume-text', h('b', a.name || 'Workout'), h('span.resume-time', fmtDuration(Date.now() - a.start))),
-        h('span.resume-go', 'Resume')) : null,
 
       a ? null : h('button.quick-start', { onclick: () => startWorkout() }, icon('plus', 18), 'Start empty workout'),
 
@@ -74,12 +69,10 @@ export function workoutPage() {
   return {
     el: (el.append(body), el),
     refresh: draw,
-    onShow() { clearInterval(tick); tick = setInterval(() => { const t = body.querySelector('.resume-time'); if (t && state.active) t.textContent = fmtDuration(Date.now() - state.active.start); }, 1000); },
-    onHide() { clearInterval(tick); },
   };
 }
 
-function historyCard(w) {
+export function historyCard(w) {
   const st = workoutStats(w);
   return h('button.card.hist-card', { onclick: () => push(() => workoutDetail(w)) },
     h('div.hist-top', h('span.hist-name', w.name), h('span.hist-date', fmtDate(w.start))),

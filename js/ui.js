@@ -44,6 +44,11 @@ export const icon = (name, size = 22) => {
     edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
     copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
     down: '<path d="m6 9 6 6 6-6"/>',
+    home: '<path d="M3.5 10.5 12 3.5l8.5 7V20a1 1 0 0 1-1 1H15v-6h-6v6H4.5a1 1 0 0 1-1-1z"/>',
+    apple: '<path d="M12 7.5c-1.6-1.2-4.6-1.4-6 .6-1.8 2.5-.8 7.3 1.4 10.3 1.2 1.6 2.6 2.4 4.6 1.4 2 1 3.4.2 4.6-1.4 2.2-3 3.2-7.8 1.4-10.3-1.4-2-4.4-1.8-6-.6z"/><path d="M12 7.5c0-2 1-3.5 3-4"/>',
+    activity: '<path d="M3 12h4l3-7 4 14 3-7h4"/>',
+    chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
   };
   const s = h('span.icon', { 'aria-hidden': 'true' });
   s.innerHTML = `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths[name] || ''}</svg>`;
@@ -64,6 +69,7 @@ export function initScreens(el) { root = el; }
 export function push(build, { replace = false, animate = true } = {}) {
   const screen = build();
   screen.el.classList.add('screen');
+  if (replace) screen.el.classList.add('root');
   if (replace) {
     while (stack.length) { const s = stack.pop(); s.onHide?.(); s.el.remove(); }
     animate = false;
@@ -96,6 +102,7 @@ export function pop() {
 }
 
 export const top = () => stack[stack.length - 1];
+export const depth = () => stack.length;
 export const refreshAll = () => stack.forEach((s) => s.refresh?.());
 
 /** Standard navigation bar: back button, title, optional right-side buttons. */

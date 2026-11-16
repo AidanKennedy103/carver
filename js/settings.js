@@ -1,6 +1,6 @@
 // Settings: units, default rest, back up / restore, reset.
 
-import { h, sheet, toast, confirmBox, fmtSecs, actionSheet, refreshAll } from './ui.js';
+import { h, sheet, toast, confirmBox, promptBox, fmtSecs, actionSheet, refreshAll } from './ui.js';
 import { state, commit, exportJSON, importJSON, resetAll } from './store.js';
 import { REST_CHOICES } from './block.js';
 
@@ -14,6 +14,7 @@ export function openSettings() {
   }, u === 'lb' ? 'Pounds (lb)' : 'Kilograms (kg)')));
 
   const restVal = h('span.row-val', fmtSecs(state.settings.restDefault));
+  const nameVal = h('span.row-val', state.profile.name || 'Add');
   const fileIn = h('input', { type: 'file', accept: 'application/json,.json', hidden: true, onchange: async (e) => {
     const f = e.target.files[0];
     if (!f) return;
@@ -29,6 +30,13 @@ export function openSettings() {
 
   const s = sheet(h('div.form',
     h('div.sheet-head', h('span'), h('div.sheet-title', 'Settings'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
+    h('div.group',
+      h('button.group-row', {
+        onclick: async () => {
+          const n = await promptBox('Your name', state.profile.name, { placeholder: 'First name' });
+          if (n != null) { commit((st) => { st.profile.name = n; }); nameVal.textContent = n || 'Add'; }
+        },
+      }, h('span', 'Your name'), nameVal)),
     h('label.form-label', 'Weight units'), unitSeg,
     h('div.group',
       h('button.group-row', {

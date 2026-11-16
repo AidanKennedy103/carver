@@ -11,6 +11,7 @@ export const LB_PER_KG = 2.20462262;
 const fresh = () => ({
   version: 1,
   settings: { unit: 'lb', restDefault: 90 },
+  profile: { name: '', joined: Date.now() },
   customExercises: [],
   plans: [],
   workouts: [],      // finished workouts, newest first
@@ -162,6 +163,38 @@ export function findPRs(w) {
   return prs;
 }
 
+// ---------- Profile overview ----------
+
+/** Monday 00:00 of the week containing ts. */
+export function weekStart(ts = Date.now()) {
+  const d = new Date(ts);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d.getTime();
+}
+
+export function overview() {
+  const ws = state.workouts;
+  const thisWeek = weekStart();
+  let volume = 0, sets = 0, time = 0;
+  for (const w of ws) { const st = workoutStats(w); volume += st.volume; sets += st.sets; time += st.duration; }
+  // Weeks in a row with at least one workout (this week counts if you've trained already)
+  const weeks = new Set(ws.map((w) => weekStart(w.start)));
+  let streak = 0;
+  let wk = weeks.has(thisWeek) ? thisWeek : weekStart(thisWeek - 864e5);
+  while (weeks.has(wk)) { streak++; wk = weekStart(wk - 864e5); }
+  const recentPRs = [];
+  for (const w of ws) {
+    for (const p of w.prList || []) recentPRs.push({ ...p, when: w.start });
+    if (recentPRs.length >= 5) break;
+  }
+  return {
+    total: ws.length,
+    streak, volume, sets, time, recentPRs: recentPRs.slice(0, 5),
+    prCount: ws.reduce((n, w) => n + (w.prs || 0), 0),
+  };
+}
+
 // ---------- Backup ----------
 
 export function exportJSON() {
@@ -173,6 +206,7 @@ export function importJSON(text) {
   commit((s) => {
     Object.assign(s, fresh(), {
       settings: { ...fresh().settings, ...data.settings },
+      profile: { ...fresh().profile, ...data.profile },
       customExercises: data.customExercises || [],
       plans: data.plans.slice(0, MAX_PLANS),
       workouts: data.workouts,

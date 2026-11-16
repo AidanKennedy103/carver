@@ -1,12 +1,14 @@
 // Carver: start-up.
 
-import { initScreens, push, top } from './ui.js';
+import { initScreens, top } from './ui.js';
 import { state, onChange } from './store.js';
+import { initTabs } from './tabs.js';
+import { homePage } from './home.js';
 import { workoutPage } from './workout.js';
 import { openWorkout } from './session.js';
 
 initScreens(document.getElementById('app'));
-push(workoutPage, { replace: true });
+initTabs({ home: homePage, workout: workoutPage });
 
 // Redraw the main page when data changes (only if it's showing)
 onChange(() => top()?.refresh?.());
