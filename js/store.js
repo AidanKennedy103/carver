@@ -3,6 +3,7 @@
 // between lb and kg never changes your numbers.
 
 import { LIBRARY } from './exercises.js';
+import { FOODS, NUTRIENT_KEYS } from './foods.js';
 
 const KEY = 'carver.v1';
 export const MAX_PLANS = 5;
@@ -16,12 +17,27 @@ const fresh = () => ({
   plans: [],
   workouts: [],      // finished workouts, newest first
   active: null,      // the workout in progress, if any
+  goals: { kcal: 2500, p: 180, c: 250, f: 80, workoutsPerWeek: 3, custom: [] },
+  food: { log: [], custom: [] },   // log entries keep their own nutrient totals
+  body: { weights: [] },           // { id, ts, kg, source }
+  checks: {},                      // custom daily goals: { 'YYYY-MM-DD': { goalId: amount } }
+  monthly: {},                     // { 'YYYY-MM': { goals: [], note } }
 });
+
+// Older saves miss newer sections: fill them in (one level deep)
+function upgrade(data) {
+  const base = fresh();
+  for (const [k, v] of Object.entries(base)) {
+    if (data[k] == null) data[k] = v;
+    else if (v && typeof v === 'object' && !Array.isArray(v) && k !== 'active') data[k] = { ...v, ...data[k] };
+  }
+  return data;
+}
 
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...fresh(), ...JSON.parse(raw) };
+    if (raw) return upgrade(JSON.parse(raw));
   } catch { /* private mode or broken data: start fresh */ }
   return fresh();
 }
@@ -227,6 +243,62 @@ export function overview() {
   };
 }
 
+// ---------- Food ----------
+
+/** Local calendar day as 'YYYY-MM-DD'. */
+export function ymd(ts = Date.now()) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+export const dayStart = (key) => { const [y, m, d] = key.split('-').map(Number); return new Date(y, m - 1, d).getTime(); };
+export const addDays = (key, n) => ymd(dayStart(key) + n * 864e5 + 36e5 * 3);   // +3 h dodges daylight-saving edges
+
+export const allFoods = () => [...state.food.custom, ...FOODS];
+export function food(id) { return allFoods().find((f) => f.id === id); }
+
+/** Nutrients for `grams` of a food (from its per-100 g values). */
+export function nutrientsFor(f, grams) {
+  const out = {};
+  for (const k of NUTRIENT_KEYS) if (f.n[k] != null) out[k] = (f.n[k] * grams) / 100;
+  return out;
+}
+
+export function logFood(entry) {
+  const e = { id: uid(), ts: Date.now(), ...entry };
+  commit((s) => { s.food.log.push(e); });
+  return e;
+}
+export function updateLog(id, changes) {
+  commit((s) => { const e = s.food.log.find((x) => x.id === id); if (e) Object.assign(e, changes); });
+}
+export function deleteLog(id) {
+  commit((s) => { s.food.log = s.food.log.filter((x) => x.id !== id); });
+}
+export const dayLog = (key) => state.food.log.filter((e) => e.date === key);
+
+/** Totals for a day: { kcal, p, c, f, ...micros, entries } */
+export function dayTotals(key) {
+  const t = { entries: 0 };
+  for (const k of NUTRIENT_KEYS) t[k] = 0;
+  for (const e of dayLog(key)) {
+    t.entries++;
+    for (const k of NUTRIENT_KEYS) if (e.n?.[k] != null) t[k] += e.n[k];
+  }
+  return t;
+}
+
+/** Foods you've logged lately, most recent first (for the Recent list). */
+export function recentFoods(limit = 15) {
+  const seen = new Set(), out = [];
+  for (let i = state.food.log.length - 1; i >= 0 && out.length < limit; i--) {
+    const e = state.food.log[i];
+    if (!e.foodId || seen.has(e.foodId)) continue;
+    const f = food(e.foodId);
+    if (f) { seen.add(e.foodId); out.push(f); }
+  }
+  return out;
+}
+
 // ---------- Backup ----------
 
 export function exportJSON() {
@@ -235,16 +307,9 @@ export function exportJSON() {
 export function importJSON(text) {
   const data = JSON.parse(text);
   if (!data || !Array.isArray(data.workouts) || !Array.isArray(data.plans)) throw new Error('That file is not a Carver backup.');
-  commit((s) => {
-    Object.assign(s, fresh(), {
-      settings: { ...fresh().settings, ...data.settings },
-      profile: { ...fresh().profile, ...data.profile },
-      customExercises: data.customExercises || [],
-      plans: data.plans.slice(0, MAX_PLANS),
-      workouts: data.workouts,
-      active: data.active || null,
-    });
-  });
+  const { app, exported, ...rest } = data;
+  rest.plans = rest.plans.slice(0, MAX_PLANS);
+  commit((s) => { Object.assign(s, upgrade(rest)); });
 }
 export function resetAll() {
   commit((s) => Object.assign(s, fresh()));
