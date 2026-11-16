@@ -7,12 +7,17 @@ import { allExercises, addCustomExercise, state } from './store.js';
 const TYPE_LABEL = { wr: 'Weight & reps', bw: 'Reps only', time: 'Duration' };
 
 /** Opens the picker. onPick(ids[]) is called with the chosen exercise ids. */
-export function pickExercises(onPick, { single = false, title = 'Add exercises' } = {}) {
-  const chosen = [];
+export function pickExercises(onPick, { single = false, title = 'Add exercises', filter = null, max = 99, initial = [], addLabel = 'Add' } = {}) {
+  const chosen = initial.slice();
   let muscle = 'All', query = '';
 
   const list = h('div.ex-list');
-  const addBtn = h('button.btn.gold.wide', { disabled: true, onclick: () => { s.close(); onPick(chosen.slice()); } }, 'Add');
+  const addBtn = h('button.btn.gold.wide', { disabled: !initial.length && addLabel === 'Add', onclick: () => { s.close(); onPick(chosen.slice()); } }, addLabel);
+  const label = () => {
+    if (addLabel !== 'Add') { addBtn.textContent = `${addLabel} (${chosen.length})`; addBtn.disabled = false; return; }
+    addBtn.disabled = !chosen.length;
+    addBtn.textContent = chosen.length ? `Add ${chosen.length} exercise${chosen.length > 1 ? 's' : ''}` : 'Add';
+  };
   const search = h('input.search-input', {
     type: 'search', placeholder: 'Search exercises', autocomplete: 'off', enterkeyhint: 'search',
     oninput: (e) => { query = e.target.value.toLowerCase().trim(); draw(); },
@@ -31,7 +36,7 @@ export function pickExercises(onPick, { single = false, title = 'Add exercises' 
   state.workouts.slice(0, 20).forEach((w, i) => w.exercises.forEach((e) => { if (!recent.has(e.exId)) recent.set(e.exId, i); }));
 
   function draw() {
-    let items = allExercises().filter((e) =>
+    let items = allExercises().filter((e) => (!filter || filter(e)) &&
       (muscle === 'All' || e.muscle === muscle) &&
       (!query || e.name.toLowerCase().includes(query) || e.equipment.toLowerCase().includes(query) || e.muscle.toLowerCase().includes(query)));
     if (!query) items = items.slice().sort((a, b) => (recent.get(a.id) ?? 999) - (recent.get(b.id) ?? 999));
@@ -42,9 +47,10 @@ export function pickExercises(onPick, { single = false, title = 'Add exercises' 
           onclick: () => {
             if (single) { s.close(); onPick([e.id]); return; }
             const i = chosen.indexOf(e.id);
-            if (i >= 0) chosen.splice(i, 1); else chosen.push(e.id);
-            addBtn.disabled = !chosen.length;
-            addBtn.textContent = chosen.length ? `Add ${chosen.length} exercise${chosen.length > 1 ? 's' : ''}` : 'Add';
+            if (i >= 0) chosen.splice(i, 1);
+            else if (chosen.length >= max) { toast(`Pick up to ${max}`); return; }
+            else chosen.push(e.id);
+            label();
             draw();
           },
         },
@@ -58,12 +64,13 @@ export function pickExercises(onPick, { single = false, title = 'Add exercises' 
 
   const s = sheet(h('div.picker',
     h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', title),
-      h('button.link', { onclick: () => createExercise((e) => { if (single) { s.close(); onPick([e.id]); } else { chosen.push(e.id); addBtn.disabled = false; addBtn.textContent = `Add ${chosen.length} exercise${chosen.length > 1 ? 's' : ''}`; draw(); } }, query) }, 'Create')),
+      h('button.link', { onclick: () => createExercise((e) => { if (single) { s.close(); onPick([e.id]); } else { if (chosen.length < max) chosen.push(e.id); label(); draw(); } }, query) }, 'Create')),
     h('div.search-wrap', icon('search', 18), search),
     chips,
     list,
     single ? null : h('div.sheet-foot', addBtn),
   ), { full: true });
+  label();
   draw();
 }
 

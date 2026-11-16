@@ -163,6 +163,38 @@ export function findPRs(w) {
   return prs;
 }
 
+// ---------- One-rep max tracking ----------
+
+/** Best estimated 1RM (kg) per workout for an exercise, oldest first. Warm-ups don't count. */
+export function e1rmHistory(exId) {
+  const out = [];
+  for (let i = state.workouts.length - 1; i >= 0; i--) {
+    const w = state.workouts[i];
+    let best = 0, set = null;
+    for (const e of w.exercises) {
+      if (e.exId !== exId) continue;
+      for (const st of e.sets) {
+        if (!st.done || st.type === 'w') continue;
+        const v = e1rm(st.weight, st.reps);
+        if (v > best) { best = v; set = st; }
+      }
+    }
+    if (best) out.push({ x: w.start, y: best, weight: set.weight, reps: set.reps, workoutId: w.id });
+  }
+  return out;
+}
+
+/** The exercises shown in the 1RM tracker: your picks, or your 4 most-logged lifts until you pick. */
+export function oneRmExercises() {
+  if (Array.isArray(state.settings.oneRm)) return state.settings.oneRm;
+  const count = new Map();
+  for (const w of state.workouts) for (const e of w.exercises) {
+    if (exercise(e.exId).type !== 'wr') continue;
+    count.set(e.exId, (count.get(e.exId) || 0) + 1);
+  }
+  return [...count.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([id]) => id);
+}
+
 // ---------- Profile overview ----------
 
 /** Monday 00:00 of the week containing ts. */

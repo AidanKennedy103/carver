@@ -5,6 +5,7 @@ import { state, commit, exercise, overview, toDisplay, unit } from './store.js';
 import { historyCard } from './workout.js';
 import { openSettings } from './settings.js';
 import { goTab } from './tabs.js';
+import { oneRmSection } from './onerm.js';
 
 function greeting() {
   const hr = new Date().getHours();
@@ -65,6 +66,8 @@ export function homePage() {
         h('div.welcome-title', 'Welcome to Carver'),
         h('div.empty-text', 'Log your first workout and your stats and records build up here.'),
         h('button.btn.gold.wide', { onclick: () => goTab('workout') }, 'Go to Workout')) : null,
+
+      oneRmSection(),
 
       // Recent PRs
       o.recentPRs.length ? h('div.section-head', h('h2.section-title', 'Recent records')) : null,
