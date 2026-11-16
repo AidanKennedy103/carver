@@ -6,6 +6,7 @@ import { state, commit, exercise, workoutStats, e1rm, toDisplay, unit, ymd, dayT
 import { photos } from './photos.js';
 import { trend } from './body.js';
 import { compareView } from './progress.js';
+import { activityKcal } from './fitness.js';
 
 export const GOAL_OPTIONS = ['Build muscle', 'Lose fat', 'Get stronger', 'Maintain weight', 'Improve endurance', 'Eat better', 'Be consistent'];
 
@@ -87,8 +88,12 @@ export function recap(key) {
   const before = pics.filter((p) => p.ts < a).pop();
   const pair = inMonth.length ? [before || (inMonth.length > 1 ? inMonth[0] : null), inMonth[inMonth.length - 1]] : null;
 
-  return { key, workouts: ws.length, volume, sets, time, prs, gains: gains.slice(0, 3), weight, food, photoPair: pair && pair[0] ? pair : null, photoCount: inMonth.length,
-    hasData: ws.length > 0 || !!weight || !!food || inMonth.length > 0 };
+  // Cardio from the Fitness tab
+  const acts = (state.activities || []).filter((x) => x.start >= a && x.start < b);
+  const cardio = acts.length ? { n: acts.length, time: acts.reduce((n, x) => n + x.dur, 0), dist: acts.reduce((n, x) => n + (x.dist || 0), 0), kcal: acts.reduce((n, x) => n + activityKcal(x), 0) } : null;
+
+  return { key, cardio, workouts: ws.length, volume, sets, time, prs, gains: gains.slice(0, 3), weight, food, photoPair: pair && pair[0] ? pair : null, photoCount: inMonth.length,
+    hasData: ws.length > 0 || !!cardio || !!weight || !!food || inMonth.length > 0 };
 }
 
 const signed = (kg) => { const v = +toDisplay(Math.abs(kg)); return `${kg > 0 ? '+' : kg < 0 ? '−' : '±'}${v} ${unit()}`; };
@@ -118,6 +123,12 @@ export function recapScreen(key) {
         h('span.pr-icon', icon('trophy', 16)),
         h('span.pr-line-text', h('span.pr-line-name', exercise(g.exId).name), h('span.pr-line-kind', `Est. 1RM ${toDisplay(g.from).split('.')[0]} → ${toDisplay(g.to).split('.')[0]} ${unit()}`)),
         h('span.pr-line-val', `+${Math.round(+toDisplay(g.to - g.from))}`)))) : null,
+
+      r.cardio ? [h('div.section-head', h('h2.section-title', 'Cardio')),
+        h('div.tiles',
+          tile(r.cardio.n, 'Activities', fmtDurationWords(r.cardio.time)),
+          tile(r.cardio.dist ? (r.cardio.dist / (unit() === 'kg' ? 1000 : 1609.344)).toFixed(1) : '—', 'Distance', unit() === 'kg' ? 'km' : 'mi'),
+          tile(fmtNum(r.cardio.kcal), 'Burned', 'active kcal'))] : null,
 
       r.weight ? [h('div.section-head', h('h2.section-title', 'Body')),
         h('section.card', h('div.energy-top',

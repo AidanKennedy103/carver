@@ -16,6 +16,7 @@ import { trendsPage, metabolism } from './trends.js';
 import { latestWeight, change, trend } from './body.js';
 import { sparkline } from './charts.js';
 import { groupsCard } from './groups.js';
+import { activityType } from './fitness.js';
 import { enabled as cloudOn } from './cloud.js';
 import { monthlyPrompts } from './monthly.js';
 
@@ -235,6 +236,7 @@ export function homePage() {
     const goals = ringGoals(view);
     const t = dayTotals(today);
     const todayWorkouts = state.workouts.filter((w) => ymd(w.start) === today);
+    const todayActs = (state.activities || []).filter((a) => ymd(a.start) === today);
     const todayWeigh = state.body.weights.filter((w) => ymd(w.ts) === today).pop();
     const prompts = monthlyPrompts({ takePhoto: takeProgressPhoto });
     const stat = (value, label, sub) => h('div.tile', h('div.tile-v', value), h('div.tile-k', label), sub ? h('div.tile-sub', sub) : null);
@@ -270,8 +272,8 @@ export function homePage() {
           h('span.today-ico', icon('dumbbell', 20)),
           h('span.today-text',
             h('span.today-k', 'Workout'),
-            h('span.today-v', todayWorkouts.length ? todayWorkouts.map((w) => `${w.name} · ${fmtDurationWords(workoutStats(w).duration)}`).join(', ') : state.active ? 'In progress' : 'Not yet')),
-          todayWorkouts.length ? h('span.ring-check.big', '✓') : h('button.btn.gold-soft.small', { onclick: () => goTab('workout') }, state.active ? 'Resume' : 'Start')),
+            h('span.today-v', todayWorkouts.length || todayActs.length ? [...todayWorkouts.map((w) => `${w.name} · ${fmtDurationWords(workoutStats(w).duration)}`), ...todayActs.map((a) => `${activityType(a.type).name} · ${fmtDurationWords(a.dur)}`)].join(', ') : state.active ? 'In progress' : 'Not yet')),
+          todayWorkouts.length || todayActs.length ? h('span.ring-check.big', '✓') : h('button.btn.gold-soft.small', { onclick: () => goTab('workout') }, state.active ? 'Resume' : 'Start')),
         h('div.today-row',
           h('span.today-ico', '🍽️'),
           h('span.today-text',
