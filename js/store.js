@@ -17,8 +17,8 @@ const fresh = () => ({
   plans: [],
   workouts: [],      // finished workouts, newest first
   active: null,      // the workout in progress, if any
-  goals: { kcal: 2500, p: 180, c: 250, f: 80, workoutsPerWeek: 3, custom: [] },
-  food: { log: [], custom: [], meals: [], favs: [] },   // log entries keep their own nutrient totals; meals = saved groups of entries
+  goals: { kcal: 2500, p: 180, c: 250, f: 80, water: 2500, workoutsPerWeek: 3, custom: [] },
+  food: { log: [], custom: [], meals: [], favs: [], water: {} },   // water: { 'YYYY-MM-DD': ml }   // log entries keep their own nutrient totals; meals = saved groups of entries
   activities: [],    // runs, walks, rides…: { id, type, start, dur (ms), dist (m), kcal, source }
   body: { weights: [], photos: [] }, // weights: { id, ts, kg, source }; photos: { id, ts } (images in IndexedDB)
   checks: {},                      // custom daily goals: { 'YYYY-MM-DD': { goalId: amount } }
@@ -315,6 +315,12 @@ export function dayTotals(key) {
 }
 
 /** Foods you've logged lately, most recent first (for the Recent list). */
+/** Water drunk on a day, in ml. */
+export const waterOn = (key) => state.food.water?.[key] || 0;
+export function addWater(key, ml) {
+  commit((s) => { s.food.water = { ...(s.food.water || {}), [key]: Math.max(0, (s.food.water?.[key] || 0) + ml) }; });
+}
+
 export function recentFoods(limit = 15) {
   const seen = new Set(), out = [];
   for (let i = state.food.log.length - 1; i >= 0 && out.length < limit; i--) {

@@ -700,3 +700,14 @@ body.has-live .root .bottom-space { height: calc(160px + var(--safe-bottom)); }
 .suggest-btn { margin-bottom: 10px; }
 .list-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 14px 4px 6px; }
 .online-row .ex-name { color: var(--gold); }
+/* Water */
+.water { padding: 14px 16px; margin-top: 12px; }
+.water-top { display: flex; align-items: center; gap: 8px; }
+.water-title { font-weight: 700; }
+.water-val { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 600; }
+.water-minus { width: 30px; height: 30px; font-size: 20px; }
+.water-glasses { display: flex; gap: 4px; margin: 10px 0; }
+.water-glasses i { flex: 1; height: 18px; border-radius: 3px 3px 6px 6px; background: var(--surface-2); }
+.water-glasses i.on { background: #2e8bd8; }
+.water-btns { display: flex; gap: 8px; }
+.water-btns .chip { flex: 1; justify-content: center; height: 32px; font-size: 13px; }

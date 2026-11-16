@@ -56,7 +56,7 @@ export function openGoals() {
     h('div.sheet-head', h('span'), h('div.sheet-title', 'Goals'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
     h('label.form-label', 'Daily food'),
     h('button.btn.gold-soft.wide.suggest-btn', { onclick: () => { s.close(); suggestGoals(); } }, '✨ Suggest goals for me'),
-    h('div.group', field('Calories', 'kcal', 'kcal', 10), field('Protein', 'p', 'g'), field('Carbs', 'c', 'g'), field('Fat', 'f', 'g')),
+    h('div.group', field('Calories', 'kcal', 'kcal', 10), field('Protein', 'p', 'g'), field('Carbs', 'c', 'g'), field('Fat', 'f', 'g'), field('Water', 'water', 'ml', 50)),
     hintEl,
     h('label.form-label', 'Workouts per week'), wkSeg,
     h('p.fine', 'Hit this and the week turns gold on your calendar.'),

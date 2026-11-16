@@ -11,7 +11,7 @@ Black and gold. The logo is a gold blackletter **C**, drawn stroke by stroke wit
 Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** open from two cards on Home. A gold bar above the tabs shows a workout in progress, with Resume.
 
 ### Home: today first
-- **Rings**, like closing your rings on Apple Watch. Pick up to 4 (pencil button): **Workout, Calories, Protein, Weigh-in**, or up to 2 goals of your own (water, steps…).
+- **Rings**, like closing your rings on Apple Watch. Pick up to 4 (pencil button): **Workout, Calories, Protein, Water, Weigh-in**, or up to 2 goals of your own (water, steps…).
   - **Today / Week** switch. Today shows each goal for today; tap one of your own goals to add 1. Week counts the days you've hit each goal since Monday, against the days a week you set for it (the Workout ring counts workouts against your workouts-per-week goal).
   - Calories count as hit within ±10% of your goal.
   - Closing a ring plays a short celebration (daily rings once a day, weekly rings once a week). Banners say "Hit your protein goal!" or "Hit your calorie goal!".
@@ -46,6 +46,9 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 - **Diary** for any day, by meal (breakfast, lunch, dinner, snacks). Macros come first, each with a bar toward its goal.
 - **Micronutrients page:** your energy split, plus vitamins and minerals against adult targets. Things to stay under (sodium, saturated fat, cholesterol) turn red when you go over.
 - **149 starter foods with emoji icons and real serving sizes**, a Recent list, category filters, and **Create food**. Search matches every word you type, so "greek yog" finds Greek yogurt.
+- **Search online:** if a food isn't in Carver, tap "Search online" to look it up in Open Food Facts by name (products sold in Canada first). Foods you pick are kept in My foods.
+- **Water:** a card on Nutrition with +250, +500 and +750 ml buttons and a glass-by-glass bar. Set your daily target in Goals. Water can also be a ring on Home (tap its row to add 250 ml).
+- **Log it again:** tap an entry on an earlier day to add it to today.
 - **Favorites:** tap ☆ on any food to keep it in a Favorites list. Search puts favorites, your own foods and the foods you log most at the top.
 - **Recipes:** build a dish from foods (Add food → Create → New recipe), set how many servings it makes and, if you like, its cooked weight. Log a serving like any food, with every vitamin and mineral added up. Tap Edit recipe to change it.
 - **Edit or delete your own foods** from the food's amount screen.

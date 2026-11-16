@@ -2,7 +2,7 @@
 // calendar, your one-rep maxes, and your profile overview.
 
 import { h, fill, icon, push, sheet, toast, promptBox, fmtDate, fmtNum, fmtDurationWords } from './ui.js';
-import { state, commit, exercise, overview, toDisplay, unit, ymd, addDays, dayTotals, weekStart, workoutStats } from './store.js';
+import { state, commit, exercise, overview, toDisplay, unit, ymd, addDays, dayTotals, weekStart, workoutStats, waterOn, addWater } from './store.js';
 import { workoutDetail } from './workout.js';
 import { openSettings } from './settings.js';
 import { goTab } from './tabs.js';
@@ -49,6 +49,7 @@ function ringCatalog() {
     { id: 'gym', label: 'Workout', color: COLORS.gym, cheer: 'Workout done!', day: (k) => { const n = state.workouts.filter((w) => ymd(w.start) === k).length; return { value: n, goal: 1, text: n ? `${n} workout${n > 1 ? 's' : ''} today` : 'Not yet today', hit: n > 0 }; } },
     { id: 'kcal', label: 'Calories', color: COLORS.calories, cheer: 'Hit your calorie goal!', day: (k) => { const v = dayTotals(k).kcal; return { value: v, goal: g.kcal, text: `${fmtNum(v)} of ${fmtNum(g.kcal)} kcal`, hit: v >= g.kcal * 0.9 && v <= g.kcal * 1.1, over: v > g.kcal * 1.1 }; } },
     { id: 'protein', label: 'Protein', color: COLORS.protein, cheer: 'Hit your protein goal!', day: (k) => { const v = dayTotals(k).p; return { value: v, goal: g.p, text: `${Math.round(v)} of ${g.p} g`, hit: v >= g.p }; } },
+    { id: 'water', label: 'Water', color: '#2e8bd8', cheer: 'Hit your water goal!', day: (k) => { const v = waterOn(k), gw = g.water || 2500; return { value: v, goal: gw, text: `${(v / 1000).toFixed(1)} of ${(gw / 1000).toFixed(1)} L`, hit: v >= gw }; } },
     { id: 'weigh', label: 'Weigh-in', color: WEIGH_COLOR, cheer: 'Weighed in!', day: (k) => { const n = state.body.weights.some((w) => ymd(w.ts) === k) ? 1 : 0; return { value: n, goal: 1, text: n ? 'Done today' : 'Not yet today', hit: !!n }; } },
     ...g.custom.map((c) => ({ id: c.id, custom: c, label: c.name, color: COLORS.custom, cheer: `${c.name} goal hit!`, day: (k) => { const v = customAmount(c.id, k); return { value: v, goal: c.target, text: `${fmtNum(v)} of ${fmtNum(c.target)} ${c.unit}`, hit: v >= c.target }; } })),
   ];
@@ -254,11 +255,13 @@ export function homePage() {
         goals.length ? h('div.rings-body',
           h('div.rings-wrap', rings(goals, 132)),
           h('div.ring-legend', goals.map((g) => {
-            const tap = g.custom && view === 'day';
-            return h(tap ? 'button.ring-row.tap' : 'div.ring-row', tap ? { onclick: () => logCustom(g.id, 1), 'aria-label': `Add 1 ${g.custom.unit} to ${g.label}` } : {},
+            const water = g.id === 'water';
+            const tap = view === 'day' && (g.custom || water);
+            const act = water ? { onclick: () => addWater(ymd(), 250), 'aria-label': 'Add 250 ml of water' } : tap ? { onclick: () => logCustom(g.id, 1), 'aria-label': `Add 1 ${g.custom.unit} to ${g.label}` } : {};
+            return h(tap ? 'button.ring-row.tap' : 'div.ring-row', act,
               h('i.ring-dot', { style: { background: g.color } }),
               h('span.ring-text', h('span.ring-label', g.label, g.hit ? h('span.ring-check', ' ✓') : null), h('span.ring-val' + (g.over ? '.red-text' : ''), g.text)),
-              tap ? h('span.ring-plus', '+1') : null);
+              tap ? h('span.ring-plus', water ? '+250' : '+1') : null);
           })))
           : h('button.link', { onclick: editRings }, 'Pick your rings')),
       view === 'day' ? goals.filter((g) => g.hit && (g.id === 'protein' || g.id === 'kcal')).map((g) => h('div.hit-banner', h('span', '🏆'), g.cheer)) : null,

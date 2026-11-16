@@ -2,7 +2,7 @@
 // picker, quick add, recipes and reports live in their own files.
 
 import { h, fill, icon, push, toast, actionSheet, confirmBox, promptBox, navBar } from './ui.js';
-import { state, commit, uid, ymd, addDays, dayLog, dayTotals, food, logFood, deleteLog } from './store.js';
+import { state, commit, uid, ymd, addDays, dayLog, dayTotals, food, logFood, deleteLog, waterOn, addWater } from './store.js';
 import { MACROS } from './foods.js';
 import { COLORS } from './charts.js';
 import { openGoals } from './goals.js';
@@ -52,6 +52,8 @@ export function nutritionPage() {
         h('button.add-tile', { onclick: () => addFood({ date: viewDate }) }, h('span.add-ico', '🔎'), 'Search food'),
         h('button.add-tile', { onclick: () => scanBarcode((f) => amountSheet({ food: f, date: viewDate })) }, h('span.add-ico', '▦'), 'Scan')),
 
+      waterCard(viewDate),
+
       MEALS.map((meal) => {
         const list = entries.filter((e) => e.meal === meal.id);
         const kcal = list.reduce((n, e) => n + (e.n.kcal || 0), 0);
@@ -98,14 +100,42 @@ async function saveMeal(list, meal) {
   toast('Saved. Find it under Saved meals when you add food.');
 }
 
+// ---------- Water ----------
+
+const L = (ml) => `${(ml / 1000).toFixed(ml % 1000 === 0 ? 1 : 2).replace(/0$/, '')} L`;
+function waterCard(date) {
+  const ml = waterOn(date), goal = state.goals.water || 2500;
+  const glasses = Math.max(4, Math.round(goal / 250));
+  const full = Math.min(glasses, Math.floor(ml / 250));
+  return h('section.card.water',
+    h('div.water-top',
+      h('span.water-title', '💧 Water'),
+      h('span.water-val', `${L(ml)} `, h('span.muted', `/ ${L(goal)}`)),
+      ml ? h('button.icon-btn.water-minus', { onclick: () => addWater(date, -250), 'aria-label': 'Remove 250 ml of water' }, '−') : null),
+    h('div.water-glasses', { role: 'img', 'aria-label': `${full} of ${glasses} glasses` }, Array.from({ length: glasses }, (_, i) => h('i' + (i < full ? '.on' : '')))),
+    h('div.water-btns',
+      h('button.chip', { onclick: () => addWater(date, 250) }, '+ 250 ml'),
+      h('button.chip', { onclick: () => addWater(date, 500) }, '+ 500 ml'),
+      h('button.chip', { onclick: () => addWater(date, 750) }, '+ 750 ml')));
+}
+
 function bar(v, goal, color, big = false) {
   const pct = goal ? Math.min(100, (v / goal) * 100) : 0;
   return h('div.bar' + (big ? '.big' : ''), h('div.bar-fill', { style: { width: pct + '%', background: color } }), v > goal && goal ? h('div.bar-over', { style: { width: Math.min(100, ((v - goal) / goal) * 100) + '%' } }) : null);
 }
 
 function editEntry(e) {
-  if (e.quick) { quickAdd({ entry: e }); return; }
-  const f = food(e.foodId);
-  if (f) { amountSheet({ food: f, entry: e }); return; }
+  const f = e.quick ? null : food(e.foodId);
+  const edit = e.quick ? () => quickAdd({ entry: e }) : f ? () => amountSheet({ food: f, entry: e }) : null;
+  // On another day, offer to log it again today (leftovers, the same lunch…)
+  if (e.date !== ymd()) {
+    actionSheet(e.name, [
+      { label: 'Add to today', onClick: () => { logFood(copyEntry(e, ymd(), e.meal)); toast(`Added ${e.name} to today`); } },
+      ...(edit ? [{ label: 'Edit', onClick: edit }] : []),
+      { label: 'Delete', danger: true, onClick: () => deleteLog(e.id) },
+    ]);
+    return;
+  }
+  if (edit) { edit(); return; }
   actionSheet(e.name, [{ label: 'Delete', danger: true, onClick: () => deleteLog(e.id) }]);
 }
