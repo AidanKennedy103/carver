@@ -2,7 +2,7 @@
 // calendar, your one-rep maxes, and your profile overview.
 
 import { h, fill, icon, push, sheet, toast, promptBox, fmtDate, fmtNum, fmtDurationWords, swipe } from './ui.js';
-import { state, commit, exercise, overview, toDisplay, unit, ymd, addDays, dayTotals, weekStart, dayStart, dayPlan, workoutDays, DAY_SHORT, workoutStats, waterOn, addWater } from './store.js';
+import { state, commit, exercise, overview, toDisplay, unit, ymd, addDays, dayTotals, weekStart, dayStart, dayPlan, workoutDays, DAY_SHORT, workoutStats, waterOn, addWater, kcalLook } from './store.js';
 import { workoutDetail } from './workout.js';
 import { openSettings } from './settings.js';
 import { goTab } from './tabs.js';
@@ -53,7 +53,7 @@ function ringCatalog() {
       if (dayPlan(k) === 'rest') return { value: 1, goal: 1, text: 'Rest day', hit: true, rest: true };   // a full ring: resting is the plan
       return { value: 0, goal: 1, text: dayPlan(k) === 'planned' ? 'Planned today' : 'Not yet today', hit: false };
     } },
-    { id: 'kcal', label: 'Calories', color: COLORS.calories, cheer: 'Hit your calorie goal!', day: (k) => { const v = dayTotals(k).kcal; return { value: v, goal: g.kcal, text: `${fmtNum(v)} of ${fmtNum(g.kcal)} kcal`, hit: v >= g.kcal * 0.9 && v <= g.kcal * 1.1, over: v > g.kcal * 1.1 }; } },
+    { id: 'kcal', label: 'Calories', color: COLORS.calories, cheer: 'Hit your calorie goal!', day: (k) => { const v = dayTotals(k).kcal; return { value: v, goal: g.kcal, text: `${fmtNum(v)} of ${fmtNum(g.kcal)} kcal`, hit: v >= g.kcal * 0.9 && v <= g.kcal * 1.1, over: kcalLook(v, g.kcal) === 'over' }; } },
     { id: 'protein', label: 'Protein', color: COLORS.protein, cheer: 'Hit your protein goal!', day: (k) => { const v = dayTotals(k).p; return { value: v, goal: g.p, text: `${Math.round(v)} of ${g.p} g`, hit: v >= g.p }; } },
     { id: 'water', label: 'Water', color: '#2e8bd8', cheer: 'Hit your water goal!', day: (k) => { const v = waterOn(k), gw = g.water || 2500; return { value: v, goal: gw, text: `${(v / 1000).toFixed(1)} of ${(gw / 1000).toFixed(1)} L`, hit: v >= gw }; } },
     { id: 'weigh', label: 'Weigh-in', color: WEIGH_COLOR, cheer: 'Weighed in!', day: (k) => { const n = state.body.weights.some((w) => ymd(w.ts) === k) ? 1 : 0; return { value: n, goal: 1, text: n ? 'Done today' : 'Not yet today', hit: !!n }; } },

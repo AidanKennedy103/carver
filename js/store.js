@@ -353,6 +353,23 @@ const NONE = Object.freeze([]);
 export const dayLog = (key) => days().byDate.get(key) || NONE;
 
 /** Totals for a day: { kcal, p, c, f, ...micros, entries } (don't change the object you get back) */
+/** Your food aim: 'cut', 'maintain' or 'build'. Set in Goals; until then, this month's goals decide. */
+export function foodAim() {
+  if (state.goals.aim) return state.goals.aim;
+  const m = state.monthly[ymd().slice(0, 7)]?.goals || [];
+  return m.includes('Build muscle') && !m.includes('Lose fat') ? 'build' : m.includes('Lose fat') && !m.includes('Build muscle') ? 'cut' : 'maintain';
+}
+
+/** How a day's calories look against the goal: 'hit' (within 10%), 'over' (red), 'soft' (off target,
+ *  but the way your aim leans: over while building, under while cutting), or '' (still going). */
+export function kcalLook(v, goal) {
+  if (!goal || !v) return '';
+  const r = v / goal, aim = foodAim();
+  if (r >= 0.9 && r <= 1.1) return 'hit';
+  if (r > 1.1) return aim === 'build' ? 'soft' : 'over';
+  return aim === 'cut' && r >= 0.6 ? 'soft' : '';
+}
+
 export function dayTotals(key) {
   const c = days();
   if (c.totals.has(key)) return c.totals.get(key);

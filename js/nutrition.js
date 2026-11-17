@@ -2,7 +2,7 @@
 // picker, quick add, recipes and reports live in their own files.
 
 import { h, fill, icon, push, toast, actionSheet, confirmBox, promptBox, navBar, swipe } from './ui.js';
-import { state, commit, uid, ymd, addDays, dayStart, dayLog, dayTotals, food, logFood, deleteLog, waterOn, addWater } from './store.js';
+import { state, commit, uid, ymd, addDays, dayStart, dayLog, dayTotals, food, logFood, deleteLog, waterOn, addWater, kcalLook } from './store.js';
 import { MACROS } from './foods.js';
 import { COLORS } from './charts.js';
 import { openGoals } from './goals.js';
@@ -28,6 +28,7 @@ export function nutritionPage() {
     const t = dayTotals(viewDate);
     const g = state.goals;
     const left = g.kcal - t.kcal;
+    const soft = kcalLook(t.kcal, g.kcal) === 'soft' && left < 0;   // over while building: gold, not red
     const entries = dayLog(viewDate);
     const showLeft = !!state.settings.macroLeft;
 
@@ -44,8 +45,8 @@ export function nutritionPage() {
       h('section.card.energy',
         h('div.energy-top',
           h('div', h('div.energy-v', r0(t.kcal).toLocaleString()), h('div.energy-k', 'kcal eaten')),
-          h('div.energy-goal', h('div.energy-v' + (left < 0 ? '.over' : ''), Math.abs(r0(left)).toLocaleString()), h('div.energy-k', left < 0 ? 'over goal' : 'left'))),
-        bar(t.kcal, g.kcal, COLORS.calories, true),
+          h('div.energy-goal', h('div.energy-v' + (left < 0 ? (soft ? '.soft' : '.over') : ''), Math.abs(r0(left)).toLocaleString()), h('div.energy-k', left < 0 ? (soft ? 'above goal' : 'over goal') : 'left'))),
+        bar(t.kcal, g.kcal, COLORS.calories, true, soft),
         // Tap the macros to switch between what you've eaten and what's left
         h('button.macro-rows', { onclick: () => { commit((st) => { st.settings.macroLeft = !st.settings.macroLeft; }); }, 'aria-label': showLeft ? 'Show grams eaten' : 'Show grams left' },
           MACROS.map((m) => {
@@ -125,14 +126,13 @@ function weekStrip(key, go) {
   return h('div.week-strip', days.map((k) => {
     const t = dayTotals(k);
     const pct = g ? Math.min(1, t.kcal / g) : 0;
-    const hit = t.kcal >= g * 0.9 && t.kcal <= g * 1.1;
-    const over = t.kcal > g * 1.1;
+    const look = kcalLook(t.kcal, g);
     const d = new Date(dayStart(k));
     return h('button.wk-day' + (k === key ? '.on' : '') + (k > today ? '.future' : ''), {
       onclick: () => go(k), 'aria-label': `${dayLabel(k)}: ${r0(t.kcal)} kcal`,
     },
     h('span.wk-dow', 'MTWTFSS'[(d.getDay() + 6) % 7]),
-    h('span.wk-bar', h('i' + (hit ? '.hit' : over ? '.over' : ''), { style: { height: pct * 100 + '%' } })),
+    h('span.wk-bar', h('i' + (look ? '.' + look : ''), { style: { height: pct * 100 + '%' } })),
     h('span.wk-num', d.getDate()));
   }));
 }
@@ -156,9 +156,9 @@ function waterCard(date) {
       h('button.chip', { onclick: () => addWater(date, 750) }, '+ 750 ml')));
 }
 
-function bar(v, goal, color, big = false) {
+function bar(v, goal, color, big = false, soft = false) {
   const pct = goal ? Math.min(100, (v / goal) * 100) : 0;
-  return h('div.bar' + (big ? '.big' : ''), h('div.bar-fill', { style: { width: pct + '%', background: color } }), v > goal && goal ? h('div.bar-over', { style: { width: Math.min(100, ((v - goal) / goal) * 100) + '%' } }) : null);
+  return h('div.bar' + (big ? '.big' : ''), h('div.bar-fill', { style: { width: pct + '%', background: color } }), v > goal && goal ? h('div.bar-over' + (soft ? '.soft' : ''), { style: { width: Math.min(100, ((v - goal) / goal) * 100) + '%' } }) : null);
 }
 
 function editEntry(e) {

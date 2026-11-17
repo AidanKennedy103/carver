@@ -2,7 +2,7 @@
 // (water, steps, anything). These drive the rings on Home.
 
 import { h, fill, icon, sheet, toast, promptBox, confirmBox } from './ui.js';
-import { state, commit, uid, ymd, toDisplay, unit, DAY_SHORT } from './store.js';
+import { state, commit, uid, ymd, toDisplay, unit, DAY_SHORT, foodAim } from './store.js';
 import { num } from './food-util.js';
 import { habits, MAX_HABITS } from './habits.js';
 
@@ -75,6 +75,11 @@ export function openGoals() {
   }
   drawWeek();
 
+  // Your aim decides how calories off target look: over is fine while building, under while cutting
+  const aimSeg = h('div.segment');
+  const drawAim = () => fill(aimSeg, AIMS.map((a) => h('button' + (foodAim() === a.id ? '.on' : ''), { onclick: () => { commit((st) => { st.goals.aim = a.id; }); drawAim(); } }, a.name)));
+  drawAim();
+
   const customList = h('div.group');
   const drawCustom = () => {
     const list = habits();
@@ -108,6 +113,8 @@ export function openGoals() {
 
   const s = sheet(h('div.form',
     h('div.sheet-head', h('span'), h('div.sheet-title', 'Goals'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
+    h('label.form-label', 'Your aim'), aimSeg,
+    h('p.fine', 'Going over while you build muscle, or under while you lose fat, shows in gold instead of red.'),
     h('label.form-label', 'Daily food'),
     h('button.btn.gold-soft.wide.suggest-btn', { onclick: () => { s.close(); suggestGoals(); } }, '✨ Suggest goals for me'),
     h('div.group', energyField('Calories', 'kcal', 'kcal'), energyField('Protein', 'p', 'g'), energyField('Carbs', 'c', 'g'), energyField('Fat', 'f', 'g')),
@@ -145,7 +152,7 @@ export async function suggestion(aim) {
 }
 
 async function suggestGoals() {
-  let aim = AIMS[1];
+  let aim = AIMS.find((a) => a.id === foodAim()) || AIMS[1];
   const box = h('div');
   const draw = async () => {
     const sug = await suggestion(aim);
@@ -156,7 +163,7 @@ async function suggestGoals() {
         h('div.group',
           [['Calories', sug.kcal, 'kcal'], ['Protein', sug.p, 'g'], ['Carbs', sug.c, 'g'], ['Fat', sug.f, 'g']].map(([l, v, u]) => h('div.goal-row', h('span', l), h('span.row-val', `${v.toLocaleString()} ${u}`)))),
         h('p.fine', `Calories come from ${sug.from}. Protein is about 1 g per lb of body weight${sug.kg ? ` (${toDisplay(sug.kg)} ${unit()})` : ''}, fat about 27% of calories, and carbs fill the rest. A starting point, not medical advice.`),
-        h('button.btn.gold.wide', { onclick: () => { commit((st) => { Object.assign(st.goals, { kcal: sug.kcal, p: sug.p, c: sug.c, f: sug.f }); }); s.close(); toast('Goals updated'); } }, 'Use these goals'),
+        h('button.btn.gold.wide', { onclick: () => { commit((st) => { Object.assign(st.goals, { kcal: sug.kcal, p: sug.p, c: sug.c, f: sug.f, aim: aim.id }); }); s.close(); toast('Goals updated'); } }, 'Use these goals'),
       ] : h('p.fine', 'Log your weight first (Home → Progress), and Carver can suggest goals.'),
     );
   };
