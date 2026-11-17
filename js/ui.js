@@ -69,6 +69,7 @@ export function initScreens(el) { root = el; }
  * replace=true swaps the whole stack (used for the main page).
  */
 export function push(build, { replace = false, animate = true } = {}) {
+  closeSheets();   // sheets sit above every screen, so one left open would hide the new screen
   const screen = build();
   screen.el.classList.add('screen');
   if (replace) screen.el.classList.add('root');
@@ -209,6 +210,10 @@ export function navBar({ title = '', back = true, backLabel = 'Back', right = []
 // ---------- Sheets and dialogs ----------
 
 /** A bottom sheet that slides up. Returns { el, close }. */
+const openSheets = new Set();
+/** Close every open sheet (used when a new screen opens). */
+export const closeSheets = () => [...openSheets].forEach((c) => c());
+
 export function sheet(content, { full = false, onClose } = {}) {
   const backdrop = h('div.backdrop');
   const panel = h('div.sheet' + (full ? '.full' : ''), { role: 'dialog', 'aria-modal': 'true' }, h('div.grabber'), content);
@@ -219,10 +224,12 @@ export function sheet(content, { full = false, onClose } = {}) {
   const close = () => {
     if (closed) return;
     closed = true;
+    openSheets.delete(close);
     wrap.classList.remove('open');
     setTimeout(() => wrap.remove(), 350);
     onClose?.();
   };
+  openSheets.add(close);
   backdrop.addEventListener('click', close);
   // Swipe the grabber area down to close
   let y0 = null;
