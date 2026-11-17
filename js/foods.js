@@ -5,6 +5,7 @@
 // chol, na, k, ca, fe, mg, zn (mg), va, vd, b12, fol (µg), vc (mg).
 
 import { MORE_FOODS } from './foods-more.js';
+import { EXTRA_FOODS } from './foods-extra.js';
 
 export const MACROS = [
   { k: 'p', name: 'Protein', unit: 'g', kcal: 4 },
@@ -32,7 +33,7 @@ export const MICROS = [
 ];
 export const NUTRIENT_KEYS = ['kcal', 'p', 'c', 'f', ...MICROS.map((m) => m.k)];
 
-export const CATEGORIES = ['Fruit', 'Vegetables', 'Protein', 'Dairy & eggs', 'Grains', 'Nuts & fats', 'Sauces & extras', 'Meals', 'Snacks', 'Drinks'];
+export const CATEGORIES = ['Fruit', 'Vegetables', 'Protein', 'Dairy & eggs', 'Grains', 'Nuts & fats', 'Sauces & extras', 'Meals', 'Restaurants', 'Snacks', 'Drinks'];
 
 // F(id, name, icon (emoji, or 'svg:name' for one of the drawings in food-icons.js), category, servings [[label, grams]], per-100 g nutrients)
 const F = (id, name, icon, cat, servings, n) => ({ id, name, icon, cat, servings: servings.map(([label, g]) => ({ label, g })), n });
@@ -208,7 +209,7 @@ const BASE_FOODS = [
   F('spirits', 'Spirits (vodka, whisky…)', '🥃', 'Drinks', [['1 shot', 42]], { kcal: 231, p: 0, c: 0, f: 0 }),
 ];
 
-export const FOODS = [...BASE_FOODS, ...MORE_FOODS];
+export const FOODS = [...BASE_FOODS, ...MORE_FOODS, ...EXTRA_FOODS];
 
 /** Everyday basics (chicken breast, eggs, rice…): search lists these first among equal matches. */
 export const STAPLES = new Set(BASE_FOODS.filter((f) => !['Meals', 'Snacks', 'Drinks'].includes(f.cat)).map((f) => f.id));

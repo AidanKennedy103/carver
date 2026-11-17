@@ -31,8 +31,10 @@ function useCount() {
 }
 
 /** How well a food matches the search words: lower is better, null = no match. */
+const plain = (t) => t.toLowerCase().replace(/['’]/g, '');   // "mcdonalds" finds "McDonald’s"
 function score(f, words, q) {
-  const name = f.name.toLowerCase(), all = `${name} ${(f.brand || '').toLowerCase()}`;
+  words = words.map(plain); q = plain(q);
+  const name = plain(f.name), all = `${name} ${plain(f.brand || '')}`;
   if (!words.every((w) => all.includes(w))) return null;
   const parts = name.split(/[\s,()]+/);
   // Best: the name starts with it, or has it as a whole word ("beef" → Ground beef). Then a word starting with it.
@@ -40,7 +42,7 @@ function score(f, words, q) {
   if (isFav(f.id)) s -= 0.6;
   if (isMine(f)) s -= 0.3;
   if (STAPLES.has(f.id)) s -= 0.1;                                          // "chicken": chicken breast before chicken wrap
-  else if (f.cat === 'Meals' || f.cat === 'Sauces & extras') s += 0.15;
+  else if (['Meals', 'Restaurants', 'Sauces & extras'].includes(f.cat)) s += 0.15;
   s -= Math.min(0.5, (useCount().get(f.id) || 0) * 0.05);   // foods you log often come first
   return s + name.split(',')[0].length / 200;   // shorter names first among equals ("Egg" before "Egg white")
 }
