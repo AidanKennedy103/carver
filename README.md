@@ -69,6 +69,7 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 - **Import from Cronometer:** in Settings, pick Cronometer's "Food & Recipe Entries" export (CSV). Every entry comes in with its nutrients, in the right meal, and pasting the same file twice is fine.
 - **Import from MyFitnessPal:** in Settings, pick the zip MyFitnessPal emails you (or the CSVs in it). Each meal's daily totals and your weigh-ins come in.
 - **Calorie goal by aim:** in Goals, pick Lose fat, Maintain or Build muscle. Building makes the calorie goal a minimum, losing fat makes it a maximum, and maintaining means within 10%.
+- **Copy or move food:** a meal's ⋯ menu copies it to today in one tap (from another day), or opens Copy or move: tick foods, pick a day and meal, and copy or move them. A food's edit sheet has the same link.
 - **Import workouts:** in Settings, pick a workout CSV from Hevy, Strong, Fitbod or a 5/3/1 app. Exercises are matched to Carver's library (others become your own), and workouts you repeat can become plans.
 - **5/3/1:** on the Workout tab, 5/3/1 sets up four plans (squat, bench, deadlift, press) from training maxes and rewrites their weights each week of the cycle.
 - **Shared food database:** when you're signed in, foods you create (with the switch on) and foods you scan are added for everyone, under **Community**. For the beta they appear straight away. To review them first, see the note in `supabase/schema.sql`.
@@ -135,6 +136,7 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 | `js/about.js` | About & privacy screen |
 | `js/nutrition-report.js`, `js/food-util.js` | Day micronutrients and the 7/30-day report; shared nutrition helpers |
 | `js/foods.js`, `js/barcode.js`, `js/cronometer.js` | Food list, barcode scanner, Cronometer import |
+| `js/copyfood.js` | Copy or move logged food between meals and days |
 | `js/imports.js`, `js/program531.js` | Workout CSV and MyFitnessPal imports, the 5/3/1 program |
 | `js/goals.js` | Goals sheet and custom daily goals |
 | `js/fitness.js` | Fitness tab: cardio activities, Health import |

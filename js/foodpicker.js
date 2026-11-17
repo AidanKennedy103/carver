@@ -5,6 +5,7 @@
 // ingredients): pass onPick and it hands back { food, qty, servingLabel, grams, n }.
 
 import { h, fill, icon, sheet, toast, actionSheet, confirmBox } from './ui.js';
+import { copySheet } from './copyfood.js';
 import { state, commit, uid, ymd, allFoods, food, nutrientsFor, logFood, updateLog, deleteLog, recentFoods, sharedFoods } from './store.js';
 import { enabled as cloudOn, account, shareFood } from './cloud.js';
 import { MACROS, MICROS, CATEGORIES, STAPLES } from './foods.js';
@@ -231,6 +232,7 @@ export function amountSheet({ food: f, date = ymd(), meal = null, entry = null, 
   const s = sheet(h('div.form',
     h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', ''),
       entry ? h('button.link.red', { onclick: () => { deleteLog(entry.id); s.close(); } }, 'Delete') : star),
+    entry ? h('button.link.small-link.copy-link', { onclick: () => { s.close(); copySheet([entry], entry.date); } }, 'Copy or move to another meal or day') : null,
     h('div.amount-food', h('span.amount-ico', foodIcon(f.icon)), h('div', h('div.amount-name', f.name), f.brand ? h('div.muted', f.brand) : null, f.recipe ? h('div.muted', `Recipe · ${f.recipe.servings} serving${f.recipe.servings === 1 ? '' : 's'}`) : null), manage),
     h('div.qty-row',
       h('button.qty-btn', { onclick: () => step(opts[si].g === 1 ? -10 : -0.5), 'aria-label': 'Less' }, '−'),

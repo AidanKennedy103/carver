@@ -2,6 +2,7 @@
 // macro sliders that always add up, and a lock to fix one macro in grams.
 
 import { h, fill, icon, sheet, toast } from './ui.js';
+import { copySheet } from './copyfood.js';
 import { state, ymd, dayTotals, logFood, updateLog, deleteLog } from './store.js';
 import { MACROS } from './foods.js';
 import { MEALS, mealNow, MACRO_COLOR, r0 } from './food-util.js';
@@ -163,6 +164,7 @@ export function quickAdd({ date = ymd(), meal = null, entry = null } = {}) {
   const s = sheet(h('div.form',
     h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', 'Quick add'),
       entry ? h('button.link.red', { onclick: () => { deleteLog(entry.id); s.close(); } }, 'Delete') : h('span')),
+    entry ? h('button.link.small-link.copy-link', { onclick: () => { s.close(); copySheet([entry], entry.date); } }, 'Copy or move to another meal or day') : null,
     text,
     h('div.kcal-wrap', kcalIn, h('span.kcal-unit', 'kcal')),
     mealRow,

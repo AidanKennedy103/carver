@@ -12,6 +12,7 @@ import { quickAdd } from './quickadd.js';
 import { addFood, amountSheet } from './foodpicker.js';
 import { microsScreen, reportScreen } from './nutrition-report.js';
 import { foodIcon } from './food-icons.js';
+import { copyEntry, copySheet } from './copyfood.js';
 
 let viewDate = ymd();
 
@@ -93,17 +94,20 @@ export function nutritionPage() {
 
 // ---------- Meal shortcuts: copy yesterday, saved meals ----------
 
-const copyEntry = (e, date, meal) => { const { id, ts, ...rest } = e; return { ...rest, date, meal, n: { ...e.n } }; };
 
 function mealMenu(meal, list, date) {
   const prev = dayLog(addDays(date, -1)).filter((e) => e.meal === meal.id);
   const kcal = (arr) => r0(arr.reduce((n, e) => n + (e.n.kcal || 0), 0));
   const actions = [];
+  const where = (k) => (k === ymd() ? 'today’s' : 'that day’s');
+  // Viewing another day: one tap puts this meal into today's
+  if (list.length && date !== ymd()) actions.push({ label: `Copy to today’s ${meal.name.toLowerCase()} (${kcal(list)} kcal)`, onClick: () => { list.forEach((e) => logFood(copyEntry(e, ymd(), meal.id))); toast(`Copied ${list.length} item${list.length > 1 ? 's' : ''} to ${where(ymd())} ${meal.name.toLowerCase()}`); } });
+  if (list.length) actions.push({ label: 'Copy or move to another meal or day…', onClick: () => copySheet(list, date, { title: `Copy ${meal.name.toLowerCase()}` }) });
   if (prev.length) actions.push({ label: `Copy yesterday’s ${meal.name.toLowerCase()} (${kcal(prev)} kcal)`, onClick: () => { prev.forEach((e) => logFood(copyEntry(e, date, meal.id))); toast(`Copied ${prev.length} item${prev.length > 1 ? 's' : ''}`); } });
   if (list.length) actions.push({ label: 'Save as a meal', onClick: () => saveMeal(list, meal) });
   if (state.food.meals?.length) actions.push({ label: 'Add a saved meal', onClick: () => addFood({ date, meal: meal.id, cat: 'Saved meals' }) });
   if (list.length) actions.push({ label: `Clear ${meal.name.toLowerCase()}`, danger: true, onClick: async () => { if (await confirmBox(`Clear ${meal.name.toLowerCase()}?`, `Removes ${list.length} item${list.length > 1 ? 's' : ''}.`, { ok: 'Clear', danger: true })) commit((s) => { const ids = new Set(list.map((e) => e.id)); s.food.log = s.food.log.filter((e) => !ids.has(e.id)); }); } });
-  if (!actions.length) { toast(`Nothing in yesterday’s ${meal.name.toLowerCase()} to copy`); return; }
+  if (!actions.length) { toast(date === ymd() ? `Nothing in yesterday’s ${meal.name.toLowerCase()} to copy` : 'Nothing here yet'); return; }
   actionSheet(meal.name, actions);
 }
 
@@ -168,6 +172,7 @@ function editEntry(e) {
   if (e.date !== ymd()) {
     actionSheet(e.name, [
       { label: 'Add to today', onClick: () => { logFood(copyEntry(e, ymd(), e.meal)); toast(`Added ${e.name} to today`); } },
+      { label: 'Copy or move…', onClick: () => copySheet([e], e.date) },
       ...(edit ? [{ label: 'Edit', onClick: edit }] : []),
       { label: 'Delete', danger: true, onClick: () => deleteLog(e.id) },
     ]);
