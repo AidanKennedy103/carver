@@ -221,11 +221,20 @@ export function sync() {
 async function syncOnce() {
   const db = await client();
   const v0 = localVersion;
-  const { data: row, error } = await db.from('carver_state').select('data, rev').eq('user_id', user.id).maybeSingle();
+  const base = loadBase();
+  // Ask for the revision first: the whole account only comes down when another phone
+  // saved since our last sync (this runs every minute the app is open, so it adds up).
+  const { data: head, error } = await db.from('carver_state').select('rev').eq('user_id', user.id).maybeSingle();
   if (error) throw error;
+  let row = head;
+  if (head && base && base.rev === head.rev) row = { rev: head.rev, data: base.data };   // the server still has what we last synced
+  else if (head) {
+    const r = await db.from('carver_state').select('data, rev').eq('user_id', user.id).maybeSingle();
+    if (r.error) throw r.error;
+    row = r.data;
+  }
   if (localVersion !== v0) return false;                    // you changed something while it loaded
   const local = JSON.parse(JSON.stringify(state));
-  const base = loadBase();
   let merged;
   if (!row) merged = local;
   else if (base && base.rev === row.rev) merged = local;     // nothing new from other phones
@@ -247,7 +256,7 @@ async function syncOnce() {
     if (e) throw e;
     if (!upd?.length) return false;                           // another phone saved first: merge again
     saveBase(row.rev + 1, merged);
-  } else saveBase(row.rev, merged);
+  } else if (row.data !== base?.data) saveBase(row.rev, merged);   // nothing to send; skip rewriting the same copy
   return true;
 }
 
