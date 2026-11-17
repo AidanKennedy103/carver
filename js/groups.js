@@ -7,13 +7,13 @@
 // summary every Monday morning, and sends phone notifications for all of it.
 // Each person picks what they share with each group.
 
-import { h, fill, icon, push, navBar, sheet, toast, actionSheet, confirmBox, promptBox, fmtDate, fmtNum, fmtDurationWords } from './ui.js';
-import { state, commit, ymd, addDays, dayTotals, weekStart, workoutStats, exercise, toDisplay, unit } from './store.js';
+import { h, fill, icon, push, navBar, sheet, toast, actionSheet, confirmBox, promptBox, fmtDate, fmtNum, fmtDurationWords, swipe } from './ui.js';
+import { state, commit, ymd, addDays, dayTotals, weekStart, workoutStats, exercise, toDisplay, unit, DAY_SHORT } from './store.js';
 import { client, enabled, account } from './cloud.js';
 import { signInSheet } from './account.js';
 import { activityType } from './fitness.js';
 import { habits, isDone } from './habits.js';
-import { pushRow } from './push.js';
+import { pushRow, pushNudge } from './push.js';
 
 export const SHARES = [
   { k: 'gym', label: 'At the gym', sub: 'When you start a workout' },
@@ -211,51 +211,112 @@ const ago = (iso) => {
 };
 const MI = 1609.344;
 const dist = (m) => (unit() === 'kg' ? `${(m / 1000).toFixed(1)} km` : `${(m / MI).toFixed(1)} mi`);
-const dayWord = (d) => (d === ymd() ? 'today' : d === addDays(ymd(), -1) ? 'yesterday' : '');
 
 function describe(e) {
   const d = e.data || {};
+  const list = (names) => names.length <= 2 ? names.join(' and ') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
   switch (e.kind) {
-    case 'photo': return { ico: '📸', text: 'shared a progress photo', sub: d.ts ? fmtDate(d.ts, { month: 'short', day: 'numeric' }) : '', photo: d.path };
-    case 'started': return { ico: '📍', text: 'is at the gym', sub: d.name && d.name !== 'Workout' ? `Started ${d.name}` : 'Started a workout' };
+    case 'photo': return { ico: '📸', text: 'shared a progress photo', photo: d.path };
+    case 'started': return { ico: '📍', text: 'is at the gym', sub: d.name && d.name !== 'Workout' ? `Started ${d.name}` : '' };
     case 'workout': return {
       ico: '🏋️', text: `finished ${d.name}`,
-      sub: [d.mins ? fmtDurationWords(d.mins * 6e4) : '', d.sets ? `${d.sets} sets` : '', d.kg ? `${fmtNum(+toDisplay(d.kg))} ${unit()} lifted` : ''].filter(Boolean).join(' · '),
+      sub: [d.mins ? fmtDurationWords(d.mins * 6e4) : '', d.sets ? `${d.sets} sets` : '', d.kg ? `${fmtNum(+toDisplay(d.kg))} ${unit()}` : ''].filter(Boolean).join(' · '),
       extra: (d.prs || []).map((p) => `🏆 ${p.ex} · ${p.kind}${p.kg != null ? ` ${toDisplay(p.kg)} ${unit()}` : p.reps ? ` ${p.reps} reps` : ''}`),
     };
     case 'cardio': { const t = activityType(d.type); return { ico: t.icon, text: `did a ${t.name.toLowerCase()}`, sub: [d.m ? dist(d.m) : '', d.mins ? fmtDurationWords(d.mins * 6e4) : '', d.kcal ? `${fmtNum(d.kcal)} kcal` : ''].filter(Boolean).join(' · ') }; }
-    case 'protein': return { ico: '💪', text: `hit their protein goal${dayWord(d.day) ? ' ' + dayWord(d.day) : ''}`, sub: `${d.g} g of ${d.goal} g` };
-    case 'kcal': return { ico: '🎯', text: `hit their calorie goal${dayWord(d.day) ? ' ' + dayWord(d.day) : ''}`, sub: `${fmtNum(d.kcal)} kcal` };
+    case 'protein': return { ico: '💪', text: 'hit their protein goal', sub: `${d.g} of ${d.goal} g` };
+    case 'kcal': return { ico: '🎯', text: 'hit their calorie goal', sub: `${fmtNum(d.kcal)} kcal` };
     case 'week': return { ico: '🔥', text: 'closed their weekly gym goal', sub: `${d.n} workout${d.n === 1 ? '' : 's'} this week` };
-    case 'habit': return { ico: '✅', text: `did ${d.name}`, sub: dayWord(d.day) === 'yesterday' ? 'yesterday' : '' };
-    case 'missed': return { ico: '❌', text: `missed ${d.name}`, sub: dayWord(d.day) || (d.day ? fmtDate(Date.parse(d.day + 'T12:00'), { weekday: 'long' }) : '') };
-    case 'weekly': return { ico: '📅', text: 'weekly update', sub: d.week ? `Week of ${fmtDate(Date.parse(d.week + 'T12:00'), { month: 'short', day: 'numeric' })}` : '', extra: weeklyLines(d) };
-    default: return { ico: '•', text: 'did something', sub: '' };
+    case 'habit': return { ico: '✅', text: `did ${list(d.names || [d.name])}`, sub: d.day && e.created_at && d.day < ymd(Date.parse(e.created_at)) ? `for ${fmtDate(Date.parse(d.day + 'T12:00'), { weekday: 'long' })}` : '' };
+    case 'missed': return { ico: '❌', text: `missed ${list(d.names || [d.name])}`, sub: d.day ? `on ${fmtDate(Date.parse(d.day + 'T12:00'), { weekday: 'long' })}` : '', bad: true };
+    case 'weekly': return { ico: '📅', text: 'weekly summary', sub: d.week ? `Week of ${fmtDate(Date.parse(d.week + 'T12:00'), { month: 'short', day: 'numeric' })}` : '', lines: weeklyLines(d) };
+    default: return { ico: '•', text: 'did something' };
   }
 }
 
 /** "Workouts 5/5", "Protein 5/7 days"… for a weekly summary. */
 export function weeklyLines(d) {
   const out = [];
-  if (d.workouts) out.push(`🏋️ Workouts ${d.workouts.n}/${d.workouts.goal}`);
-  if (d.protein) out.push(`💪 Protein goal ${d.protein.days}/${d.protein.of} days`);
-  if (d.kcal) out.push(`🎯 Calorie goal ${d.kcal.days}/${d.kcal.of} days`);
-  for (const x of d.habits || []) out.push(`✅ ${x.name} ${x.days}/${x.of} days`);
+  if (d.workouts) out.push(['🏋️', 'Workouts', `${d.workouts.n}/${d.workouts.goal}`, d.workouts.n >= d.workouts.goal]);
+  if (d.protein) out.push(['💪', 'Protein goal', `${d.protein.days}/${d.protein.of}`, d.protein.days >= d.protein.of - 1]);
+  if (d.kcal) out.push(['🎯', 'Calorie goal', `${d.kcal.days}/${d.kcal.of}`, d.kcal.days >= d.kcal.of - 1]);
+  for (const x of d.habits || []) out.push(['✅', x.name, `${x.days}/${x.of}`, x.days >= x.of]);
   return out;
 }
 
-export function eventRow(e, { showGroup = false } = {}) {
+// Each person keeps one color everywhere
+const AV_COLORS = ['#b8862a', '#16917f', '#c2493a', '#7d57c9', '#2e7fc4', '#b4527a', '#4f8f35', '#b06a2a'];
+const avColor = (id = '') => AV_COLORS[[...id].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7) % AV_COLORS.length];
+export const avatar = (name, id, badge) => h('span.av', { style: { background: avColor(id) } }, (name || '?').trim()[0]?.toUpperCase() || '?', badge ? h('span.av-badge', badge) : null);
+
+/**
+ * Make the feed read like a story, not a list of alerts: one line per person
+ * per day for daily goals (done, or missed), and "at the gym" disappears once
+ * that workout is posted.
+ */
+export function tidyFeed(feed) {
+  const out = [], merged = new Map();
+  for (const e of [...feed].sort((a, b) => (a.created_at < b.created_at ? 1 : -1))) {   // newest first
+    if (e.kind === 'started' && (Date.now() - Date.parse(e.created_at) > 4 * 36e5 || feed.some((x) => x.kind === 'workout' && x.user_id === e.user_id && x.group_id === e.group_id && x.created_at > e.created_at))) continue;
+    if (e.kind === 'habit' || e.kind === 'missed') {
+      const key = [e.group_id, e.user_id, e.kind, e.data?.day].join('|');
+      const m = merged.get(key);
+      if (m) { m.data.names.push(e.data.name); m.merged = true; continue; }
+      const copy = { ...e, data: { ...e.data, names: [e.data?.name] } };
+      merged.set(key, copy);
+      out.push(copy);
+      continue;
+    }
+    out.push(e);
+  }
+  return out;
+}
+
+const clock = (iso) => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+export function eventRow(e, { showGroup = false, time = 'ago' } = {}) {
   const x = describe(e);
   const grp = showGroup ? myGroups().find((g) => g.id === e.group_id)?.name : null;
-  return h('div.feed-row',
-    h('span.feed-av', (e.who || '?')[0].toUpperCase()),
+  return h('div.feed-row' + (x.bad ? '.bad' : '') + (e.kind === 'weekly' ? '.weekly' : ''),
+    avatar(e.who, e.user_id, x.ico),
     h('div.feed-text',
-      h('div.feed-line', h('b', e.me ? 'You' : e.who), ' ', x.ico, ' ', x.text),
-      x.sub ? h('div.feed-sub', x.sub) : null,
+      e.kind === 'weekly'
+        ? h('div.feed-line', h('b', e.me ? 'Your' : `${e.who}’s`), ' week')
+        : h('div.feed-line', h('b', e.me ? 'You' : e.who), ' ', x.text),
+      x.sub || grp ? h('div.feed-sub', [x.sub, grp].filter(Boolean).join(' · ')) : null,
       (x.extra || []).map((t) => h('div.feed-pr', t)),
-      x.photo ? groupPhoto(x.photo) : null,
-      grp ? h('div.feed-sub', grp) : null),
-    h('span.feed-when', ago(e.created_at)));
+      x.lines ? h('div.week-lines', x.lines.map(([ico, label, val, good]) => h('div.week-line' + (good ? '.good' : ''), h('span', ico), h('span.wl-name', label), h('b', val)))) : null,
+      x.photo ? groupPhoto(x.photo) : null),
+    h('span.feed-when', time === 'clock' ? clock(e.created_at) : ago(e.created_at)));
+}
+
+/** "Today", "Yesterday", "Monday, Nov 10" */
+const dayHead = (iso) => {
+  const k = ymd(Date.parse(iso));
+  return k === ymd() ? 'Today' : k === addDays(ymd(), -1) ? 'Yesterday' : fmtDate(Date.parse(iso), { weekday: 'long', month: 'short', day: 'numeric' });
+};
+
+/** This week for everyone in the group: days trained, workouts, daily goals done and missed. */
+function weekBoard(g, feed, members) {
+  const mon = ymd(weekStart()), today = ymd();
+  const days = Array.from({ length: 7 }, (_, i) => addDays(mon, i));
+  const people = (members.length ? members : [{ user_id: account()?.id, name: g.myName }]).map((m) => {
+    const mine = feed.filter((e) => e.user_id === m.user_id && e.group_id === g.id);
+    const trained = new Set(mine.filter((e) => (e.kind === 'workout' || e.kind === 'cardio') && ymd(Date.parse(e.created_at)) >= mon).map((e) => ymd(Date.parse(e.created_at))));
+    return {
+      ...m, me: m.user_id === account()?.id, trained,
+      workouts: mine.filter((e) => e.kind === 'workout' && ymd(Date.parse(e.created_at)) >= mon).length,
+      done: mine.filter((e) => e.kind === 'habit' && (e.data?.day || '') >= mon).length,
+      missed: mine.filter((e) => e.kind === 'missed' && (e.data?.day || '') >= mon).length,
+    };
+  }).sort((a, b) => b.workouts - a.workouts || b.done - a.done || a.missed - b.missed);
+  return h('section.card.board',
+    h('div.board-days', h('span'), days.map((k) => h('span' + (k === today ? '.today' : ''), DAY_SHORT[days.indexOf(k)][0]))),
+    people.map((p) => h('div.board-row',
+      h('div.board-who', avatar(p.name, p.user_id), h('div.board-name', h('b', p.me ? 'You' : p.name),
+        h('span', [`${p.workouts} workout${p.workouts === 1 ? '' : 's'}`, p.done ? `${p.done} goal${p.done === 1 ? '' : 's'} done` : null, p.missed ? `${p.missed} missed` : null].filter(Boolean).join(' · ')))),
+      h('div.board-dots', days.map((k) => h('i' + (p.trained.has(k) ? '.on' : k > today ? '.later' : '')))))),
+  );
 }
 
 const signed = new Map();
@@ -324,7 +385,7 @@ export function groupsCard() {
       return;
     }
     fill(box, h('button.card.list-card.feed-card', { onclick: () => push(groupsScreen) },
-      feed.length ? feed.slice(0, 3).map((e) => eventRow(e, { showGroup: myGroups().length > 1 })) : h('div.feed-empty', 'Nothing yet. Finish a workout and your group sees it here.'),
+      feed.length ? tidyFeed(feed).slice(0, 3).map((e) => eventRow(e, { showGroup: myGroups().length > 1 })) : h('div.feed-empty', 'Nothing yet. Finish a workout and your group sees it here.'),
       h('div.feed-more', myGroups().length === 1 ? `Open ${myGroups()[0].name}` : 'Open groups', icon('back', 14))));
   };
   draw();
@@ -356,31 +417,49 @@ export function groupsScreen() {
     const groups = myGroups();
     if (!groups.some((g) => g.id === selected)) selected = groups[0]?.id || null;
     const g = groups.find((x) => x.id === selected);
-    const list = feed.filter((e) => e.group_id === selected);
+    const raw = feed.filter((e) => e.group_id === selected);
     const members = g ? groupMembers(g.id) : [];
+
+    // Activity, by day
+    const days = [];
+    for (const e of tidyFeed(raw)) {
+      const label = dayHead(e.created_at);
+      if (days[days.length - 1]?.label !== label) days.push({ label, items: [] });
+      days[days.length - 1].items.push(e);
+    }
+    const row = (e) => (e.me && !e.merged
+      ? h('button.own-post', { onclick: () => deletePost(e).then((ok) => ok && refresh()), 'aria-label': 'Your post. Tap to remove it.' }, eventRow(e, { time: 'clock' }))
+      : eventRow(e, { time: 'clock' }));
+
     fill(body,
       navBar({ title: 'Groups', backLabel: 'Home', large: true, right: [h('button.icon-btn.gold-text', { onclick: addMenu, 'aria-label': 'Make or join a group' }, icon('plus', 24))] }),
       !account()
         ? h('button.card.empty-plan', { onclick: signInSheet }, h('div.empty-title', 'Sign in first'), h('div.empty-text', 'Groups need an account so friends can see your posts.'))
         : !groups.length
           ? h('div.empty-groups',
-            h('div.empty-title', 'Train with friends'),
-            h('div.empty-text', 'Make a group and share its invite code, or join a friend’s. Carver tells the group when you finish a workout or a daily goal, and at 8 am if you missed a daily goal yesterday. Every Monday everyone gets a weekly summary. You choose what each group sees.'),
+            h('div.empty-title', 'Keep each other honest'),
+            h('div.empty-text', 'Make a group and share its invite code, or join a friend’s. Your group sees when you finish a workout or a daily goal, and at 8 am if you missed one yesterday. Every Monday everyone gets a weekly summary. You choose what each group sees.'),
             h('div.btn-pair', h('button.btn.gold', { onclick: () => createGroup().then((x) => { if (x) { selected = x.id; refresh(); } }) }, 'Make a group'), h('button.btn.dark', { onclick: () => joinGroup().then((x) => { if (x) { selected = x.id; refresh(); } }) }, 'Join with code')))
           : [
             groups.length > 1 ? h('div.chips.tight', groups.map((x) => h('button.chip' + (x.id === selected ? '.on' : ''), { onclick: () => { selected = x.id; draw(); } }, x.name))) : null,
-            h('section.card.group-head',
-              h('div.group-title', g.name),
-              h('div.group-meta', `${members.length || 1} member${members.length === 1 ? '' : 's'}${members.length ? ': ' + members.map((m) => m.name).join(', ') : ''}`),
-              h('div.group-code', 'Invite code ', h('b', g.code)),
-              h('div.btn-pair',
-                h('button.btn.gold-soft', { onclick: () => invite(g) }, 'Invite friends'),
-                h('button.btn.dark', { onclick: () => sharesSheet(g, draw) }, 'What I share'))),
-            h('section.card.push-card', pushRow()),
-            h('div.section-head', h('h2.section-title', 'Activity'), loading ? h('span.section-count', 'Updating…') : null),
-            list.length ? h('section.card.list-card', list.map((e) => (e.me ? h('button.own-post', { onclick: () => deletePost(e).then((ok) => ok && refresh()), 'aria-label': 'Your post. Tap to remove it.' }, eventRow(e)) : eventRow(e)))) : h('div.feed-empty.card', loading ? 'Loading…' : 'Nothing here yet. Posts show up as people train and hit goals.'),
-            list.some((e) => e.me) ? h('p.fine', 'Tap one of your own posts to remove it.') : null,
-            h('button.link.red-text.leave', { onclick: () => leaveGroup(g).then((ok) => ok && refresh()) }, 'Leave group'),
+            h('section.card.group-hero',
+              h('div.group-hero-top',
+                h('div',
+                  h('div.group-title', g.name),
+                  h('div.group-meta', `${members.length || 1} member${(members.length || 1) === 1 ? '' : 's'}`)),
+                h('button.icon-btn', { onclick: () => groupSettings(g, refresh), 'aria-label': 'Group settings' }, icon('gear'))),
+              h('div.av-stack', (members.length ? members : [{ user_id: account().id, name: g.myName }]).slice(0, 8).map((m) => avatar(m.name, m.user_id))),
+              h('button.btn.gold-soft.wide', { onclick: () => invite(g) }, icon('plus', 16), 'Invite friends')),
+            pushNudge(),
+
+            h('div.section-head', h('h2.section-title', 'This week'), loading ? h('span.section-count', 'Updating…') : null),
+            weekBoard(g, raw, members),
+
+            h('div.section-head', h('h2.section-title', 'Activity')),
+            days.length
+              ? days.map((d) => h('div.feed-day', h('div.feed-day-head', d.label), h('section.card.list-card.feed-list', d.items.map(row))))
+              : h('div.feed-empty.card', loading ? 'Loading…' : 'Nothing yet. Posts show up as people train and finish their daily goals.'),
+            raw.some((e) => e.me) ? h('p.fine', 'Tap one of your own posts to remove it.') : null,
           ],
       h('div.bottom-space'),
     );
@@ -394,8 +473,26 @@ export function groupsScreen() {
   }
   draw();
   if (account()) refresh();
+  swipe(body, {
+    left: () => { const gs = myGroups(), i = gs.findIndex((x) => x.id === selected); if (!gs[i + 1]) return false; selected = gs[i + 1].id; draw(); },
+    right: () => { const gs = myGroups(), i = gs.findIndex((x) => x.id === selected); if (i < 1) return false; selected = gs[i - 1].id; draw(); },
+  });
   el.append(body);
   return { el, refresh: draw };
+}
+
+/** Invite code, what I share, notifications, leaving. */
+function groupSettings(g, after) {
+  const s = sheet(h('div.form',
+    h('div.sheet-head', h('span'), h('div.sheet-title', g.name), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
+    h('div.group',
+      h('div.group-row', h('span', 'Invite code'), h('b.gold-text.code-big', g.code)),
+      h('button.group-row', { onclick: () => invite(g) }, h('span', 'Send an invite'), h('span.row-val', '›')),
+      h('button.group-row', { onclick: () => { s.close(); sharesSheet(g, after); } }, h('span', 'What I share'), h('span.row-val', '›'))),
+    h('label.form-label', 'Notifications'),
+    h('section.card.push-card', pushRow()),
+    h('button.link.red-text.leave', { onclick: () => { s.close(); leaveGroup(g).then((ok) => ok && after()); } }, 'Leave group'),
+  ));
 }
 
 async function invite(g) {

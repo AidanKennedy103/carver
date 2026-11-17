@@ -103,3 +103,17 @@ export function pushRow() {
   draw();
   return box;
 }
+
+/** A small card on the Groups screen while notifications are off (nothing once they're on). */
+export function pushNudge() {
+  if (!account() || !CONFIG.VAPID_PUBLIC_KEY) return null;
+  const box = h('div');
+  pushState().then((st) => {
+    if (st !== 'off' && st !== 'install') return;
+    fill(box, h('section.card.nudge',
+      h('span.nudge-ico', '🔔'),
+      h('div.nudge-text', h('b', 'Get notified'), h('span', st === 'install' ? 'Add Carver to your Home Screen to get notifications.' : 'Hear when your group trains, finishes or misses a daily goal.')),
+      st === 'off' ? h('button.btn.gold.small', { onclick: async () => { try { await enablePush(); toast('Notifications on'); fill(box); } catch (e) { toast(e.message); } } }, 'Turn on') : null));
+  }).catch(() => {});
+  return box;
+}
