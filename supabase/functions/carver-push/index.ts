@@ -234,7 +234,11 @@ async function sweep() {
       if (food.size) {
         const vals = [...food.values()];
         if (g.p) sum.protein = { days: vals.filter((t) => t.p >= g.p).length, of: 7 };
-        if (g.kcal) sum.kcal = { days: vals.filter((t) => t.kcal >= g.kcal * 0.9 && t.kcal <= g.kcal * 1.1).length, of: 7 };
+        // Same rule as the app: building = the goal is a minimum, cutting = a maximum, else within 10%
+        const m = data.monthly?.[mon.slice(0, 7)]?.goals || [];
+        const aim = g.aim || (m.includes('Build muscle') && !m.includes('Lose fat') ? 'build' : m.includes('Lose fat') && !m.includes('Build muscle') ? 'cut' : 'maintain');
+        const hit = (v: number) => { const r = v / g.kcal; return aim === 'build' ? r >= 1 : aim === 'cut' ? r <= 1 && r >= 0.5 : r >= 0.9 && r <= 1.1; };
+        if (g.kcal) sum.kcal = { days: vals.filter((t) => hit(t.kcal)).length, of: 7 };
       }
       for (const h of habits) {
         const counted = days.filter((d) => !h.since || h.since <= d);

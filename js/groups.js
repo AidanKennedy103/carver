@@ -8,7 +8,7 @@
 // Each person picks what they share with each group.
 
 import { h, fill, icon, push, navBar, sheet, toast, actionSheet, confirmBox, promptBox, fmtDate, fmtNum, fmtDurationWords, swipe } from './ui.js';
-import { state, commit, ymd, addDays, dayTotals, weekStart, workoutStats, exercise, toDisplay, unit, DAY_SHORT } from './store.js';
+import { state, commit, ymd, addDays, dayTotals, weekStart, workoutStats, exercise, toDisplay, unit, DAY_SHORT, kcalHit, foodAim } from './store.js';
 import { client, enabled, account } from './cloud.js';
 import { signInSheet } from './account.js';
 import { activityType } from './fitness.js';
@@ -135,6 +135,7 @@ function happenings() {
   if (a && a.start > now - 3 * 36e5) out.push({ kind: 'started', ref: 's:' + a.id, share: 'gym', data: { name: a.name || 'Workout' } });
   for (const w of state.workouts) {
     if ((w.end || w.start) < now - RECENT) break;   // newest first
+    if (w.imported) continue;                         // history brought in from another app isn't news
     const st = workoutStats(w);
     out.push({
       kind: 'workout', ref: 'w:' + w.id, share: 'workouts',
@@ -153,7 +154,8 @@ function happenings() {
     const t = dayTotals(day);
     if (!t.entries) continue;
     if (t.p >= g.p) out.push({ kind: 'protein', ref: 'p:' + day, share: 'protein', data: { g: Math.round(t.p), goal: g.p, day } });
-    if (t.kcal >= g.kcal * 0.9 && t.kcal <= g.kcal * 1.1) out.push({ kind: 'kcal', ref: 'k:' + day, share: 'kcal', data: { kcal: Math.round(t.kcal), goal: g.kcal, day } });
+    // A maximum (losing fat) can still be broken later in the day, so only finished days are shared
+    if (kcalHit(t.kcal, g.kcal, day) && (foodAim() !== 'cut' || day < ymd())) out.push({ kind: 'kcal', ref: 'k:' + day, share: 'kcal', data: { kcal: Math.round(t.kcal), goal: g.kcal, day } });
   }
   for (const day of [addDays(ymd(), -1), ymd()]) {
     for (const hb of habits()) if (isDone(hb, day)) out.push({ kind: 'habit', ref: `h:${hb.id}:${day}`, share: 'habits', data: { name: hb.name, day } });

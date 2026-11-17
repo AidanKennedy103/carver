@@ -114,7 +114,7 @@ export function openGoals() {
   const s = sheet(h('div.form',
     h('div.sheet-head', h('span'), h('div.sheet-title', 'Goals'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
     h('label.form-label', 'Your aim'), aimSeg,
-    h('p.fine', 'Going over while you build muscle, or under while you lose fat, shows in gold instead of red.'),
+    h('p.fine', 'Build muscle: your calories are a minimum to reach. Lose fat: a maximum to stay under. Maintain: within 10% either way.'),
     h('label.form-label', 'Daily food'),
     h('button.btn.gold-soft.wide.suggest-btn', { onclick: () => { s.close(); suggestGoals(); } }, '✨ Suggest goals for me'),
     h('div.group', energyField('Calories', 'kcal', 'kcal'), energyField('Protein', 'p', 'g'), energyField('Carbs', 'c', 'g'), energyField('Fat', 'f', 'g')),

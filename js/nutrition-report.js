@@ -3,7 +3,7 @@
 // your top foods, and the vitamins and minerals you tend to run low on).
 
 import { h, fill, navBar, swipeSegment } from './ui.js';
-import { state, ymd, addDays, dayLog, dayTotals, food } from './store.js';
+import { state, ymd, addDays, dayLog, dayTotals, food, kcalHit } from './store.js';
 import { MACROS, MICROS, NUTRIENT_KEYS } from './foods.js';
 import { COLORS } from './charts.js';
 import { MEALS, MACRO_COLOR, r0, fmtAmt, dayLabel } from './food-util.js';
@@ -96,11 +96,11 @@ export function report(days) {
   const micro = {};
   for (const m of MICROS) micro[m.k] = microDays.reduce((s, k) => s + (dayTotals(k)[m.k] || 0), 0) / (microDays.length || 1);
   const g = state.goals;
-  const daysHit = (fn) => logged.filter((k) => fn(dayTotals(k))).length;
+  const daysHit = (fn) => logged.filter((k) => fn(dayTotals(k), k)).length;
   return {
     days, logged: logged.length, avg, micro, microDays: microDays.length, entries, quick,
     proteinDays: daysHit((t) => t.p >= g.p),
-    kcalDays: daysHit((t) => t.kcal >= g.kcal * 0.9 && t.kcal <= g.kcal * 1.1),
+    kcalDays: daysHit((t, k) => kcalHit(t.kcal, g.kcal, k)),
     meals: MEALS.map((m) => ({ ...m, kcal: byMeal[m.id] / n })),
     topKcal: [...foods.values()].sort((a, b) => b.kcal - a.kcal).slice(0, 5),
     topProtein: [...foods.values()].filter((f) => f.p > 0).sort((a, b) => b.p - a.p).slice(0, 5),

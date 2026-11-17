@@ -23,6 +23,7 @@ const fresh = () => ({
   body: { weights: [], photos: [] }, // weights: { id, ts, kg, source }; photos: { id, ts } (images in IndexedDB)
   checks: {},                      // custom daily goals: { 'YYYY-MM-DD': { goalId: amount } }
   monthly: {},                     // { 'YYYY-MM': { goals: [], note } }
+  program: null,                   // a running program (5/3/1): see program531.js
 });
 
 // Older saves miss newer sections: fill them in (one level deep)
@@ -360,14 +361,27 @@ export function foodAim() {
   return m.includes('Build muscle') && !m.includes('Lose fat') ? 'build' : m.includes('Lose fat') && !m.includes('Build muscle') ? 'cut' : 'maintain';
 }
 
-/** How a day's calories look against the goal: 'hit' (within 10%), 'over' (red), 'soft' (off target,
- *  but the way your aim leans: over while building, under while cutting), or '' (still going). */
-export function kcalLook(v, goal) {
-  if (!goal || !v) return '';
+/**
+ * Did a day hit the calorie goal? It depends on your aim:
+ *  build muscle: the goal is a minimum (eat at least this much)
+ *  lose fat:     the goal is a maximum (stay under it); while the day is still going it counts
+ *                once you're close (85%+), and a finished day counts from half the goal up
+ *  maintain:     within 10% either way
+ */
+export function kcalHit(v, goal, key = ymd()) {
+  if (!goal || !v) return false;
   const r = v / goal, aim = foodAim();
-  if (r >= 0.9 && r <= 1.1) return 'hit';
-  if (r > 1.1) return aim === 'build' ? 'soft' : 'over';
-  return aim === 'cut' && r >= 0.6 ? 'soft' : '';
+  if (aim === 'build') return r >= 1;
+  if (aim === 'cut') return r <= 1 && r >= (key < ymd() ? 0.5 : 0.85);
+  return r >= 0.9 && r <= 1.1;
+}
+
+/** How a day's calories look: 'hit', 'over' (red: past a maximum, or 10%+ over when maintaining), or '' (not there yet). */
+export function kcalLook(v, goal, key) {
+  if (!goal || !v) return '';
+  if (kcalHit(v, goal, key)) return 'hit';
+  const r = v / goal, aim = foodAim();
+  return (aim === 'cut' && r > 1) || (aim === 'maintain' && r > 1.1) ? 'over' : '';
 }
 
 export function dayTotals(key) {

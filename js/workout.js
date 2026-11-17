@@ -9,6 +9,7 @@ import { exerciseCard, newSet } from './block.js';
 import { pickExercises } from './picker.js';
 import { openSettings } from './settings.js';
 import { volumeCard, tally, MUSCLE_ORDER } from './volume.js';
+import { programCard, setup531, program } from './program531.js';
 
 export function workoutPage() {
   const el = h('div.page');
@@ -27,12 +28,15 @@ export function workoutPage() {
       nav,
       state.active ? activeCard(state.active) : next ? upNext(next) : firstPlanCard(),
       weekStrip(),
+      programCard(),
 
       h('div.section-head',
         h('h2.section-title', 'Plans', h('span.section-count', `${state.plans.length} of ${MAX_PLANS}`)),
-        h('button.link' + (plansFull ? '.off' : ''), {
-          onclick: () => plansFull ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor()),
-        }, icon('plus', 16), 'New')),
+        h('span.head-links',
+          program() ? null : h('button.link', { onclick: setup531 }, '5/3/1'),
+          h('button.link' + (plansFull ? '.off' : ''), {
+            onclick: () => plansFull ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor()),
+          }, icon('plus', 16), 'New'))),
       state.plans.length ? h('section.card.list-card.plan-list', state.plans.map((p) => planRow(p, p === next))) : null,
       state.active ? null : h('button.quick-start', { onclick: () => startWorkout() }, icon('plus', 18), h('span', 'Empty workout'), h('span.quick-sub', 'Add exercises as you go')),
       state.plans.length || state.workouts.length ? volumeCard() : null,

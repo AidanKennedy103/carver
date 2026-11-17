@@ -8,7 +8,7 @@
 import { state, commit } from './store.js';
 
 /** A small CSV reader that handles quoted fields. */
-export function parseCSV(text) {
+export function parseCSV(text, sep = ',') {
   const rows = [];
   let row = [], cell = '', q = false;
   for (let i = 0; i < text.length; i++) {
@@ -18,7 +18,7 @@ export function parseCSV(text) {
       else if (ch === '"') q = false;
       else cell += ch;
     } else if (ch === '"') q = true;
-    else if (ch === ',') { row.push(cell); cell = ''; }
+    else if (ch === sep) { row.push(cell); cell = ''; }
     else if (ch === '\n' || ch === '\r') {
       if (ch === '\r' && text[i + 1] === '\n') i++;
       row.push(cell); cell = '';
@@ -40,14 +40,14 @@ const COLS = [
   [/^vitamin d \(iu\)/i, 'vd', 1 / 40], [/^vitamin d \(µg\)|^vitamin d \(ug\)/i, 'vd'], [/^b12 \(cobalamin\) \(µg\)|^b12|^vitamin b12/i, 'b12'],
   [/^folate \(µg\)|^folate/i, 'fol'],
 ];
-const MEAL_OF = (g) => {
+export const MEAL_OF = (g) => {
   const t = (g || '').toLowerCase();
   if (t.startsWith('break')) return 'breakfast';
   if (t.startsWith('lunch')) return 'lunch';
   if (t.startsWith('dinner') || t.startsWith('supper')) return 'dinner';
   return 'snacks';
 };
-const hash = (s) => { let x = 5381; for (let i = 0; i < s.length; i++) x = ((x << 5) + x + s.charCodeAt(i)) | 0; return (x >>> 0).toString(36); };
+export const hash = (s) => { let x = 5381; for (let i = 0; i < s.length; i++) x = ((x << 5) + x + s.charCodeAt(i)) | 0; return (x >>> 0).toString(36); };
 
 /** Turn a Cronometer export into diary entries. Returns { entries, kind } or throws. */
 export function readCronometer(text) {

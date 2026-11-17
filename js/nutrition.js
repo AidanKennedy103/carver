@@ -2,7 +2,7 @@
 // picker, quick add, recipes and reports live in their own files.
 
 import { h, fill, icon, push, toast, actionSheet, confirmBox, promptBox, navBar, swipe } from './ui.js';
-import { state, commit, uid, ymd, addDays, dayStart, dayLog, dayTotals, food, logFood, deleteLog, waterOn, addWater, kcalLook } from './store.js';
+import { state, commit, uid, ymd, addDays, dayStart, dayLog, dayTotals, food, logFood, deleteLog, waterOn, addWater, kcalLook, foodAim } from './store.js';
 import { MACROS } from './foods.js';
 import { COLORS } from './charts.js';
 import { openGoals } from './goals.js';
@@ -28,7 +28,7 @@ export function nutritionPage() {
     const t = dayTotals(viewDate);
     const g = state.goals;
     const left = g.kcal - t.kcal;
-    const soft = kcalLook(t.kcal, g.kcal) === 'soft' && left < 0;   // over while building: gold, not red
+    const soft = left < 0 && foodAim() === 'build';   // past a minimum while building: that's the goal, so gold, not red
     const entries = dayLog(viewDate);
     const showLeft = !!state.settings.macroLeft;
 
@@ -45,7 +45,7 @@ export function nutritionPage() {
       h('section.card.energy',
         h('div.energy-top',
           h('div', h('div.energy-v', r0(t.kcal).toLocaleString()), h('div.energy-k', 'kcal eaten')),
-          h('div.energy-goal', h('div.energy-v' + (left < 0 ? (soft ? '.soft' : '.over') : ''), Math.abs(r0(left)).toLocaleString()), h('div.energy-k', left < 0 ? (soft ? 'above goal' : 'over goal') : 'left'))),
+          h('div.energy-goal', h('div.energy-v' + (left < 0 ? (soft ? '.soft' : '.over') : ''), Math.abs(r0(left)).toLocaleString()), h('div.energy-k', left < 0 ? (soft ? 'over · goal hit' : 'over goal') : foodAim() === 'build' ? 'to go' : 'left'))),
         bar(t.kcal, g.kcal, COLORS.calories, true, soft),
         // Tap the macros to switch between what you've eaten and what's left
         h('button.macro-rows', { onclick: () => { commit((st) => { st.settings.macroLeft = !st.settings.macroLeft; }); }, 'aria-label': showLeft ? 'Show grams eaten' : 'Show grams left' },
@@ -126,7 +126,7 @@ function weekStrip(key, go) {
   return h('div.week-strip', days.map((k) => {
     const t = dayTotals(k);
     const pct = g ? Math.min(1, t.kcal / g) : 0;
-    const look = kcalLook(t.kcal, g);
+    const look = kcalLook(t.kcal, g, k);
     const d = new Date(dayStart(k));
     return h('button.wk-day' + (k === key ? '.on' : '') + (k > today ? '.future' : ''), {
       onclick: () => go(k), 'aria-label': `${dayLabel(k)}: ${r0(t.kcal)} kcal`,

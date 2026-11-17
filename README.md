@@ -67,6 +67,10 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 - **The amount screen** lists the vitamins and minerals a food is rich in, and flags high sodium.
 - **Meal shortcuts:** each meal's ⋯ menu can copy yesterday's meal, save the meal to reuse it (it appears under **Meals** when you add food), or clear it.
 - **Import from Cronometer:** in Settings, pick Cronometer's "Food & Recipe Entries" export (CSV). Every entry comes in with its nutrients, in the right meal, and pasting the same file twice is fine.
+- **Import from MyFitnessPal:** in Settings, pick the zip MyFitnessPal emails you (or the CSVs in it). Each meal's daily totals and your weigh-ins come in.
+- **Calorie goal by aim:** in Goals, pick Lose fat, Maintain or Build muscle. Building makes the calorie goal a minimum, losing fat makes it a maximum, and maintaining means within 10%.
+- **Import workouts:** in Settings, pick a workout CSV from Hevy, Strong, Fitbod or a 5/3/1 app. Exercises are matched to Carver's library (others become your own), and workouts you repeat can become plans.
+- **5/3/1:** on the Workout tab, 5/3/1 sets up four plans (squat, bench, deadlift, press) from training maxes and rewrites their weights each week of the cycle.
 - **Shared food database:** when you're signed in, foods you create (with the switch on) and foods you scan are added for everyone, under **Community**. For the beta they appear straight away. To review them first, see the note in `supabase/schema.sql`.
 - **Barcode scanner:** uses the camera and looks the product up in Open Food Facts, a free, open database. It checks your foods and the Carver database first. Scanned foods are saved to My foods. You can also type the barcode in.
 - **Goals:** calories, protein, carbs, fat, water, workouts per week (optionally on set days: Home then shows rest days, the next planned day, and planned days on the calendar), and your own daily goals. Calories and macros are linked: type any three and the one you changed longest ago fills itself in (marked *auto*).
@@ -131,6 +135,7 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 | `js/about.js` | About & privacy screen |
 | `js/nutrition-report.js`, `js/food-util.js` | Day micronutrients and the 7/30-day report; shared nutrition helpers |
 | `js/foods.js`, `js/barcode.js`, `js/cronometer.js` | Food list, barcode scanner, Cronometer import |
+| `js/imports.js`, `js/program531.js` | Workout CSV and MyFitnessPal imports, the 5/3/1 program |
 | `js/goals.js` | Goals sheet and custom daily goals |
 | `js/fitness.js` | Fitness tab: cardio activities, Health import |
 | `js/progress.js`, `js/body.js`, `js/photos.js`, `js/monthly.js` | Progress tab, weight and imports, progress photos, monthly goals and recaps |

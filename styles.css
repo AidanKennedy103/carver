@@ -904,3 +904,13 @@ button.macro-rows { width: 100%; text-align: left; }
 .week-line b { font-variant-numeric: tabular-nums; color: var(--muted); }
 .week-line.good b { color: var(--gold); }
 .wl-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 5/3/1 program card */
+.head-links { display: flex; gap: 16px; align-items: center; }
+.prog-card { display: flex; flex-direction: column; gap: 10px; }
+.prog-head { display: flex; justify-content: space-between; align-items: flex-start; }
+.prog-week { font-size: 17px; font-weight: 700; margin-top: 2px; }
+.prog-days { display: flex; gap: 6px; flex-wrap: wrap; }
+.prog-days .chip.on { background: var(--gold-bg-2); color: var(--gold); }
+.prog-tm { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.prog-skip { align-self: flex-start; font-size: 14px; }
