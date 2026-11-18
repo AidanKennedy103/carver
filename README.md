@@ -188,6 +188,12 @@ Until then, Carver runs without accounts and everything stays on each phone.
 
 If `dev/vapid.json` is lost, make a new key pair; everyone then turns notifications off and on again.
 
+### Updating the server later
+
+When `supabase/functions/carver-push/index.ts` changes: **Edge Functions → carver-push → Code**, select all, paste the new file, **Deploy**. Secrets and the JWT setting stay as they are.
+
+For Social challenges, run `supabase/social.sql` once in the **SQL Editor** (safe to run again).
+
 ## Put it online (free)
 
 It's on GitHub (`AidanKennedy103/carver`, private) and Cloudflare Workers. Every push to `main` updates the live app in about a minute. `wrangler.jsonc` serves the folder as it is (no build step), and `.assetsignore` keeps scripts and dev files off the site.
