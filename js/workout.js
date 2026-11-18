@@ -1,5 +1,5 @@
 // The Workout page: what's up next (or the workout in progress), this week,
-// your plans (up to 8), and History by week.
+// your plans (up to 10), and History by week.
 // Also the plan editor and the workout detail screen.
 
 import { h, fill, icon, push, pop, navBar, actionSheet, confirmBox, promptBox, toast, fmtDate, fmtDurationWords, fmtNum, fmtSecs } from './ui.js';
@@ -81,7 +81,7 @@ export function workoutPage() {
     return h('button.card.hero.empty-hero', { onclick: () => push(() => planEditor()) },
       h('div.hero-label', 'Get set up'),
       h('div.hero-name', 'Make your first plan'),
-      h('div.hero-meta', 'Save up to 8 routines, like Push, Pull and Legs. Carver keeps them in order and has the next one ready to start.'),
+      h('div.hero-meta', 'Save up to 10 routines, like Push, Pull and Legs. Carver keeps them in order and has the next one ready to start.'),
       h('span.btn.gold.wide.hero-go', icon('plus', 16), 'New plan'));
   }
 
