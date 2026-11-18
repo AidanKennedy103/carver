@@ -298,6 +298,24 @@ export function dayPlan(key) {
   return days.includes(dow(key)) ? 'planned' : 'rest';
 }
 
+/**
+ * On a planned rest day with no workout yet: how the week is going, so the app
+ * can say "rest easy" or "you're falling behind". null on other days.
+ * tone: 'done' (weekly goal already hit), 'ok' (on track), 'behind'.
+ */
+export function restNote(today = ymd()) {
+  if (dayPlan(today) !== 'rest' || state.workouts.some((w) => ymd(w.start) === today)) return null;
+  const goal = state.goals.workoutsPerWeek;
+  const n = state.workouts.filter((w) => w.start >= weekStart()).length;
+  const sunday = addDays(ymd(weekStart()), 6);
+  let left = 0;
+  for (let k = addDays(today, 1); k <= sunday; k = addDays(k, 1)) if (dayPlan(k) === 'planned') left++;
+  if (n >= goal) return { tone: 'done', title: 'Rest day, goal already hit 🔥', sub: `${n} of ${goal} workouts this week. Recover well, or train anyway if you feel good.` };
+  if (n + left >= goal) return { tone: 'ok', title: 'Rest day, and you’re on track', sub: `${n} of ${goal} this week with ${left} workout day${left === 1 ? '' : 's'} left. Still want to train?` };
+  const need = goal - n;
+  return { tone: 'behind', title: 'Rest day, but you’re falling behind', sub: `${n} of ${goal} this week and only ${left} workout day${left === 1 ? '' : 's'} left. ${left + 1 >= need ? 'A workout today keeps you on pace.' : `To make ${goal}, you’d need to train on ${need - left} rest day${need - left === 1 ? '' : 's'}, today included.`}` };
+}
+
 export function overview() {
   const ws = state.workouts;
   const thisWeek = weekStart();

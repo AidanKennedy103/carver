@@ -11,6 +11,7 @@ import { openSettings } from './settings.js';
 import { volumeCard, tally, MUSCLE_ORDER, ALL_MUSCLES } from './volume.js';
 import { programCard, setup531, program } from './program531.js';
 import { goalsButton } from './goals.js';
+import { restBanner } from './home.js';
 
 export function workoutPage() {
   const el = h('div.page');
@@ -29,6 +30,7 @@ export function workoutPage() {
       nav,
       // 1. Working out: start (or resume) a workout that's logged as you go
       state.active ? activeCard(state.active) : [
+        restBanner(() => (next ? startWorkout(next) : startWorkout())),
         next ? upNext(next) : freestyleHero()],
       weekStrip(),
       programCard(),

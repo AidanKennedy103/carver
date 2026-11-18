@@ -2,7 +2,7 @@
 // calendar, your one-rep maxes, and your profile overview.
 
 import { h, fill, icon, push, sheet, toast, promptBox, fmtDate, fmtNum, fmtDurationWords, swipe } from './ui.js';
-import { state, commit, exercise, overview, toDisplay, unit, bodyDisplay, bodyUnit, tabOn, ymd, addDays, dayTotals, weekStart, dayStart, dayPlan, workoutDays, DAY_SHORT, workoutStats, waterOn, addWater, kcalLook, kcalHit } from './store.js';
+import { state, commit, exercise, overview, toDisplay, unit, bodyDisplay, bodyUnit, tabOn, ymd, addDays, dayTotals, weekStart, dayStart, dayPlan, restNote, workoutDays, DAY_SHORT, workoutStats, waterOn, addWater, kcalLook, kcalHit } from './store.js';
 import { workoutDetail } from './workout.js';
 import { openSettings } from './settings.js';
 import { goTab } from './tabs.js';
@@ -50,7 +50,7 @@ function ringCatalog() {
     { id: 'gym', label: 'Workout', color: COLORS.gym, cheer: 'Workout done!', day: (k) => {
       const n = state.workouts.filter((w) => ymd(w.start) === k).length;
       if (n) return { value: n, goal: 1, text: `${n} workout${n > 1 ? 's' : ''} today`, hit: true };
-      if (dayPlan(k) === 'rest') return { value: 1, goal: 1, text: 'Rest day', hit: true, rest: true };   // a full ring: resting is the plan
+      if (dayPlan(k) === 'rest') { const rn = k === ymd() ? restNote(k) : null; return rn?.tone === 'behind' ? { value: 0, goal: 1, text: 'Rest day · behind this week', hit: false } : { value: 1, goal: 1, text: 'Rest day', hit: true, rest: true }; }   // a full ring: resting is the plan, unless the week needs a workout
       return { value: 0, goal: 1, text: dayPlan(k) === 'planned' ? 'Planned today' : 'Not yet today', hit: false };
     } },
     { id: 'kcal', label: 'Calories', color: COLORS.calories, cheer: 'Hit your calorie goal!', day: (k) => { const v = dayTotals(k).kcal; return { value: v, goal: g.kcal, text: `${fmtNum(v)} of ${fmtNum(g.kcal)} kcal`, hit: kcalHit(v, g.kcal, k), over: kcalLook(v, g.kcal, k) === 'over' }; } },
@@ -241,6 +241,17 @@ function progressCards() {
       h('div.card-foot', m.ready ? `${m.confidence} estimate · charts` : `${m.need.food + m.need.weigh} more log${m.need.food + m.need.weigh === 1 ? '' : 's'} to estimate`)));
 }
 
+// ---------- Rest days ----------
+
+/** "Rest day, but you're falling behind" and the like, with a way to train anyway. */
+export function restBanner(onTrain) {
+  const rn = restNote();
+  if (!rn) return null;
+  return h('section.card.rest-banner.' + rn.tone,
+    h('div.rest-banner-text', h('b', rn.title), h('span', rn.sub)),
+    rn.tone === 'done' ? null : h('button.btn.small.' + (rn.tone === 'behind' ? 'gold' : 'gold-soft'), { onclick: onTrain }, rn.tone === 'behind' ? 'Train today' : 'Next workout'));
+}
+
 // ---------- The page ----------
 
 export function homePage() {
@@ -292,6 +303,7 @@ export function homePage() {
           : h('button.link', { onclick: editRings }, 'Pick your rings')),
       { left: view === 'day' ? setView('week') : null, right: view === 'week' ? setView('day') : null, target: () => body.querySelector('.rings-card') }),
       view === 'day' ? goals.filter((g) => g.hit && (g.id === 'protein' || g.id === 'kcal')).map((g) => h('div.hit-banner', h('span', '🏆'), g.cheer)) : null,
+      tabOn('workout') && !state.active ? restBanner(() => goTab('workout')) : null,
 
       habitsCard(openGoals),
 
@@ -312,7 +324,7 @@ export function homePage() {
           h('span.today-ico', icon('dumbbell', 20)),
           h('span.today-text',
             h('span.today-k', 'Workout'),
-            h('span.today-v', todayWorkouts.length || todayActs.length ? [...todayWorkouts.map((w) => `${w.name} · ${fmtDurationWords(workoutStats(w).duration)}`), ...todayActs.map((a) => `${activityType(a.type).name} · ${fmtDurationWords(a.dur)}`)].join(', ') : state.active ? 'In progress' : { rest: 'Rest day', planned: 'Planned today' }[dayPlan(today)] || 'Not yet')),
+            h('span.today-v', todayWorkouts.length || todayActs.length ? [...todayWorkouts.map((w) => `${w.name} · ${fmtDurationWords(workoutStats(w).duration)}`), ...todayActs.map((a) => `${activityType(a.type).name} · ${fmtDurationWords(a.dur)}`)].join(', ') : state.active ? 'In progress' : dayPlan(today) === 'rest' ? (restNote()?.tone === 'behind' ? 'Rest day · behind this week' : 'Rest day') : dayPlan(today) === 'planned' ? 'Planned today' : 'Not yet')),
           todayWorkouts.length || todayActs.length ? h('span.ring-check.big', '✓') : h('button.btn.gold-soft.small', { onclick: () => goTab(tabOn('workout') ? 'workout' : 'fitness') }, state.active ? 'Resume' : tabOn('workout') ? 'Start' : 'Add')) : null,
         tabOn('nutrition') ? h('div.today-row',
           h('span.today-ico', '🍽️'),
