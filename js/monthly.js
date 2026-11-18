@@ -2,7 +2,7 @@
 // recap of each month (photo change, weight change, lifting highlights).
 
 import { h, icon, push, navBar, sheet, toast, fmtDate, fmtNum, fmtDurationWords } from './ui.js';
-import { state, commit, exercise, workoutStats, e1rm, toDisplay, unit, ymd, dayTotals } from './store.js';
+import { state, commit, exercise, workoutStats, e1rm, toDisplay, unit, ymd, dayTotals, bodyDisplay, bodyUnit, distUnit } from './store.js';
 import { photos } from './photos.js';
 import { trend } from './body.js';
 import { compareView } from './progress.js';
@@ -96,7 +96,7 @@ export function recap(key) {
     hasData: ws.length > 0 || !!cardio || !!weight || !!food || inMonth.length > 0 };
 }
 
-const signed = (kg) => { const v = +toDisplay(Math.abs(kg)); return `${kg > 0 ? '+' : kg < 0 ? '−' : '±'}${v} ${unit()}`; };
+const signed = (kg) => { const v = +bodyDisplay(Math.abs(kg)); return `${kg > 0 ? '+' : kg < 0 ? '−' : '±'}${v} ${bodyUnit()}`; };
 
 export function recapScreen(key) {
   const r = recap(key);
@@ -127,13 +127,13 @@ export function recapScreen(key) {
       r.cardio ? [h('div.section-head', h('h2.section-title', 'Cardio')),
         h('div.tiles',
           tile(r.cardio.n, 'Activities', fmtDurationWords(r.cardio.time)),
-          tile(r.cardio.dist ? (r.cardio.dist / (unit() === 'kg' ? 1000 : 1609.344)).toFixed(1) : '—', 'Distance', unit() === 'kg' ? 'km' : 'mi'),
+          tile(r.cardio.dist ? (r.cardio.dist / (distUnit() === 'km' ? 1000 : 1609.344)).toFixed(1) : '—', 'Distance', distUnit()),
           tile(fmtNum(r.cardio.kcal), 'Burned', 'active kcal'))] : null,
 
       r.weight ? [h('div.section-head', h('h2.section-title', 'Body')),
         h('section.card', h('div.energy-top',
           h('div', h('div.energy-v', signed(r.weight.to - r.weight.from)), h('div.energy-k', 'weight change (7-day average)')),
-          h('div.energy-goal', h('div.recap-small', `${toDisplay(r.weight.from)} → ${toDisplay(r.weight.to)} ${unit()}`))))] : null,
+          h('div.energy-goal', h('div.recap-small', `${bodyDisplay(r.weight.from)} → ${bodyDisplay(r.weight.to)} ${bodyUnit()}`))))] : null,
 
       r.food ? [h('div.section-head', h('h2.section-title', 'Food')),
         h('div.tiles',

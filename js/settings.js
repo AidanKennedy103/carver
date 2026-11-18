@@ -1,7 +1,7 @@
 // Settings: units, default rest, back up / restore, reset.
 
-import { h, sheet, toast, confirmBox, promptBox, fmtSecs, actionSheet, refreshAll, push } from './ui.js';
-import { state, commit, exportJSON, importJSON, resetAll, MAX_PLANS, savePlan } from './store.js';
+import { h, fill, sheet, toast, confirmBox, promptBox, fmtSecs, actionSheet, refreshAll, push } from './ui.js';
+import { state, commit, exportJSON, importJSON, resetAll, MAX_PLANS, savePlan, unit, bodyUnit, distUnit, tabOn } from './store.js';
 import { REST_CHOICES } from './block.js';
 import { accountSection } from './account.js';
 import { aboutScreen } from './about.js';
@@ -11,13 +11,34 @@ import { account } from './cloud.js';
 import { readFiles, readWorkouts, saveWorkouts, routines, planFrom, readMFP, saveMFP } from './imports.js';
 
 export function openSettings() {
-  const unitSeg = h('div.segment', ['lb', 'kg'].map((u) => h('button' + (state.settings.unit === u ? '.on' : ''), {
-    onclick: (e) => {
-      commit((s) => { s.settings.unit = u; });
-      unitSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === e.currentTarget));
-      refreshAll();
-    },
-  }, u === 'lb' ? 'Pounds (lb)' : 'Kilograms (kg)')));
+  // Units: lifting, body weight and distance are each their own choice
+  const unitSeg = (key, opts, cur) => {
+    const seg = h('div.segment', opts.map(([v, label]) => h('button' + (cur() === v ? '.on' : ''), {
+      onclick: (e) => {
+        commit((st) => { st.settings[key] = v; });
+        seg.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === e.currentTarget));
+        refreshAll();
+      },
+    }, label)));
+    return seg;
+  };
+  const liftSeg = unitSeg('unit', [['lb', 'Pounds (lb)'], ['kg', 'Kilograms (kg)']], unit);
+  const bodySeg = unitSeg('bodyUnit', [['lb', 'Pounds (lb)'], ['kg', 'Kilograms (kg)']], bodyUnit);
+  const distSeg = unitSeg('distUnit', [['mi', 'Miles'], ['km', 'Kilometres']], distUnit);
+
+  // Tabs: keep only the parts of Carver you use
+  const tabRows = h('div.group');
+  const drawTabs = () => fill(tabRows, [['workout', '🏋️ Workout', 'Gym workouts and plans'], ['nutrition', '🍽️ Nutrition', 'Food, calories and macros'], ['fitness', '🏃 Fitness', 'Runs, walks, rides and cardio']].map(([id, label, sub]) =>
+    h('button.group-row.tab-pick', {
+      role: 'switch', 'aria-checked': String(tabOn(id)),
+      onclick: () => {
+        const hidden = new Set(state.settings.hiddenTabs || []);
+        if (hidden.has(id)) hidden.delete(id); else hidden.add(id);
+        commit((st) => { st.settings.hiddenTabs = [...hidden]; });
+        drawTabs(); refreshAll();
+      },
+    }, h('span.tab-pick-text', h('span', label), h('span.tab-pick-sub', sub)), h('span.switch' + (tabOn(id) ? '.on' : ''), h('i')))));
+  drawTabs();
 
   const restVal = h('span.row-val', fmtSecs(state.settings.restDefault));
   const nameVal = h('span.row-val', state.profile.name || 'Add');
@@ -95,7 +116,11 @@ export function openSettings() {
           if (n != null) { commit((st) => { st.profile.name = n; }); nameVal.textContent = n || 'Add'; }
         },
       }, h('span', 'Your name'), nameVal)),
-    h('label.form-label', 'Weight units'), unitSeg,
+    h('label.form-label', 'Tabs'), tabRows,
+    h('p.fine', 'Turn off the parts you don’t use. Home hides them too, and your data stays saved if you turn them back on.'),
+    h('label.form-label', 'Weights you lift'), liftSeg,
+    h('label.form-label', 'Body weight'), bodySeg,
+    h('label.form-label', 'Distance'), distSeg,
     h('div.group',
       h('button.group-row', {
         onclick: () => actionSheet('Default rest timer', REST_CHOICES.map((sec) => ({

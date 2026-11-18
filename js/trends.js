@@ -2,7 +2,7 @@
 // from what you eat and how your weight moves.
 
 import { h, fill, navBar, fmtNum, fmtDate, swipeSegment } from './ui.js';
-import { state, ymd, dayTotals, weekStart, workoutStats, toDisplay, unit } from './store.js';
+import { state, ymd, dayTotals, weekStart, workoutStats, toDisplay, unit, bodyDisplay, bodyUnit } from './store.js';
 import { lineChart, barChart, COLORS } from './charts.js';
 import { trend, latestWeight } from './body.js';
 import { activityKcal } from './fitness.js';
@@ -83,7 +83,7 @@ export function trendsPage() {
           h('div.meta-top',
             h('div', h('div.energy-v', fmtNum(m.tdee)), h('div.energy-k', 'kcal a day to maintain')),
             h('div.energy-goal', h('div.meta-rest', fmtNum(m.resting)), h('div.energy-k', 'without workouts'))),
-          h('p.fine', `You ate ${fmtNum(m.intake)} kcal a day on average and your weight trend moved ${m.dKg >= 0 ? '+' : '−'}${toDisplay(Math.abs(m.dKg))} ${unit()} over ${Math.round(m.span)} days. Your ${m.workouts} gym workout${m.workouts === 1 ? '' : 's'}${m.activities ? ` and ${m.activities} activit${m.activities === 1 ? 'y' : 'ies'}` : ''} burned about ${fmtNum(m.workoutKcal)} kcal a day on top of your resting burn.${m.activities ? '' : ' Import runs and rides on Fitness to sharpen this.'}`),
+          h('p.fine', `You ate ${fmtNum(m.intake)} kcal a day on average and your weight trend moved ${m.dKg >= 0 ? '+' : '−'}${bodyDisplay(Math.abs(m.dKg))} ${bodyUnit()} over ${Math.round(m.span)} days. Your ${m.workouts} gym workout${m.workouts === 1 ? '' : 's'}${m.activities ? ` and ${m.activities} activit${m.activities === 1 ? 'y' : 'ies'}` : ''} burned about ${fmtNum(m.workoutKcal)} kcal a day on top of your resting burn.${m.activities ? '' : ' Import runs and rides on Fitness to sharpen this.'}`),
           h('div.meta-foot', h('span', `Confidence: ${m.confidence}`), h('span', `${m.logged} days of food · ${m.weighins} weigh-ins`)),
           h('p.fine', 'An estimate that sharpens the more days you log. Eat about 300–500 kcal under maintenance to lose fat, or 200–300 over to build muscle.'))
         : h('section.card.meta-card',
@@ -91,9 +91,9 @@ export function trendsPage() {
           h('p.fine', `Carver works out your maintenance calories from what you eat and how your weight moves. It needs at least 10 days of food logs and 2 weigh-ins in the last 4 weeks. ${m.need.food ? `${m.need.food} more day${m.need.food > 1 ? 's' : ''} of food` : ''}${m.need.food && m.need.weigh ? ' and ' : ''}${m.need.weigh ? `${m.need.weigh} more weigh-in${m.need.weigh > 1 ? 's' : ''}` : ''} to go.`)),
 
       h('div.section-head', h('h2.section-title', 'Weight')),
-      h('section.card.chart-card', lineChart(weight.map((p) => ({ ...p, y: +toDisplay(p.y) })), {
+      h('section.card.chart-card', lineChart(weight.map((p) => ({ ...p, y: +bodyDisplay(p.y) })), {
         height: 170, dots: weight.length < 30, fmtY: (v) => Math.round(v), label: 'Weight trend', empty: 'Log your weight to see it here',
-        tip: (p) => `<b>${toDisplay(p.raw)} ${unit()}</b><span>Trend ${p.y} · ${fmtDay(p.x)}</span>`,
+        tip: (p) => `<b>${bodyDisplay(p.raw)} ${bodyUnit()}</b><span>Trend ${p.y} · ${fmtDay(p.x)}</span>`,
       })),
 
       h('div.section-head', h('h2.section-title', 'Calories'), h('span.section-count', short ? 'weekly average' : 'per day')),

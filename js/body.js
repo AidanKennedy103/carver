@@ -2,7 +2,7 @@
 // scale), and read the trend.
 
 import { h, icon, sheet, toast, actionSheet, confirmBox, fmtDate } from './ui.js';
-import { state, commit, uid, toDisplay, fromDisplay, unit, LB_PER_KG } from './store.js';
+import { state, commit, uid, bodyDisplay as toDisplay, bodyFromDisplay as fromDisplay, bodyUnit as unit, LB_PER_KG } from './store.js';
 
 export const weights = () => state.body.weights;   // oldest first
 

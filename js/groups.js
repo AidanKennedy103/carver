@@ -132,7 +132,7 @@ async function leaveGroup(g) {
 function happenings() {
   const now = Date.now(), out = [];
   const a = state.active;
-  if (a && a.start > now - 3 * 36e5) out.push({ kind: 'started', ref: 's:' + a.id, share: 'gym', data: { name: a.name || 'Workout' } });
+  if (a && !a.past && a.start > now - 3 * 36e5) out.push({ kind: 'started', ref: 's:' + a.id, share: 'gym', data: { name: a.name || 'Workout' } });
   for (const w of state.workouts) {
     if ((w.end || w.start) < now - RECENT) break;   // newest first
     if (w.imported) continue;                         // history brought in from another app isn't news

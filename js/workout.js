@@ -3,13 +3,14 @@
 // Also the plan editor and the workout detail screen.
 
 import { h, fill, icon, push, pop, navBar, actionSheet, confirmBox, promptBox, toast, fmtDate, fmtDurationWords, fmtNum, fmtSecs } from './ui.js';
-import { state, commit, save, uid, exercise, savePlan, deletePlan, workoutStats, toDisplay, unit, e1rm, MAX_PLANS, ymd, addDays, dayStart, weekStart, dayPlan, DAY_SHORT } from './store.js';
-import { startWorkout, repeatWorkout, saveAsPlan, openWorkout } from './session.js';
+import { state, commit, save, uid, exercise, savePlan, deletePlan, workoutStats, toDisplay, unit, e1rm, MAX_PLANS, ymd, addDays, dayStart, weekStart, dayPlan, workoutDays, DAY_SHORT } from './store.js';
+import { startWorkout, repeatWorkout, saveAsPlan, openWorkout, logPastWorkout, editWorkout } from './session.js';
 import { exerciseCard, newSet } from './block.js';
 import { pickExercises } from './picker.js';
 import { openSettings } from './settings.js';
 import { volumeCard, tally, MUSCLE_ORDER, ALL_MUSCLES } from './volume.js';
 import { programCard, setup531, program } from './program531.js';
+import { goalsCard } from './goals.js';
 
 export function workoutPage() {
   const el = h('div.page');
@@ -28,6 +29,7 @@ export function workoutPage() {
       nav,
       state.active ? activeCard(state.active) : next ? upNext(next) : firstPlanCard(),
       weekStrip(),
+      workoutGoals(),
       programCard(),
 
       h('div.section-head',
@@ -39,6 +41,7 @@ export function workoutPage() {
           }, icon('plus', 16), 'New'))),
       state.plans.length ? h('section.card.list-card.plan-list', state.plans.map((p) => planRow(p, p === next))) : null,
       state.active ? null : h('button.quick-start', { onclick: () => startWorkout() }, icon('plus', 18), h('span', 'Empty workout'), h('span.quick-sub', 'Add exercises as you go')),
+      state.active ? null : h('button.quick-start', { onclick: () => logPastWorkout() }, icon('calendar', 18), h('span', 'Log a past workout'), h('span.quick-sub', 'One you didn’t track')),
       state.plans.length || state.workouts.length ? volumeCard() : null,
 
       h('div.section-head', h('h2.section-title', 'History'), state.workouts.length ? h('span.section-count', `${state.workouts.length} workout${state.workouts.length === 1 ? '' : 's'}`) : null),
@@ -53,9 +56,9 @@ export function workoutPage() {
     const total = a.exercises.reduce((n, e) => n + e.sets.length, 0);
     const done = a.exercises.reduce((n, e) => n + e.sets.filter((x) => x.done).length, 0);
     return h('section.card.hero.live',
-      h('div.hero-label', h('span.pulse'), 'In progress'),
+      h('div.hero-label', a.past ? null : h('span.pulse'), a.past?.editOf ? 'Editing a workout' : a.past ? 'Logging a past workout' : 'In progress'),
       h('div.hero-name', a.name || 'Workout'),
-      h('div.hero-meta', `Started ${fmtDurationWords(Date.now() - a.start)} ago · ${done} of ${total} sets`),
+      h('div.hero-meta', a.past ? `${fmtDate(a.start)} · ${total} sets` : `Started ${fmtDurationWords(Date.now() - a.start)} ago · ${done} of ${total} sets`),
       h('div.hero-progress', h('i', { style: { width: (total ? (done / total) * 100 : 0) + '%' } })),
       h('button.btn.gold.wide.hero-go', { onclick: () => openWorkout() }, icon('play', 16), 'Resume'));
   }
@@ -95,7 +98,18 @@ export function workoutPage() {
         const cls = did.has(k) ? '.did' : dayPlan(k) === 'planned' && k >= today ? '.plan' : '';
         return h('div.wk-col' + cls + (k === today ? '.today' : ''), h('span.wk-d', d[0]), h('span.wk-dot', did.has(k) ? icon('check', 14) : null));
       })),
-      h('div.wk-sum', h('b', `${n} of ${goal}`), n >= goal ? ' this week · goal hit 🔥' : ' workouts this week'));
+      n >= goal ? h('div.wk-sum', 'Weekly goal hit 🔥') : null);
+  }
+
+  /** Your workout goals, and this week so far. */
+  function workoutGoals() {
+    const n = state.workouts.filter((w) => w.start >= weekStart()).length;
+    const goal = state.goals.workoutsPerWeek;
+    const days = workoutDays();
+    return goalsCard('workout', [
+      { label: 'Workouts this week', text: `${n} of ${goal}`, value: n, goal },
+      { label: 'Training days', text: days.length ? days.map((i) => DAY_SHORT[i]).join(', ') : 'Any day' },
+    ]);
   }
 
   function planRow(p, isNext) {
@@ -113,6 +127,7 @@ export function workoutPage() {
   function planMenu(p) {
     actionSheet(p.name, [
       { label: 'Start', onClick: () => startWorkout(p) },
+      { label: 'Log it as a past workout', onClick: () => logPastWorkout(p) },
       { label: 'Edit plan', onClick: () => push(() => planEditor(p)) },
       { label: 'Rename', onClick: async () => { const n = await promptBox('Rename plan', p.name); if (n) savePlan({ ...p, name: n }); } },
       { label: 'Duplicate', onClick: () => {
@@ -206,6 +221,7 @@ export function workoutDetail(w) {
       right: [h('button.icon-btn', {
         'aria-label': 'Options',
         onclick: () => actionSheet(w.name, [
+          { label: 'Edit workout', onClick: () => { pop(); editWorkout(w); } },
           { label: 'Repeat this workout', onClick: () => { pop(); repeatWorkout(w); } },
           { label: 'Save as a plan', onClick: () => saveAsPlan(w) },
           { label: 'Rename', onClick: async () => { const n = await promptBox('Rename workout', w.name); if (n) { commit((s) => { const x = s.workouts.find((y) => y.id === w.id); if (x) x.name = n; }); pop(); } } },

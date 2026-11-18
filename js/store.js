@@ -123,6 +123,20 @@ export function toDisplay(kg) {
   const v = unit() === 'lb' ? kg * LB_PER_KG : kg;
   return String(Math.round(v * 10) / 10);
 }
+/** Body weight has its own unit (falls back to the lifting one). */
+export const bodyUnit = () => state.settings.bodyUnit || unit();
+export function bodyDisplay(kg) {
+  if (kg == null || kg === '') return '';
+  return String(Math.round((bodyUnit() === 'lb' ? kg * LB_PER_KG : kg) * 10) / 10);
+}
+export function bodyFromDisplay(v) {
+  if (v === '' || v == null || isNaN(+v)) return null;
+  return bodyUnit() === 'lb' ? +v / LB_PER_KG : +v;
+}
+/** Distance for runs and rides: 'km' or 'mi'. */
+export const distUnit = () => state.settings.distUnit || (unit() === 'kg' ? 'km' : 'mi');
+/** Tabs you can hide in Settings (Home always shows). */
+export const tabOn = (id) => id === 'home' || !(state.settings.hiddenTabs || []).includes(id);
 /** Number the person typed (lb or kg) → kg. */
 export function fromDisplay(v) {
   if (v === '' || v == null || isNaN(+v)) return null;

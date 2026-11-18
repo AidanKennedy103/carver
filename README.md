@@ -26,6 +26,8 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 - **Profile:** your name, "carving since", week streak, all-time workouts, weight lifted, records, hours trained, and recent personal records.
 
 ### Workout
+- **Goals on every page:** Workout, Nutrition and Fitness each have a Goals card (with this week's progress) that opens just that page's goals. Home's 🎯 Goals opens all of them. Fitness goals are weekly: activities, active minutes, distance.
+- **Pick your tabs:** Settings → Tabs turns Workout, Nutrition or Fitness off. Home drops their rings and rows too.
 - **Up next:** your plans rotate in order, so the next one is ready at the top with its muscles, sets, how long it took last time and when you last did it. While a workout is going, that card becomes **Resume** with your progress.
 - **This week:** Monday to Sunday with the days you trained and the days you planned.
 - **Plans:** up to **5**, each a row with a play button to start it. Tap a plan to edit it; ··· to rename, duplicate or delete. Or start an **empty workout**.
@@ -44,7 +46,9 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
   - **4-week average.**
 
   Main-muscle sets count fully and helping muscles count half (triceps on bench press, biceps on rows…). Each muscle shows against a 10–20 set guide. Tap one to see which exercises count.
-- **81 built-in exercises** (including weighted pull-ups) plus your own custom ones. Choose lb or kg.
+- **196 built-in exercises**, 52 of them one arm or leg at a time (filter **One side** in the picker), including hip adduction and abduction. Each lists its main muscle and the muscles it also works (traps, lower back, obliques, adductors and abductors included), and those count toward sets per muscle. Make your own with the muscles it works.
+- **Log a past workout** (Workout tab): pick the day, start time and length, start empty, from a plan or like an earlier workout, and type in what you did. **Edit workout** in a finished workout's ··· menu changes it later.
+- **Units:** lifting weights, body weight and distance each have their own setting (lb or kg, mi or km).
 - **A workout in progress survives closing the app.**
 
 ### Nutrition (like Cronometer)

@@ -1,7 +1,7 @@
 // Progress: body weight, progress photos, and your monthly goals and recaps.
 
 import { h, fill, icon, push, pop, navBar, toast, actionSheet, confirmBox, fmtDate, swipe, swipeSegment } from './ui.js';
-import { toDisplay, unit } from './store.js';
+import { bodyDisplay as toDisplay, bodyUnit as unit } from './store.js';
 import { lineChart } from './charts.js';
 import { weights, latestWeight, trend, change, logWeightSheet, importSheet, weightRow } from './body.js';
 import { photos, addPhoto, deletePhoto, loadInto } from './photos.js';

@@ -2,7 +2,7 @@
 // "workout in progress" bar that sits above it on every tab.
 
 import { h, icon, push, depth, fmtDuration, navBar } from './ui.js';
-import { state, onChange } from './store.js';
+import { state, onChange, tabOn } from './store.js';
 import { openWorkout } from './session.js';
 
 const TABS = [
@@ -20,20 +20,30 @@ const live = h('button.live-bar', { onclick: () => openWorkout() });
 /** pageBuilders: { home: () => screen, workout: ... }. Missing ones show "Coming soon". */
 export function initTabs(pageBuilders) {
   pages = pageBuilders;
-  bar.append(...TABS.map((t) => h('button.tab', { 'data-tab': t.id, onclick: () => goTab(t.id) }, icon(t.icon, 24), h('span', t.label))));
+  drawBar();
   live.append(h('span.pulse'), h('span.live-text', h('b.live-name', ''), h('span.live-time', '')), h('span.live-go', 'Resume'));
   document.body.append(live, bar);
 
   let saved = 'home';
   try { saved = localStorage.getItem('carver.tab') || 'home'; } catch { /* fine */ }
-  goTab(TABS.some((t) => t.id === saved) ? saved : 'home');
+  goTab(TABS.some((t) => t.id === saved) && tabOn(saved) ? saved : 'home');
 
   drawLive();
   onChange(drawLive);
-  setInterval(() => { if (state.active) live.querySelector('.live-time').textContent = fmtDuration(Date.now() - state.active.start); syncVisibility(); }, 500);
+  onChange(() => { if (barKey() !== shownKey) { drawBar(); if (!tabOn(current)) goTab('home'); } });
+  setInterval(() => { if (state.active) live.querySelector('.live-time').textContent = liveTime(state.active); syncVisibility(); }, 500);
+}
+
+// Only the tabs you keep (Settings → Tabs)
+let shownKey = '';
+const barKey = () => TABS.filter((t) => tabOn(t.id)).map((t) => t.id).join();
+function drawBar() {
+  shownKey = barKey();
+  bar.replaceChildren(...TABS.filter((t) => tabOn(t.id)).map((t) => h('button.tab' + (t.id === current ? '.on' : ''), { 'data-tab': t.id, onclick: () => goTab(t.id) }, icon(t.icon, 24), h('span', t.label))));
 }
 
 export function goTab(id) {
+  if (!tabOn(id)) id = 'home';
   if (id === current && depth() === 1) return;
   current = id;
   try { localStorage.setItem('carver.tab', id); } catch { /* fine */ }
@@ -48,7 +58,7 @@ function drawLive() {
   document.body.classList.toggle('has-live', !!a);
   if (a) {
     live.querySelector('.live-name').textContent = a.name || 'Workout';
-    live.querySelector('.live-time').textContent = fmtDuration(Date.now() - a.start);
+    live.querySelector('.live-time').textContent = liveTime(a);
   }
 }
 
@@ -66,3 +76,4 @@ function comingSoon(tab) {
   ));
   return { el };
 }
+const liveTime = (a) => (a.past ? (a.past.editOf ? 'Editing' : 'Past workout') : fmtDuration(Date.now() - a.start));

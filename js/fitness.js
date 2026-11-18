@@ -2,9 +2,10 @@
 // Shortcut copies them, you paste) or added by hand. Gym workouts live in Workout.
 
 import { h, fill, icon, navBar, sheet, toast, confirmBox, fmtDate, fmtNum, fmtDurationWords } from './ui.js';
-import { state, commit, uid, unit, weekStart } from './store.js';
+import { state, commit, uid, distUnit, weekStart } from './store.js';
 import { barChart, COLORS } from './charts.js';
 import { latestWeight, findDate } from './body.js';
+import { goalsCard } from './goals.js';
 
 export const ACTIVITY_TYPES = [
   { id: 'run', name: 'Run', icon: '🏃', met: 9.8, words: ['run', 'running', 'jog'] },
@@ -23,8 +24,7 @@ const STRENGTH = /strength|weight ?lift|weights|core training/i;   // logged in 
 export const activityType = (id) => ACTIVITY_TYPES.find((t) => t.id === id) || ACTIVITY_TYPES[ACTIVITY_TYPES.length - 1];
 
 const MI = 1609.344;
-const metric = () => unit() === 'kg';
-const distUnit = () => (metric() ? 'km' : 'mi');
+const metric = () => distUnit() === 'km';
 const fmtDist = (m) => `${(m / (metric() ? 1000 : MI)).toFixed(m >= 100000 ? 0 : 1)} ${distUnit()}`;
 const paceText = (a) => {
   if (!a.dist || !['run', 'walk', 'hike'].includes(a.type)) return '';
@@ -221,6 +221,17 @@ function activityRow(a) {
     h('span.food-kcal', `${fmtNum(activityKcal(a))}`, h('span.food-sub', a.kcal ? ' kcal' : ' kcal est.')));
 }
 
+/** Weekly fitness goals (activities, minutes, distance) and how this week is going. */
+function fitnessGoals(week) {
+  const g = state.goals, sum = (f) => week.reduce((n, a) => n + (f(a) || 0), 0);
+  const mins = Math.round(sum((a) => a.dur) / 6e4), dist = sum((a) => a.dist);
+  return goalsCard('fitness', [
+    g.fitPerWeek ? { label: 'Activities this week', text: `${week.length} of ${g.fitPerWeek}`, value: week.length, goal: g.fitPerWeek } : null,
+    g.fitMins ? { label: 'Active time', text: `${mins} of ${g.fitMins} min`, value: mins, goal: g.fitMins } : null,
+    g.fitDist ? { label: 'Distance', text: `${fmtDist(dist).split(' ')[0]} of ${fmtDist(g.fitDist)}`, value: dist, goal: g.fitDist } : null,
+  ], { emptyText: 'Set a weekly goal: activities, active minutes or distance.' });
+}
+
 export function fitnessPage() {
   const el = h('div.page');
   const body = h('div.scroll-body');
@@ -247,6 +258,8 @@ export function fitnessPage() {
         h('div.tile', h('div.tile-v', week.length), h('div.tile-k', 'Activities'), h('div.tile-sub', `${fmtDurationWords(sum(week, (a) => a.dur))}`)),
         h('div.tile', h('div.tile-v', week.some((a) => a.dist) ? fmtDist(sum(week, (a) => a.dist)).split(' ')[0] : '0'), h('div.tile-k', 'Distance'), h('div.tile-sub', distUnit())),
         h('div.tile', h('div.tile-v', fmtNum(sum(week, activityKcal))), h('div.tile-k', 'Burned'), h('div.tile-sub', 'active kcal'))),
+
+      fitnessGoals(week),
 
       h('div.btn-pair',
         h('button.btn.gold', { onclick: importActivitiesSheet }, icon('apple', 18), 'Import'),

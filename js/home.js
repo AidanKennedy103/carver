@@ -2,7 +2,7 @@
 // calendar, your one-rep maxes, and your profile overview.
 
 import { h, fill, icon, push, sheet, toast, promptBox, fmtDate, fmtNum, fmtDurationWords, swipe } from './ui.js';
-import { state, commit, exercise, overview, toDisplay, unit, ymd, addDays, dayTotals, weekStart, dayStart, dayPlan, workoutDays, DAY_SHORT, workoutStats, waterOn, addWater, kcalLook, kcalHit } from './store.js';
+import { state, commit, exercise, overview, toDisplay, unit, bodyDisplay, bodyUnit, tabOn, ymd, addDays, dayTotals, weekStart, dayStart, dayPlan, workoutDays, DAY_SHORT, workoutStats, waterOn, addWater, kcalLook, kcalHit } from './store.js';
 import { workoutDetail } from './workout.js';
 import { openSettings } from './settings.js';
 import { goTab } from './tabs.js';
@@ -57,8 +57,9 @@ function ringCatalog() {
     { id: 'protein', label: 'Protein', color: COLORS.protein, cheer: 'Hit your protein goal!', day: (k) => { const v = dayTotals(k).p; return { value: v, goal: g.p, text: `${Math.round(v)} of ${g.p} g`, hit: v >= g.p }; } },
     { id: 'water', label: 'Water', color: '#2e8bd8', cheer: 'Hit your water goal!', day: (k) => { const v = waterOn(k), gw = g.water || 2500; return { value: v, goal: gw, text: `${(v / 1000).toFixed(1)} of ${(gw / 1000).toFixed(1)} L`, hit: v >= gw }; } },
     { id: 'weigh', label: 'Weigh-in', color: WEIGH_COLOR, cheer: 'Weighed in!', day: (k) => { const n = state.body.weights.some((w) => ymd(w.ts) === k) ? 1 : 0; return { value: n, goal: 1, text: n ? 'Done today' : 'Not yet today', hit: !!n }; } },
+  ].filter((r) => (r.id === 'gym' ? tabOn('workout') : ['kcal', 'protein', 'water'].includes(r.id) ? tabOn('nutrition') : true)).concat([
     ...g.custom.map((c) => ({ id: c.id, custom: c, label: c.name, color: COLORS.custom, cheer: `${c.name}: done!`, day: (k) => { const d = isDone(c, k); return { value: d ? 1 : 0, goal: 1, text: d ? 'Done' : 'Not yet', hit: d }; } })),
-  ];
+  ]);
 }
 export function ringIds() {
   const ids = new Set(ringCatalog().map((r) => r.id));
@@ -208,7 +209,7 @@ function calendar(redraw) {
       h('span', h('i.cal-key.did'), 'Workout'),
       h('span', h('i.cal-key.gold'), `Week with ${goal}+`),
       workoutDays().length ? h('span', h('i.cal-key.plan'), 'Planned') : null,
-      h('button.link', { onclick: openGoals }, `${thisWeek}/${goal} this week`))),
+      h('button.link', { onclick: () => openGoals('workout') }, `${thisWeek}/${goal} this week`))),
   { left: () => moveMonth(1), right: () => moveMonth(-1), target: () => document.querySelector('.card.cal') });
 }
 
@@ -226,8 +227,8 @@ function progressCards() {
     h('button.card.orm-card.link-card', { onclick: () => push(progressPage), 'aria-label': 'Open Progress: weight, photos and monthly goals' },
       h('div.orm-name', 'Progress', h('span.card-go', '›')),
       last
-        ? [h('div.orm-val', toDisplay(last.kg), h('span.orm-unit', unit())),
-          h('div.orm-sub', c30 != null ? `${c30 > 0 ? '+' : c30 < 0 ? '−' : ''}${toDisplay(Math.abs(c30))} ${unit()} in 30 days` : 'Weight')]
+        ? [h('div.orm-val', bodyDisplay(last.kg), h('span.orm-unit', bodyUnit())),
+          h('div.orm-sub', c30 != null ? `${c30 > 0 ? '+' : c30 < 0 ? '−' : ''}${bodyDisplay(Math.abs(c30))} ${bodyUnit()} in 30 days` : 'Weight')]
         : [h('div.orm-val.dim-val', '—'), h('div.orm-sub', 'Log your weight')],
       tr.length > 1 ? sparkline(tr.map((p) => p.y)) : h('div.card-foot', `${pics} progress photo${pics === 1 ? '' : 's'}`),
       tr.length > 1 ? h('div.card-foot', `${pics} photo${pics === 1 ? '' : 's'} · monthly goals`) : null),
@@ -268,7 +269,9 @@ export function homePage() {
         h('div.home-hello',
           h('div.home-date', fmtDate(Date.now(), { weekday: 'long', month: 'long', day: 'numeric' })),
           h('h1.home-title', name ? `${greeting()}, ${name}` : greeting())),
-        h('button.icon-btn', { onclick: openSettings, 'aria-label': 'Settings' }, icon('gear'))),
+        h('div.home-head-btns',
+          h('button.nav-goals', { onclick: () => openGoals() }, '🎯 Goals'),
+          h('button.icon-btn', { onclick: openSettings, 'aria-label': 'Settings' }, icon('gear')))),
 
       // Rings (swipe for Today / Week)
       swipe(h('section.card.rings-card',
@@ -295,23 +298,23 @@ export function homePage() {
       // Today
       h('div.section-head', h('h2.section-title', 'Today')),
       h('section.card.list-card.today',
-        h('div.today-row',
+        tabOn('workout') || tabOn('fitness') ? h('div.today-row',
           h('span.today-ico', icon('dumbbell', 20)),
           h('span.today-text',
             h('span.today-k', 'Workout'),
             h('span.today-v', todayWorkouts.length || todayActs.length ? [...todayWorkouts.map((w) => `${w.name} · ${fmtDurationWords(workoutStats(w).duration)}`), ...todayActs.map((a) => `${activityType(a.type).name} · ${fmtDurationWords(a.dur)}`)].join(', ') : state.active ? 'In progress' : { rest: 'Rest day', planned: 'Planned today' }[dayPlan(today)] || 'Not yet')),
-          todayWorkouts.length || todayActs.length ? h('span.ring-check.big', '✓') : h('button.btn.gold-soft.small', { onclick: () => goTab('workout') }, state.active ? 'Resume' : 'Start')),
-        h('div.today-row',
+          todayWorkouts.length || todayActs.length ? h('span.ring-check.big', '✓') : h('button.btn.gold-soft.small', { onclick: () => goTab(tabOn('workout') ? 'workout' : 'fitness') }, state.active ? 'Resume' : tabOn('workout') ? 'Start' : 'Add')) : null,
+        tabOn('nutrition') ? h('div.today-row',
           h('span.today-ico', '🍽️'),
           h('span.today-text',
             h('span.today-k', 'Food'),
             h('span.today-v', t.entries ? `${fmtNum(t.kcal)} kcal · ${Math.round(t.p)} g protein` : 'Nothing logged')),
-          h('button.btn.gold-soft.small', { onclick: () => quickAdd({}) }, 'Add')),
+          h('button.btn.gold-soft.small', { onclick: () => quickAdd({}) }, 'Add')) : null,
         h('div.today-row',
           h('span.today-ico', '⚖️'),
           h('span.today-text',
             h('span.today-k', 'Weigh-in'),
-            h('span.today-v', todayWeigh ? `${toDisplay(todayWeigh.kg)} ${unit()}` : 'Not yet')),
+            h('span.today-v', todayWeigh ? `${bodyDisplay(todayWeigh.kg)} ${bodyUnit()}` : 'Not yet')),
           todayWeigh ? h('span.ring-check.big', '✓') : h('button.btn.gold-soft.small', { onclick: logWeightSheet }, 'Log'))),
 
       // Monthly nudges
@@ -327,11 +330,10 @@ export function homePage() {
       progressCards(),
 
       // Calendar
-      h('div.section-head', h('h2.section-title', 'Calendar')),
-      calendar(draw),
+      tabOn('workout') ? [h('div.section-head', h('h2.section-title', 'Calendar')), calendar(draw)] : null,
 
       // One-rep max
-      oneRmSection(),
+      tabOn('workout') ? oneRmSection() : null,
 
       // Profile overview
       h('div.section-head', h('h2.section-title', 'Profile')),

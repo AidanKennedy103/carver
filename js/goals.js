@@ -2,11 +2,11 @@
 // (water, steps, anything). These drive the rings on Home.
 
 import { h, fill, icon, sheet, toast, promptBox, confirmBox } from './ui.js';
-import { state, commit, uid, ymd, toDisplay, unit, DAY_SHORT, foodAim } from './store.js';
+import { state, commit, uid, ymd, bodyDisplay, bodyUnit, distUnit, tabOn, DAY_SHORT, foodAim } from './store.js';
 import { num } from './food-util.js';
 import { habits, MAX_HABITS } from './habits.js';
 
-export function openGoals() {
+export function openGoals(section = 'all') {
   const g = state.goals;
   const field = (label, key, unit, step = 1) => {
     const input = h('input.field.goal-input', { value: g[key] ?? '', inputmode: 'decimal', 'aria-label': label });
@@ -111,22 +111,69 @@ export function openGoals() {
   }
   drawCustom();
 
-  const s = sheet(h('div.form',
-    h('div.sheet-head', h('span'), h('div.sheet-title', 'Goals'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
-    h('label.form-label', 'Your aim'), aimSeg,
-    h('p.fine', 'Build muscle: your calories are a minimum to reach. Lose fat: a maximum to stay under. Maintain: within 10% either way.'),
-    h('label.form-label', 'Daily food'),
-    h('button.btn.gold-soft.wide.suggest-btn', { onclick: () => { s.close(); suggestGoals(); } }, '✨ Suggest goals for me'),
-    h('div.group', energyField('Calories', 'kcal', 'kcal'), energyField('Protein', 'p', 'g'), energyField('Carbs', 'c', 'g'), energyField('Fat', 'f', 'g')),
-    hintEl,
-    h('div.group', field('Water', 'water', 'ml', 50)),
-    h('label.form-label', 'Workouts per week'), wkSeg,
-    h('p.fine', 'Hit this and the week turns gold on your calendar.'),
-    h('label.form-label', 'Which days'), dayRow, dayHint,
-    h('label.form-label', `Daily goals (up to ${MAX_HABITS})`), customList,
-    h('p.fine', 'Things you either do each day or don’t. Each one is a slider on Home: slide it when it’s done. Your groups see it right away, and at 8 am the next day if you missed it. You can also show one as a ring.'),
+  // Fitness (runs, rides, cardio): weekly targets, 0 = no goal. Distance is stored in metres.
+  const dKm = distUnit() === 'km' ? 1000 : 1609.344;
+  const fitField = (label, key, u, toShow = (v) => v, fromShow = (v) => v) => {
+    const input = h('input.field.goal-input', { value: g[key] ? toShow(g[key]) : '', placeholder: 'none', inputmode: 'decimal', 'aria-label': label });
+    input.addEventListener('change', () => { const v = num(input.value); commit((st) => { st.goals[key] = v > 0 ? fromShow(v) : 0; }); });
+    return h('label.goal-row', h('span', label), h('span.goal-field', input, h('span.goal-unit', u)));
+  };
+
+  const sections = {
+    workout: () => [
+      h('div.goal-section', '🏋️ Workout'),
+      h('label.form-label', 'Workouts per week'), wkSeg,
+      h('p.fine', 'Hit this and the week turns gold on your calendar.'),
+      h('label.form-label', 'Which days'), dayRow, dayHint],
+    nutrition: () => [
+      h('div.goal-section', '🍽️ Nutrition'),
+      h('label.form-label', 'Your aim'), aimSeg,
+      h('p.fine', 'Build muscle: your calories are a minimum to reach. Lose fat: a maximum to stay under. Maintain: within 10% either way.'),
+      h('label.form-label', 'Daily food'),
+      h('button.btn.gold-soft.wide.suggest-btn', { onclick: () => { s.close(); suggestGoals(); } }, '✨ Suggest goals for me'),
+      h('div.group', energyField('Calories', 'kcal', 'kcal'), energyField('Protein', 'p', 'g'), energyField('Carbs', 'c', 'g'), energyField('Fat', 'f', 'g')),
+      hintEl,
+      h('div.group', field('Water', 'water', 'ml', 50))],
+    fitness: () => [
+      h('div.goal-section', '🏃 Fitness'),
+      h('label.form-label', 'Each week'),
+      h('div.group',
+        fitField('Activities', 'fitPerWeek', 'per week'),
+        fitField('Active time', 'fitMins', 'min'),
+        fitField('Distance', 'fitDist', distUnit(), (m) => Math.round((m / dKm) * 10) / 10, (v) => v * dKm)),
+      h('p.fine', 'Runs, walks, rides and other cardio on the Fitness tab. Leave any blank for no goal. Health guidelines suggest about 150 minutes of moderate activity a week.')],
+    daily: () => [
+      h('div.goal-section', '✅ Daily goals'),
+      h('label.form-label', `Your own (up to ${MAX_HABITS})`), customList,
+      h('p.fine', 'Things you either do each day or don’t. Each one is a slider on Home: slide it when it’s done. Your groups see it right away, and at 8 am the next day if you missed it. You can also show one as a ring.')],
+  };
+  const shown = ['workout', 'nutrition', 'fitness'].includes(section)
+    ? [section] : ['workout', 'nutrition', 'fitness', 'daily'].filter((k) => k === 'daily' || tabOn(k));
+  const titles = { workout: 'Workout goals', nutrition: 'Nutrition goals', fitness: 'Fitness goals' };
+  const others = ['workout', 'nutrition', 'fitness'].filter((k) => k !== section && tabOn(k));
+
+  const s = sheet(h('div.form.goals-form' + (shown.length === 1 ? '.one' : ''),
+    h('div.sheet-head', h('span'), h('div.sheet-title', titles[section] || 'Goals'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
+    shown.map((k) => sections[k]()),
+    shown.length === 1 ? h('div.goal-others', others.map((k) => h('button.link', { onclick: () => { s.close(); openGoals(k); } }, `${titles[k]} ›`)),
+      h('button.link', { onclick: () => { s.close(); openGoals(); } }, 'All goals ›')) : null,
   ));
-  balance(false);   // show which one fills in, without changing your saved goals
+  if (shown.includes('nutrition')) balance(false);   // show which one fills in, without changing your saved goals
+}
+
+/**
+ * A goals card for the top of a page: what you're aiming for (and how this week
+ * is going), with a clear way in to change it.
+ * rows: [{ label, text, value?, goal? }] (value/goal draw a bar)
+ */
+export function goalsCard(section, rows, { emptyText } = {}) {
+  const set = rows.filter(Boolean);
+  return h('button.card.goals-card', { onclick: () => openGoals(section), 'aria-label': `Edit ${section} goals` },
+    h('div.goals-top', h('span.goals-title', '🎯 Goals'), h('span.goals-edit', set.length ? 'Edit' : 'Set goals')),
+    set.length ? set.map((r) => h('div.goals-row',
+      h('div.goals-line', h('span.goals-label', r.label), h('span.goals-val' + (r.value != null && r.value >= r.goal ? '.hit' : ''), r.text, r.value != null && r.value >= r.goal ? ' ✓' : '')),
+      r.value != null ? h('div.goals-bar', h('i', { style: { width: Math.min(100, (r.value / Math.max(r.goal, 1e-9)) * 100) + '%' } })) : null))
+      : h('div.goals-empty', emptyText || 'Tap to set a goal.'));
 }
 
 // ---------- Suggested food goals ----------
@@ -162,7 +209,7 @@ async function suggestGoals() {
       sug ? [
         h('div.group',
           [['Calories', sug.kcal, 'kcal'], ['Protein', sug.p, 'g'], ['Carbs', sug.c, 'g'], ['Fat', sug.f, 'g']].map(([l, v, u]) => h('div.goal-row', h('span', l), h('span.row-val', `${v.toLocaleString()} ${u}`)))),
-        h('p.fine', `Calories come from ${sug.from}. Protein is about 1 g per lb of body weight${sug.kg ? ` (${toDisplay(sug.kg)} ${unit()})` : ''}, fat about 27% of calories, and carbs fill the rest. A starting point, not medical advice.`),
+        h('p.fine', `Calories come from ${sug.from}. Protein is about 1 g per lb of body weight${sug.kg ? ` (${bodyDisplay(sug.kg)} ${bodyUnit()})` : ''}, fat about 27% of calories, and carbs fill the rest. A starting point, not medical advice.`),
         h('button.btn.gold.wide', { onclick: () => { commit((st) => { Object.assign(st.goals, { kcal: sug.kcal, p: sug.p, c: sug.c, f: sug.f, aim: aim.id }); }); s.close(); toast('Goals updated'); } }, 'Use these goals'),
       ] : h('p.fine', 'Log your weight first (Home → Progress), and Carver can suggest goals.'),
     );

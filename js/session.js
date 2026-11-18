@@ -10,8 +10,8 @@ import { beep, unlockAudio } from './sound.js';
 
 const defaultRest = () => state.settings.restDefault ?? 90;
 
-function greeting() {
-  const hr = new Date().getHours();
+function greeting(ts = Date.now()) {
+  const hr = new Date(ts).getHours();
   return hr < 11 ? 'Morning workout' : hr < 17 ? 'Afternoon workout' : 'Evening workout';
 }
 
@@ -41,6 +41,75 @@ export function repeatWorkout(old) {
   });
 }
 
+// ---------- Past workouts ----------
+// Logging one you forgot (or fixing a finished one) uses the same screen, with
+// a date and length you pick instead of a running clock. w.past = { dur, editOf? }.
+
+const pad = (n) => String(n).padStart(2, '0');
+const dateVal = (ts) => { const d = new Date(ts); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const timeVal = (ts) => { const d = new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const shortDay = (ts) => new Date(ts).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+
+/** Day, start time and length (and, for a new one, what to start from). onSave({ start, dur, from }). */
+export function whenSheet({ start, dur, title = 'When was it?', ok = 'Next', choose = false }, onSave) {
+  const dateIn = h('input.field', { type: 'date', value: dateVal(start), max: dateVal(Date.now()) });
+  const timeIn = h('input.field', { type: 'time', value: timeVal(start) });
+  const durIn = h('input.field.goal-input', { value: String(Math.round(dur / 6e4)), inputmode: 'numeric', 'aria-label': 'Length in minutes' });
+  const fromSel = choose ? h('select.field',
+    h('option', { value: '' }, 'Empty: add exercises yourself'),
+    state.plans.map((p) => h('option', { value: 'p:' + p.id }, `Plan: ${p.name}`)),
+    state.workouts.slice(0, 10).map((w) => h('option', { value: 'w:' + w.id }, `Same as ${w.name} (${shortDay(w.start)})`))) : null;
+  const s = sheet(h('div.form',
+    h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', title), h('button.link.strong', { onclick: go }, ok)),
+    h('label.form-label', 'Day'), dateIn,
+    h('label.form-label', 'Started at'), timeIn,
+    h('div.group', h('label.goal-row', h('span', 'How long'), h('span.goal-field', durIn, h('span.goal-unit', 'min')))),
+    choose ? [h('label.form-label', 'Start from'), fromSel,
+      h('p.fine', 'Next, type in the weights and reps you did. Sets you fill in are saved; empty ones are left out.')] : null,
+  ));
+  function go() {
+    const [y, m, d] = dateIn.value.split('-').map(Number);
+    const [hh, mm] = (timeIn.value || '12:00').split(':').map(Number);
+    if (!y) { toast('Pick a day'); return; }
+    const t = new Date(y, m - 1, d, hh || 0, mm || 0).getTime();
+    if (t > Date.now()) { toast('That’s in the future'); return; }
+    const mins = Math.max(1, Math.min(600, Math.round(+durIn.value) || 60));
+    s.close();
+    const v = fromSel?.value || '';
+    const from = v.startsWith('w:') ? { workout: state.workouts.find((w) => 'w:' + w.id === v) }
+      : v.startsWith('p:') ? { plan: state.plans.find((p) => 'p:' + p.id === v) } : {};
+    onSave({ start: t, dur: mins * 6e4, from });
+  }
+}
+
+/** Log a workout you did earlier, empty, from a plan, or like a past one. */
+export function logPastWorkout(plan = null) {
+  if (state.active) { toast('Finish or discard the workout in progress first'); openWorkout(); return; }
+  const y = new Date(); y.setDate(y.getDate() - 1); y.setHours(18, 0, 0, 0);
+  whenSheet({ start: y.getTime(), dur: 60 * 6e4, title: 'Log a past workout', choose: !plan }, ({ start, dur, from }) => {
+    const p = plan || from.plan, old = from.workout;
+    const exercises = old
+      ? old.exercises.map((e) => ({ exId: e.exId, note: '', rest: e.rest, sets: e.sets.map((x) => newSet({ type: x.type, tWeight: x.weight, tReps: x.reps, tSecs: x.secs })) }))
+      : p ? p.exercises.map((pe) => ({ exId: pe.exId, note: pe.note || '', rest: pe.rest ?? defaultRest(), sets: (pe.sets.length ? pe.sets : [{}]).map((ps) => newSet(ps)) }))
+        : [];
+    commit((s) => {
+      s.active = { id: uid(), name: (p || old)?.name || greeting(start), planId: p?.id || old?.planId || null, start, end: null, rest: null, past: { dur }, exercises };
+    });
+    openWorkout();
+  });
+}
+
+/** Open a finished workout to change it. */
+export function editWorkout(old) {
+  if (state.active) { toast('Finish or discard the workout in progress first'); return; }
+  const w = structuredClone(old);
+  w.past = { dur: Math.max(6e4, (old.end || old.start) - old.start), editOf: old.id };
+  delete w.prs; delete w.prList;
+  w.exercises.forEach((e) => e.sets.forEach((x) => { x.done = true; }));
+  commit((s) => { s.active = w; });
+  openWorkout();
+}
+
 export function openWorkout() {
   if (!state.active) return;
   push(workoutScreen);
@@ -59,9 +128,17 @@ function workoutScreen() {
 
   const nav = navBar({
     back: true, backLabel: 'Hide',
-    right: [h('button.btn.gold.small', { onclick: finish }, 'Finish')],
+    right: [h('button.btn.gold.small', { onclick: finish }, w.past ? 'Save' : 'Finish')],
   });
-  nav.querySelector('.nav-title').textContent = 'Workout';
+  nav.querySelector('.nav-title').textContent = w.past?.editOf ? 'Edit workout' : w.past ? 'Past workout' : 'Workout';
+
+  // A past workout shows its day and length (tap to change) instead of a clock
+  const whenBtn = w.past ? h('button.past-when', { onclick: changeWhen }) : null;
+  const drawWhen = () => whenBtn && fill(whenBtn, icon('calendar', 15),
+    h('span', `${shortDay(w.start)} · ${new Date(w.start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} · ${fmtDurationWords(w.past.dur)}`),
+    h('span.past-change', 'Change'));
+  function changeWhen() { whenSheet({ start: w.start, dur: w.past.dur, ok: 'Done' }, ({ start, dur }) => { w.start = start; w.past.dur = dur; save(); drawWhen(); updateStats(); }); }
+  drawWhen();
 
   const title = h('input.workout-name', {
     value: w.name, enterkeyhint: 'done', 'aria-label': 'Workout name',
@@ -71,7 +148,7 @@ function workoutScreen() {
 
   function updateStats() {
     const st = workoutStats(w);
-    elapsed.textContent = fmtDuration(Date.now() - w.start);
+    elapsed.textContent = w.past ? fmtDurationWords(w.past.dur) : fmtDuration(Date.now() - w.start);
     volumeEl.textContent = `${fmtNum(+toDisplay(st.volume) || 0)} ${unit()}`;
     const total = w.exercises.reduce((n, e) => n + e.sets.length, 0);
     setsEl.textContent = total ? `${st.sets}/${total}` : String(st.sets);
@@ -80,8 +157,9 @@ function workoutScreen() {
 
   function draw() {
     const y = body.scrollTop;
-    fill(body, 
+    fill(body,
       title,
+      whenBtn,
       h('div.live-stats',
         h('div.stat.time', h('span.stat-k', 'Time'), elapsed),
         h('div.stat', h('span.stat-k', 'Volume'), volumeEl),
@@ -96,7 +174,7 @@ function workoutScreen() {
         prev: previousSets(ex.exId, w.id),
         redraw: () => { save(); draw(); },
         save: () => { save(); updateStats(); },
-        onSetDone: (e) => { updateStats(); if (e.rest) startRest(e.rest, exercise(e.exId).name); },
+        onSetDone: (e) => { updateStats(); if (e.rest && !w.past) startRest(e.rest, exercise(e.exId).name); },
         onMove: (d) => { const [m] = w.exercises.splice(i, 1); w.exercises.splice(i + d, 0, m); save(); draw(); },
         onRemove: async () => {
           if (ex.sets.some((s) => s.done) && !(await confirmBox('Remove ' + exercise(ex.exId).name + '?', 'Its logged sets will be removed too.', { ok: 'Remove', danger: true }))) return;
@@ -128,7 +206,7 @@ function workoutScreen() {
 
   function workoutMenu() {
     actionSheet('Workout options', [
-      { label: 'Change start time', onClick: async () => {
+      w.past ? { label: 'Change day, time or length', onClick: changeWhen } : { label: 'Change start time', onClick: async () => {
         const mins = await promptBox('Started how many minutes ago?', String(Math.round((Date.now() - w.start) / 60000)), { inputmode: 'numeric' });
         if (mins != null && !isNaN(+mins)) { w.start = Date.now() - +mins * 60000; save(); updateStats(); }
       } },
@@ -137,7 +215,8 @@ function workoutScreen() {
   }
 
   async function discard() {
-    const ok = await confirmBox('Discard workout?', 'Everything logged in this workout will be deleted.', { ok: 'Discard', danger: true });
+    const ok = w.past?.editOf ? await confirmBox('Discard changes?', 'The workout stays as it was.', { ok: 'Discard', danger: true })
+      : await confirmBox('Discard workout?', 'Everything logged in this workout will be deleted.', { ok: 'Discard', danger: true });
     if (!ok) return;
     stopRest();
     commit((s) => { s.active = null; });
@@ -145,6 +224,7 @@ function workoutScreen() {
   }
 
   async function finish() {
+    if (w.past) { savePast(); return; }
     const st = workoutStats(w);
     if (!st.sets) {
       const ok = await confirmBox('No sets completed', 'Tick off at least one set to save this workout, or discard it.', { ok: 'Discard', danger: true, cancel: 'Keep going' });
@@ -167,6 +247,31 @@ function workoutScreen() {
     commit((s) => { s.workouts.unshift(done); s.active = null; });
     pop();
     showSummary(done, prs);
+  }
+
+  // A past workout: sets you ticked or filled in count, empty ones are left out
+  function savePast() {
+    const filled = (info, x) => (info.type === 'time' ? x.secs != null : x.reps != null);
+    const exercises = w.exercises.map((e) => {
+      const info = exercise(e.exId);
+      return {
+        exId: e.exId, note: e.note, rest: e.rest,
+        sets: e.sets.filter((x) => x.done || filled(info, x)).map(({ tWeight, tReps, tSecs, ...x }) => ({ ...x, weight: info.type === 'wr' ? x.weight ?? 0 : x.weight, done: true })),
+      };
+    }).filter((e) => e.sets.length);
+    if (!exercises.length) { toast('Fill in at least one set'); return; }
+    const { past, rest, ...base } = w;
+    const done = { ...base, id: past.editOf || w.id, name: (w.name || '').trim() || greeting(w.start), end: w.start + past.dur, exercises };
+    commit((s) => {
+      s.workouts = s.workouts.filter((x) => x.id !== done.id);   // editing: the old copy goes, so PRs compare against the rest
+      const prs = findPRs(done);
+      done.prs = prs.length; done.prList = prs;
+      s.workouts.push(done);
+      s.workouts.sort((a, b) => b.start - a.start);
+      s.active = null;
+    });
+    pop();
+    toast(past.editOf ? 'Workout saved' : `Logged ${done.name} on ${shortDay(done.start)}`);
   }
 
   // ----- Rest timer -----
