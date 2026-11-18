@@ -14,6 +14,9 @@ export const MAX_HABITS = 10;
 export const habits = () => state.goals.custom || [];
 const need = (g) => g.target || 1;
 
+/** The first day a daily goal counts: when you added it, or when you joined Carver if that's later. */
+export const habitStart = (g) => { const j = ymd(state.profile.joined || Date.now()); return g.since && g.since > j ? g.since : j; };
+
 export const isDone = (g, date = ymd()) => (state.checks[date]?.[g.id] || 0) >= need(g);
 
 export function setDone(g, date, done) {
@@ -71,7 +74,7 @@ export function habitsCard(onEdit) {
   if (!list.length) return null;
   const today = ymd(), yesterday = addDays(today, -1);
   const early = new Date().getHours() < 8;
-  const late = early ? list.filter((g) => (g.since || '') <= yesterday && !isDone(g, yesterday)) : [];
+  const late = early ? list.filter((g) => habitStart(g) <= yesterday && !isDone(g, yesterday)) : [];
   const box = h('div');
   fill(box,
     h('div.section-head', h('h2.section-title', 'Daily goals'), h('button.link.small', { onclick: onEdit }, 'Edit')),
@@ -88,22 +91,22 @@ export function habitsCard(onEdit) {
 /** Days in a row done, up to today (today not done yet doesn't break it). */
 export function streak(g, today = ymd()) {
   let n = 0, k = isDone(g, today) ? today : addDays(today, -1);
-  while (isDone(g, k) && (!g.since || k >= g.since)) { n++; k = addDays(k, -1); }
+  while (isDone(g, k) && k >= habitStart(g)) { n++; k = addDays(k, -1); }
   return n;
 }
 /** The longest run ever. */
 export function bestStreak(g) {
-  const days = Object.keys(state.checks).filter((k) => isDone(g, k)).sort();
+  const days = Object.keys(state.checks).filter((k) => k >= habitStart(g) && isDone(g, k)).sort();
   let best = 0, run = 0, prev = null;
   for (const k of days) { run = prev && addDays(prev, 1) === k ? run + 1 : 1; best = Math.max(best, run); prev = k; }
   return best;
 }
-/** Share of the last `n` days done (only counting days since it was added). */
+/** Share of the last `n` days done (only counting days since it started counting). */
 export function rate(g, n = 30) {
   let of = 0, done = 0;
   for (let i = 0; i < n; i++) {
     const k = addDays(ymd(), -i);
-    if (g.since && k < g.since) break;
+    if (k < habitStart(g)) break;
     of++; if (isDone(g, k)) done++;
   }
   return of ? done / of : 0;
@@ -118,9 +121,8 @@ function heatMap(g, redraw) {
   for (let w = 0; w < 12; w++) {
     cols.push(h('div.hm-col', Array.from({ length: 7 }, (_, d) => {
       const k = addDays(start, w * 7 + d);
-      if (k > today) return h('i.hm-cell.future');
-      const before = g.since && k < g.since;
-      return h('button.hm-cell' + (isDone(g, k) ? '.on' : '') + (k === today ? '.today' : '') + (before ? '.before' : ''), {
+      if (k > today || k < habitStart(g)) return h('i.hm-cell.future');   // before it started counting: not a miss
+      return h('button.hm-cell' + (isDone(g, k) ? '.on' : '') + (k === today ? '.today' : ''), {
         'aria-label': `${fmtDate(new Date(k + 'T12:00').getTime(), { weekday: 'short', month: 'short', day: 'numeric' })}: ${isDone(g, k) ? 'done' : 'not done'}`,
         onclick: () => { setDone(g, k, !isDone(g, k)); redraw(); },
       });

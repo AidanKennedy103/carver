@@ -226,6 +226,9 @@ async function sweep() {
     if (hourIn(now, tz) < 8) continue;   // not 8 am there yet
     const today = keyIn(now, tz), yesterday = addDays(today, -1);
     const habits: Habit[] = data.goals?.custom || [];
+    // A daily goal counts from when it was added, or when they joined Carver if that's later
+    const joined = data.profile?.joined ? keyIn(data.profile.joined, tz) : '';
+    const startOf = (h: Habit) => (h.since && h.since > joined ? h.since : joined);
     const groups = members.filter((m) => m.user_id === st.user_id);
     const post = (share: string, kind: string, ref: string, d: any) => {
       for (const g of groups) if (g.shares?.[share] !== false) rows.push({ group_id: g.group_id, user_id: st.user_id, kind, ref, data: d });
@@ -233,7 +236,7 @@ async function sweep() {
 
     // Yesterday's missed daily goals
     for (const h of habits) {
-      if (h.since && h.since > yesterday) continue;   // added today
+      if (startOf(h) > yesterday) continue;   // added today (or joined Carver today)
       if (!habitDone(data, h, yesterday)) post('habits', 'missed', `m:${h.id}:${yesterday}`, { name: h.name, day: yesterday });
     }
 
@@ -261,7 +264,7 @@ async function sweep() {
         if (g.kcal) sum.kcal = { days: vals.filter((t) => hit(t.kcal)).length, of: 7 };
       }
       for (const h of habits) {
-        const counted = days.filter((d) => !h.since || h.since <= d);
+        const counted = days.filter((d) => startOf(h) <= d);
         if (counted.length) sum.habits.push({ name: h.name, days: counted.filter((d) => habitDone(data, h, d)).length, of: counted.length });
       }
       for (const gr of groups) {
