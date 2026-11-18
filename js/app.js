@@ -9,11 +9,12 @@ import { nutritionPage } from './nutrition.js';
 import { fitnessPage } from './fitness.js';
 import { socialPage } from './social.js';
 import { habitsPage } from './habits.js';
+import { coachPage } from './coach.js';
 import { openWorkout } from './session.js';
 import { initCloud } from './cloud.js';
 
 initScreens(document.getElementById('app'));
-initTabs({ home: homePage, workout: workoutPage, nutrition: nutritionPage, fitness: fitnessPage, social: socialPage, habits: habitsPage });
+initTabs({ home: homePage, workout: workoutPage, nutrition: nutritionPage, fitness: fitnessPage, social: socialPage, habits: habitsPage, coach: coachPage });
 
 // Redraw the main page when data changes (only if it's showing)
 onChange(() => top()?.refresh?.());

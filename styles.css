@@ -1012,3 +1012,17 @@ button.macro-rows { width: 100%; text-align: left; }
 .hm-cell.future { background: none; }
 .hour-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 14px; }
 .hm { max-width: 440px; }
+
+/* Coach tab */
+.coach-intro { color: var(--muted); font-size: 15px; line-height: 1.45; margin: 4px 2px 0; }
+.coach-card { display: block; width: 100%; text-align: left; margin-bottom: 10px; }
+.coach-top { display: flex; align-items: center; gap: 12px; }
+.coach-top > div { flex: 1; }
+.coach-emoji { font-size: 26px; width: 40px; height: 40px; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; }
+.coach-name { font-weight: 700; font-size: 17px; }
+.coach-meta { font-size: 13px; color: var(--gold); margin-top: 1px; }
+.coach-about { font-size: 14px; color: var(--muted); line-height: 1.4; margin-top: 10px; }
+.coach-plan { margin-bottom: 8px; padding: 12px 14px; }
+.coach-plan-name { font-weight: 700; margin-bottom: 4px; }
+.coach-ex { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; }
+.coach-log { height: auto; min-height: 48px; gap: 10px; }

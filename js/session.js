@@ -6,6 +6,7 @@ import { h, fill, icon, push, pop, navBar, confirmBox, promptBox, actionSheet, s
 import { state, commit, save, uid, exercise, previousSets, workoutStats, findPRs, toDisplay, unit, MAX_PLANS, savePlan } from './store.js';
 import { exerciseCard, newSet } from './block.js';
 import { pickExercises } from './picker.js';
+import { progressAfter } from './coach.js';
 import { beep, unlockAudio } from './sound.js';
 
 const defaultRest = () => state.settings.restDefault ?? 90;
@@ -247,7 +248,7 @@ function workoutScreen() {
     done.prList = prs;
     commit((s) => { s.workouts.unshift(done); s.active = null; });
     pop();
-    showSummary(done, prs);
+    showSummary(done, prs, progressAfter(done));
   }
 
   // A past workout: sets you ticked or filled in count, empty ones are left out
@@ -331,7 +332,7 @@ export async function saveAsPlan(w) {
   toast('Saved to My plans');
 }
 
-function showSummary(w, prs) {
+function showSummary(w, prs, changes = []) {
   const st = workoutStats(w);
   const s = sheet(h('div.summary',
     h('div.summary-burst', icon('trophy', 44)),
@@ -341,6 +342,11 @@ function showSummary(w, prs) {
       h('div.stat', h('span.stat-k', 'Duration'), h('span.stat-v', fmtDurationWords(st.duration))),
       h('div.stat', h('span.stat-k', 'Volume'), h('span.stat-v', `${fmtNum(+toDisplay(st.volume) || 0)} ${unit()}`)),
       h('div.stat', h('span.stat-k', 'Sets'), h('span.stat-v', st.sets))),
+    changes.length ? h('div.pr-list',
+      h('div.section-label', 'Next time (your program)'),
+      changes.map((c) => h('div.pr-row', h('span', c.kind === 'up' ? '📈' : '↘️'),
+        h('span.pr-name', exercise(c.exId).name),
+        h('span.pr-val', `${toDisplay(c.from)} → ${toDisplay(c.to)} ${unit()}`)))) : null,
     prs.length ? h('div.pr-list',
       h('div.section-label', `${prs.length} personal record${prs.length > 1 ? 's' : ''}`),
       prs.map((p) => h('div.pr-row', icon('trophy', 18),
