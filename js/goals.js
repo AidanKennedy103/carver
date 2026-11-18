@@ -2,7 +2,7 @@
 // (water, steps, anything). These drive the rings on Home.
 
 import { h, fill, icon, sheet, toast, promptBox, confirmBox } from './ui.js';
-import { state, commit, uid, ymd, bodyDisplay, bodyUnit, distUnit, tabOn, DAY_SHORT, foodAim } from './store.js';
+import { state, commit, uid, ymd, bodyDisplay, bodyFromDisplay, bodyUnit, distUnit, tabOn, DAY_SHORT, foodAim } from './store.js';
 import { num } from './food-util.js';
 import { habits, MAX_HABITS } from './habits.js';
 
@@ -142,6 +142,16 @@ export function openGoals(section = 'all') {
         fitField('Active time', 'fitMins', 'min'),
         fitField('Distance', 'fitDist', distUnit(), (m) => Math.round((m / dKm) * 10) / 10, (v) => v * dKm)),
       h('p.fine', 'Runs, walks, rides and other cardio on the Fitness tab. Leave any blank for no goal. Health guidelines suggest about 150 minutes of moderate activity a week.')],
+    body: () => {
+      const wIn = h('input.field.goal-input', { value: g.weight ? bodyDisplay(g.weight) : '', placeholder: 'none', inputmode: 'decimal', 'aria-label': 'Goal weight' });
+      wIn.addEventListener('change', () => { const v = num(wIn.value); commit((st) => { st.goals.weight = v > 0 ? bodyFromDisplay(v) : 0; }); });
+      return [
+        h('div.goal-section', '🧍 Body'),
+        h('div.group',
+          h('label.goal-row', h('span', 'Goal weight'), h('span.goal-field', wIn, h('span.goal-unit', bodyUnit()))),
+          field('Goal body fat', 'bodyFat', '%', 0.5)),
+        h('p.fine', 'Optional. Your weight card shows how far you have to go.')];
+    },
     recovery: () => [
       h('div.goal-section', '😴 Recovery'),
       h('div.group', field('Sleep each night', 'sleep', 'h', 0.5)),
@@ -151,10 +161,10 @@ export function openGoals(section = 'all') {
       h('label.form-label', `Your own (up to ${MAX_HABITS})`), customList,
       h('p.fine', 'Things you either do each day or don’t. Each one is a slider on Home: slide it when it’s done. Your groups see it right away, and at 8 am the next day if you missed it. You can also show one as a ring.')],
   };
-  const shown = ['workout', 'nutrition', 'fitness', 'recovery', 'daily'].includes(section)
-    ? [section] : ['workout', 'nutrition', 'fitness', 'recovery', 'daily'].filter((k) => k === 'daily' || tabOn(k));
-  const titles = { workout: 'Workout goals', nutrition: 'Nutrition goals', fitness: 'Fitness goals', recovery: 'Recovery goals', daily: 'Daily goals' };
-  const others = ['workout', 'nutrition', 'fitness', 'recovery'].filter((k) => k !== section && tabOn(k));
+  const shown = ['workout', 'nutrition', 'fitness', 'recovery', 'body', 'daily'].includes(section)
+    ? [section] : ['workout', 'nutrition', 'fitness', 'recovery', 'body', 'daily'].filter((k) => k === 'daily' || k === 'body' || tabOn(k));
+  const titles = { workout: 'Workout goals', nutrition: 'Nutrition goals', fitness: 'Fitness goals', recovery: 'Recovery goals', body: 'Body goals', daily: 'Daily goals' };
+  const others = ['workout', 'nutrition', 'fitness', 'recovery', 'body'].filter((k) => k !== section && (k === 'body' || tabOn(k)));
 
   const s = sheet(h('div.form.goals-form' + (shown.length === 1 ? '.one' : ''),
     h('div.sheet-head', h('span'), h('div.sheet-title', titles[section] || 'Goals'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),

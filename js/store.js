@@ -146,6 +146,7 @@ export const TAB_LIST = [
   { id: 'habits', label: 'Habits', icon: 'check', emoji: '✅', sub: 'Daily goals, streaks and reminders' },
   { id: 'coach', label: 'Coach', icon: 'trophy', emoji: '🧭', sub: 'Ready-made programs that add weight for you' },
   { id: 'recovery', label: 'Recovery', icon: 'moon', emoji: '😴', sub: 'Sleep, soreness and a daily readiness score' },
+  { id: 'body', label: 'Body', icon: 'user', emoji: '🧍', sub: 'Weight, body fat, photos and measurements' },
 ];
 /** Tab ids you keep, in your order (not counting Home). */
 export function shownTabs() {

@@ -225,7 +225,7 @@ function progressCards() {
   for (let i = 27; i >= 1; i--) { const t = dayTotals(ymd(Date.now() - i * 864e5)); if (t.entries) kcals.push(t.kcal); }
   const pics = state.body.photos?.length || 0;
   return h('div.orm-grid',
-    h('button.card.orm-card.link-card', { onclick: () => push(progressPage), 'aria-label': 'Open Progress: weight, photos and monthly goals' },
+    h('button.card.orm-card.link-card', { onclick: () => (tabOn('body') ? goTab('body') : push(() => progressPage())), 'aria-label': 'Open Progress: weight, photos and monthly goals' },
       h('div.orm-name', 'Progress', h('span.card-go', '›')),
       last
         ? [h('div.orm-val', bodyDisplay(last.kg), h('span.orm-unit', bodyUnit())),

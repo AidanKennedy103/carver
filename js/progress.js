@@ -8,6 +8,8 @@ import { photos, addPhoto, deletePhoto, loadInto } from './photos.js';
 import { monthlySection } from './monthly.js';
 import { account, enabled as cloudOn } from './cloud.js';
 import { sharePhoto } from './groups.js';
+import { compSection, measureSection, weightGoalText } from './bodycomp.js';
+import { goalsButton } from './goals.js';
 
 const fmtW = (kg) => `${toDisplay(kg)} ${unit()}`;
 const signed = (kg) => { const v = +toDisplay(Math.abs(kg)); return `${kg > 0 ? '+' : kg < 0 ? '−' : ''}${v} ${unit()}`; };
@@ -26,7 +28,8 @@ export function takeProgressPhoto() {
   input.click();
 }
 
-export function progressPage() {
+/** Weight, body composition, photos and monthly recaps. tab: shown as the Body tab. */
+export function progressPage({ tab = false } = {}) {
   const el = h('div.page');
   const body = h('div.scroll-body');
 
@@ -37,7 +40,7 @@ export function progressPage() {
     const pics = photos();
 
     fill(body,
-      navBar({ title: 'Progress', backLabel: 'Home', large: true }),
+      navBar({ title: tab ? 'Body' : 'Progress', back: !tab, backLabel: 'Home', large: true, right: [goalsButton('body')] }),
 
       // Weight
       h('div.section-head', h('h2.section-title', 'Weight'), weights().length ? h('button.link', { onclick: () => push(weightScreen) }, 'History') : null),
@@ -46,6 +49,7 @@ export function progressPage() {
           h('div', h('div.energy-v', toDisplay(last.kg), h('span.orm-unit', unit())), h('div.energy-k', `Last weigh-in · ${fmtDate(last.ts, { month: 'short', day: 'numeric' })}`)),
           c30 != null ? h('div.energy-goal', h('div.weight-change', signed(c30)), h('div.energy-k', 'last 30 days')) : null)
           : h('div.empty-text.left', 'Log your weight to see your trend. Weighing in most mornings gives the clearest picture.'),
+        weightGoalText() ? h('div.weight-goal', '🎯 ', weightGoalText()) : null,
         recent.length > 1 ? lineChart(recent.map((p) => ({ ...p, y: +toDisplay(p.y) })), {
           height: 140, dots: false, fmtY: (v) => Math.round(v), label: 'Weight trend, last 90 days',
           tip: (p) => `<b>${toDisplay(p.raw)} ${unit()}</b><span>Trend ${p.y} · ${fmtDate(p.x, { month: 'short', day: 'numeric' })}</span>`,
@@ -53,6 +57,8 @@ export function progressPage() {
         h('div.btn-pair',
           h('button.btn.gold', { onclick: logWeightSheet }, icon('plus', 18), 'Log weight'),
           h('button.btn.dark', { onclick: importSheet }, 'Import'))),
+
+      compSection(),
 
       // Progress photos
       h('div.section-head', h('h2.section-title', 'Progress photos'), h('button.link', { onclick: takeProgressPhoto }, icon('plus', 16), 'Add')),
@@ -66,6 +72,7 @@ export function progressPage() {
       pics.length > 12 ? h('button.link', { onclick: () => push(allPhotosScreen) }, `See all ${pics.length}`) : null,
       pics.length && !account() ? h('p.fine', 'Photos stay on this phone unless you sign in. They aren’t in the data export.') : null,
 
+      measureSection(),
       monthlySection(),
       h('div.bottom-space'),
     );

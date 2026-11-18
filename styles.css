@@ -1053,3 +1053,9 @@ button.macro-rows { width: 100%; text-align: left; }
 .face-emoji { font-size: 22px; }
 .face-word { font-size: 10px; color: var(--muted); text-align: center; line-height: 1.2; }
 .field.paste { min-height: 120px; font-family: inherit; }
+
+/* Body tab */
+.weight-goal { font-size: 14px; color: var(--gold); margin: 8px 0 2px; font-weight: 600; }
+.comp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.comp-grid:empty { display: none; }
+.measure-on { display: block; margin: 22px auto 0; font-size: 14px; }
