@@ -295,6 +295,16 @@ export function homePage() {
 
       habitsCard(openGoals),
 
+      // Progress and Trends live here instead of in the tab bar
+      h('div.section-head', h('h2.section-title', 'Progress & trends')),
+      progressCards(),
+
+      // One-rep max
+      tabOn('workout') ? oneRmSection() : null,
+
+      // Calendar
+      tabOn('workout') ? [h('div.section-head', h('h2.section-title', 'Calendar')), calendar(draw)] : null,
+
       // Today
       h('div.section-head', h('h2.section-title', 'Today')),
       h('section.card.list-card.today',
@@ -324,16 +334,6 @@ export function homePage() {
       // Groups
       cloudOn() ? h('div.section-head', h('h2.section-title', 'Groups')) : null,
       groupsCard(),
-
-      // Progress and Trends live here instead of in the tab bar
-      h('div.section-head', h('h2.section-title', 'Progress & trends')),
-      progressCards(),
-
-      // Calendar
-      tabOn('workout') ? [h('div.section-head', h('h2.section-title', 'Calendar')), calendar(draw)] : null,
-
-      // One-rep max
-      tabOn('workout') ? oneRmSection() : null,
 
       // Profile overview
       h('div.section-head', h('h2.section-title', 'Profile')),
