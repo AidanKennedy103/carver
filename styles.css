@@ -965,3 +965,29 @@ button.macro-rows { width: 100%; text-align: left; }
 
 .tile-of { font-size: .6em; font-weight: 600; color: var(--muted); }
 .tile.hit .tile-v { color: var(--gold); }
+.tab-pick-main { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex: 1; min-width: 0; text-align: left; }
+.tab-up { transform: rotate(90deg); margin-left: 6px; }
+.tab-up-gap { width: 36px; flex: none; }
+.more-row { height: auto; min-height: 60px; gap: 12px; justify-content: flex-start; }
+.more-ico { flex: none; width: 36px; height: 36px; border-radius: 10px; background: var(--gold-bg); color: var(--gold); display: grid; place-items: center; }
+.more-row .tab-pick-text { flex: 1; }
+
+/* Social: leaderboard and challenges */
+.segment.mini { width: auto; }
+.segment.mini button { padding: 0 12px; height: 28px; font-size: 13px; }
+.lb-card .chips { margin: 0 0 8px; padding: 0; }
+.lb-row, .ch-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+.lb-row + .lb-row, .ch-row + .ch-row { border-top: .5px solid var(--surface-3); }
+.lb-place { width: 24px; text-align: center; font-weight: 700; color: var(--muted); font-size: 15px; }
+.lb-main { flex: 1; min-width: 0; }
+.lb-name { font-weight: 600; font-size: 15px; }
+.lb-bar { height: 5px; border-radius: 3px; background: var(--surface-2); margin-top: 5px; overflow: hidden; }
+.lb-bar i { display: block; height: 100%; border-radius: 3px; background: var(--gold); }
+.lb-val { font-size: 15px; min-width: 32px; text-align: right; }
+.lb-row.me .lb-name, .ch-row.hit .lb-val { color: var(--gold); }
+.ch-card { margin-bottom: 10px; }
+.ch-card.ended { opacity: .75; }
+.ch-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
+.ch-title { font-weight: 700; font-size: 17px; }
+.ch-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.ch-goal { font-size: 13px; color: var(--muted); margin-top: 6px; }

@@ -2,15 +2,21 @@
 // "workout in progress" bar that sits above it on every tab.
 
 import { h, icon, push, depth, fmtDuration, navBar } from './ui.js';
-import { state, onChange, tabOn } from './store.js';
+import { state, onChange, tabOn, shownTabs, TAB_LIST } from './store.js';
 import { openWorkout } from './session.js';
 
-const TABS = [
-  { id: 'home', label: 'Home', icon: 'home' },
-  { id: 'workout', label: 'Workout', icon: 'dumbbell' },
-  { id: 'nutrition', label: 'Nutrition', icon: 'apple' },
-  { id: 'fitness', label: 'Fitness', icon: 'activity' },
-];
+const HOME = { id: 'home', label: 'Home', icon: 'home' };
+const MORE = { id: 'more', label: 'More', icon: 'more' };
+const BAR_MAX = 5;   // what fits on a phone; the rest go under More
+const TABS = [HOME, ...TAB_LIST, MORE];
+const tab = (id) => TABS.find((t) => t.id === id);
+
+/** [in the bar], [under More] */
+function layout() {
+  const list = shownTabs().map(tab);
+  if (list.length + 1 <= BAR_MAX) return [[HOME, ...list], []];
+  return [[HOME, ...list.slice(0, BAR_MAX - 2), MORE], list.slice(BAR_MAX - 2)];
+}
 
 let pages = {};
 let current = null;
@@ -26,29 +32,35 @@ export function initTabs(pageBuilders) {
 
   let saved = 'home';
   try { saved = localStorage.getItem('carver.tab') || 'home'; } catch { /* fine */ }
-  goTab(TABS.some((t) => t.id === saved) && tabOn(saved) ? saved : 'home');
+  goTab(saved);
 
   drawLive();
   onChange(drawLive);
-  onChange(() => { if (barKey() !== shownKey) { drawBar(); if (!tabOn(current)) goTab('home'); } });
+  onChange(() => { if (barKey() !== shownKey) { drawBar(); if (current === 'more' || !tabOn(current)) { current = null; goTab('home'); } } });
   setInterval(() => { if (state.active) live.querySelector('.live-time').textContent = liveTime(state.active); syncVisibility(); }, 500);
 }
 
 // Only the tabs you keep (Settings → Tabs)
 let shownKey = '';
-const barKey = () => TABS.filter((t) => tabOn(t.id)).map((t) => t.id).join();
+const barKey = () => shownTabs().join();
 function drawBar() {
   shownKey = barKey();
-  bar.replaceChildren(...TABS.filter((t) => tabOn(t.id)).map((t) => h('button.tab' + (t.id === current ? '.on' : ''), { 'data-tab': t.id, onclick: () => goTab(t.id) }, icon(t.icon, 24), h('span', t.label))));
+  bar.replaceChildren(...layout()[0].map((t) => h('button.tab', { 'data-tab': t.id, onclick: () => goTab(t.id) }, icon(t.icon, 24), h('span', t.label))));
+  markBar();
+}
+/** Light up the tab you're on (More, for tabs that live under it). */
+function markBar() {
+  const inBar = layout()[0].some((t) => t.id === current);
+  bar.querySelectorAll('.tab').forEach((b) => b.classList.toggle('on', b.dataset.tab === (inBar ? current : 'more')));
 }
 
 export function goTab(id) {
-  if (!tabOn(id)) id = 'home';
+  if (id === 'more' ? !layout()[1].length : !tabOn(id)) id = 'home';
   if (id === current && depth() === 1) return;
   current = id;
   try { localStorage.setItem('carver.tab', id); } catch { /* fine */ }
-  push(pages[id] || (() => comingSoon(TABS.find((t) => t.id === id))), { replace: true });
-  bar.querySelectorAll('.tab').forEach((b) => b.classList.toggle('on', b.dataset.tab === id));
+  push(id === 'more' ? morePage : pages[id] || (() => comingSoon(tab(id))), { replace: true });
+  markBar();
   syncVisibility();
 }
 
@@ -67,6 +79,16 @@ function syncVisibility() {
   const onRoot = depth() <= 1;
   bar.classList.toggle('hidden', !onRoot);
   live.classList.toggle('hidden', !onRoot || current === 'workout');   // the Workout tab shows its own Resume card
+}
+
+/** The tabs that don't fit in the bar. */
+function morePage() {
+  const el = h('div.page', h('div.scroll-body',
+    navBar({ title: 'More', back: false, large: true }),
+    h('section.card.list-card', layout()[1].map((t) => h('button.group-row.more-row', { onclick: () => goTab(t.id) },
+      h('span.more-ico', icon(t.icon, 22)), h('span.tab-pick-text', h('span', t.label), h('span.tab-pick-sub', t.sub)), h('span.card-go', '›')))),
+    h('p.fine', 'Choose which tabs show, and their order, in Settings → Tabs.')));
+  return { el };
 }
 
 function comingSoon(tab) {

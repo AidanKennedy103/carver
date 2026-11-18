@@ -28,7 +28,8 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 ### Workout
 - **🎯 Goals on every page:** the same button, top right of Home, Workout, Nutrition and Fitness. Each opens that page's goals (Home opens all). Fitness goals are weekly: activities, active minutes, distance, shown on the This week tiles.
 - **Start a workout vs. make a plan:** the top of the Workout tab is for working out: your next plan, a **Freestyle** workout (make it up as you go), another plan, or a past workout. **Your plans** below are routines saved for later; making or editing one never logs anything. A freestyle workout can be saved as a plan when you finish.
-- **Pick your tabs:** Settings → Tabs turns Workout, Nutrition or Fitness off. Home drops their rings and rows too.
+- **Pick your tabs:** Settings → Tabs turns tabs on or off and the arrow moves one left. Workout, Nutrition and Fitness are on to start; the rest (Social, …) are off until you want them. Up to 5 fit in the bar and the rest go under **More**. Home drops the rings and rows of tabs you turn off.
+- **Social tab:** your groups as a tab, with a **Leaderboard** (this week or month: workouts, active days, daily goals, protein days) and **Challenges** anyone in the group can start, like 12 workouts in 30 days, with everyone's progress. Counts only what each person shares with the group. Challenges need `supabase/social.sql` run once in the Supabase SQL editor.
 - **Up next:** your plans rotate in order, so the next one is ready at the top with its muscles, sets, how long it took last time and when you last did it. While a workout is going, that card becomes **Resume** with your progress.
 - **This week:** Monday to Sunday with the days you trained and the days you planned.
 - **Plans:** up to **10**, each a row with a play button to start it. Tap a plan to edit it; ··· to rename, duplicate or delete. Or start an **empty workout**.

@@ -149,6 +149,7 @@ function text(kind: string, who: string, d: any): string | null {
     case 'missed': return `${who} missed ${d.name} yesterday`;
     case 'week': return `${who} closed their weekly gym goal 🔥`;
     case 'photo': return `${who} shared a progress photo`;
+    case 'challenge': return `${who} started a challenge: ${d.title} 🏁`;
     case 'weekly': {
       const bits = [];
       if (d.workouts) bits.push(`${d.workouts.n}/${d.workouts.goal} workouts`);

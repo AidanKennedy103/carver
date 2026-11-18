@@ -1,7 +1,7 @@
 // Settings: units, default rest, back up / restore, reset.
 
-import { h, fill, sheet, toast, confirmBox, promptBox, fmtSecs, actionSheet, refreshAll, push } from './ui.js';
-import { state, commit, exportJSON, importJSON, resetAll, MAX_PLANS, savePlan, unit, bodyUnit, distUnit, tabOn } from './store.js';
+import { h, fill, icon, sheet, toast, confirmBox, promptBox, fmtSecs, actionSheet, refreshAll, push } from './ui.js';
+import { state, commit, exportJSON, importJSON, resetAll, MAX_PLANS, savePlan, unit, bodyUnit, distUnit, shownTabs, TAB_LIST } from './store.js';
 import { REST_CHOICES } from './block.js';
 import { accountSection } from './account.js';
 import { aboutScreen } from './about.js';
@@ -26,18 +26,20 @@ export function openSettings() {
   const bodySeg = unitSeg('bodyUnit', [['lb', 'Pounds (lb)'], ['kg', 'Kilograms (kg)']], bodyUnit);
   const distSeg = unitSeg('distUnit', [['mi', 'Miles'], ['km', 'Kilometres']], distUnit);
 
-  // Tabs: keep only the parts of Carver you use
+  // Tabs: keep only the parts of Carver you use, in the order you like
   const tabRows = h('div.group');
-  const drawTabs = () => fill(tabRows, [['workout', '🏋️ Workout', 'Gym workouts and plans'], ['nutrition', '🍽️ Nutrition', 'Food, calories and macros'], ['fitness', '🏃 Fitness', 'Runs, walks, rides and cardio']].map(([id, label, sub]) =>
-    h('button.group-row.tab-pick', {
-      role: 'switch', 'aria-checked': String(tabOn(id)),
-      onclick: () => {
-        const hidden = new Set(state.settings.hiddenTabs || []);
-        if (hidden.has(id)) hidden.delete(id); else hidden.add(id);
-        commit((st) => { st.settings.hiddenTabs = [...hidden]; });
-        drawTabs(); refreshAll();
-      },
-    }, h('span.tab-pick-text', h('span', label), h('span.tab-pick-sub', sub)), h('span.switch' + (tabOn(id) ? '.on' : ''), h('i')))));
+  const setTabs = (list) => { commit((st) => { st.settings.tabs = list; }); drawTabs(); refreshAll(); };
+  const drawTabs = () => {
+    const shown = shownTabs();
+    const ordered = [...shown.map((id) => TAB_LIST.find((t) => t.id === id)), ...TAB_LIST.filter((t) => !shown.includes(t.id))];
+    fill(tabRows, ordered.map((t) => {
+      const on = shown.includes(t.id), i = shown.indexOf(t.id);
+      return h('div.group-row.tab-pick',
+        h('button.tab-pick-main', { role: 'switch', 'aria-checked': String(on), onclick: () => setTabs(on ? shown.filter((x) => x !== t.id) : [...shown, t.id]) },
+          h('span.tab-pick-text', h('span', `${t.emoji} ${t.label}`), h('span.tab-pick-sub', t.sub)), h('span.switch' + (on ? '.on' : ''), h('i'))),
+        on && i > 0 ? h('button.icon-btn.tab-up', { 'aria-label': `Move ${t.label} left`, onclick: () => { const l = shown.slice(); [l[i - 1], l[i]] = [l[i], l[i - 1]]; setTabs(l); } }, icon('back', 16)) : h('span.tab-up-gap'));
+    }));
+  };
   drawTabs();
 
   const restVal = h('span.row-val', fmtSecs(state.settings.restDefault));
@@ -117,7 +119,7 @@ export function openSettings() {
         },
       }, h('span', 'Your name'), nameVal)),
     h('label.form-label', 'Tabs'), tabRows,
-    h('p.fine', 'Turn off the parts you don’t use. Home hides them too, and your data stays saved if you turn them back on.'),
+    h('p.fine', 'Turn on the parts you want and off the ones you don’t. The arrow moves a tab left. Up to 5 fit in the bar; the rest go under More. Turning one off keeps its data.'),
     h('label.form-label', 'Weights you lift'), liftSeg,
     h('label.form-label', 'Body weight'), bodySeg,
     h('label.form-label', 'Distance'), distSeg,

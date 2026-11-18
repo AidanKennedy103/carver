@@ -8,12 +8,13 @@
 // Each person picks what they share with each group.
 
 import { h, fill, icon, push, navBar, sheet, toast, actionSheet, confirmBox, promptBox, fmtDate, fmtNum, fmtDurationWords, swipe } from './ui.js';
-import { state, commit, ymd, addDays, dayTotals, weekStart, workoutStats, exercise, toDisplay, unit, DAY_SHORT, kcalHit, foodAim } from './store.js';
+import { state, commit, ymd, addDays, dayTotals, weekStart, workoutStats, exercise, toDisplay, unit, DAY_SHORT, kcalHit, foodAim, tabOn } from './store.js';
 import { client, enabled, account } from './cloud.js';
 import { signInSheet } from './account.js';
 import { activityType } from './fitness.js';
 import { habits, isDone } from './habits.js';
 import { pushRow, pushNudge } from './push.js';
+import { goalsButton } from './goals.js';
 
 export const SHARES = [
   { k: 'gym', label: 'At the gym', sub: 'When you start a workout' },
@@ -219,6 +220,7 @@ function describe(e) {
   const list = (names) => names.length <= 2 ? names.join(' and ') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
   switch (e.kind) {
     case 'photo': return { ico: '📸', text: 'shared a progress photo', photo: d.path };
+    case 'challenge': return { ico: '🏁', text: `started a challenge: ${d.title}`, sub: d.end ? `Until ${fmtDate(Date.parse(d.end + 'T12:00'), { month: 'short', day: 'numeric' })}` : '' };
     case 'started': return { ico: '📍', text: 'is at the gym', sub: d.name && d.name !== 'Workout' ? `Started ${d.name}` : '' };
     case 'workout': return {
       ico: '🏋️', text: `finished ${d.name}`,
@@ -372,6 +374,12 @@ async function deletePost(e) {
 
 let lastFetch = 0;
 /** The Groups card on Home. Fills in from the cache, then refreshes. */
+/** Social: the tab if you have it, otherwise the same page pushed over Home. */
+async function openSocial() {
+  const [{ socialPage }, { goTab }] = await Promise.all([import('./social.js'), import('./tabs.js')]);
+  if (tabOn('social')) goTab('social'); else push(() => socialPage({ tab: false }));
+}
+
 export function groupsCard() {
   if (!enabled()) return null;
   const box = h('div');
@@ -382,11 +390,11 @@ export function groupsCard() {
       return;
     }
     if (!myGroups().length) {
-      fill(box, h('button.card.prompt', { onclick: () => push(groupsScreen) },
+      fill(box, h('button.card.prompt', { onclick: openSocial },
         h('span.prompt-ico', '👥'), h('span.today-text', h('span.today-k.strong', 'Make a group'), h('span.today-v', 'Friends see when you train and hit your goals')), h('span.prompt-go', icon('back', 16))));
       return;
     }
-    fill(box, h('button.card.list-card.feed-card', { onclick: () => push(groupsScreen) },
+    fill(box, h('button.card.list-card.feed-card', { onclick: openSocial },
       feed.length ? tidyFeed(feed).slice(0, 3).map((e) => eventRow(e, { showGroup: myGroups().length > 1 })) : h('div.feed-empty', 'Nothing yet. Finish a workout and your group sees it here.'),
       h('div.feed-more', myGroups().length === 1 ? `Open ${myGroups()[0].name}` : 'Open groups', icon('back', 14))));
   };
@@ -403,7 +411,8 @@ export function groupsCard() {
 
 let selected = null;
 
-export function groupsScreen() {
+/** The groups screen. tab: shown as the Social tab (no back button). sections(g, members, redraw): extra cards after This week. */
+export function groupsScreen({ tab = false, sections = null } = {}) {
   const el = h('div.page');
   const body = h('div.scroll-body');
   let feed = cachedFeed(), loading = true;
@@ -434,7 +443,7 @@ export function groupsScreen() {
       : eventRow(e, { time: 'clock' }));
 
     fill(body,
-      navBar({ title: 'Groups', backLabel: 'Home', large: true, right: [h('button.icon-btn.gold-text', { onclick: addMenu, 'aria-label': 'Make or join a group' }, icon('plus', 24))] }),
+      navBar({ title: tab ? 'Social' : 'Groups', back: !tab, backLabel: 'Home', large: true, right: [tab ? goalsButton() : null, h('button.icon-btn.gold-text', { onclick: addMenu, 'aria-label': 'Make or join a group' }, icon('plus', 24))] }),
       !account()
         ? h('button.card.empty-plan', { onclick: signInSheet }, h('div.empty-title', 'Sign in first'), h('div.empty-text', 'Groups need an account so friends can see your posts.'))
         : !groups.length
@@ -456,6 +465,7 @@ export function groupsScreen() {
 
             h('div.section-head', h('h2.section-title', 'This week'), loading ? h('span.section-count', 'Updating…') : null),
             weekBoard(g, raw, members),
+            sections ? sections(g, members, draw) : null,
 
             h('div.section-head', h('h2.section-title', 'Activity')),
             days.length

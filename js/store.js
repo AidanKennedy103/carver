@@ -136,7 +136,20 @@ export function bodyFromDisplay(v) {
 /** Distance for runs and rides: 'km' or 'mi'. */
 export const distUnit = () => state.settings.distUnit || (unit() === 'kg' ? 'km' : 'mi');
 /** Tabs you can hide in Settings (Home always shows). */
-export const tabOn = (id) => id === 'home' || !(state.settings.hiddenTabs || []).includes(id);
+// The tabs you can show, in bar order. Home is always first. New ones start off.
+export const TAB_LIST = [
+  { id: 'workout', label: 'Workout', icon: 'dumbbell', emoji: '🏋️', sub: 'Gym workouts and plans' },
+  { id: 'nutrition', label: 'Nutrition', icon: 'apple', emoji: '🍽️', sub: 'Food, calories and macros' },
+  { id: 'fitness', label: 'Fitness', icon: 'activity', emoji: '🏃', sub: 'Runs, walks, rides and cardio' },
+  { id: 'social', label: 'Social', icon: 'users', emoji: '👥', sub: 'Groups, leaderboards and challenges' },
+];
+/** Tab ids you keep, in your order (not counting Home). */
+export function shownTabs() {
+  const known = new Set(TAB_LIST.map((t) => t.id));
+  const list = state.settings.tabs || ['workout', 'nutrition', 'fitness'].filter((id) => !(state.settings.hiddenTabs || []).includes(id));
+  return list.filter((id) => known.has(id));
+}
+export const tabOn = (id) => id === 'home' || shownTabs().includes(id);
 /** Number the person typed (lb or kg) → kg. */
 export function fromDisplay(v) {
   if (v === '' || v == null || isNaN(+v)) return null;
