@@ -6,10 +6,11 @@
 // Stored in goals.custom as { id, name, since }. Older goals that had a number
 // target ({ target, unit }) count as done once that amount was logged.
 
-import { h, fill, icon, actionSheet } from './ui.js';
-import { state, commit, ymd, addDays } from './store.js';
+import { h, fill, icon, actionSheet, navBar, sheet, toast, promptBox, confirmBox, fmtDate } from './ui.js';
+import { state, commit, ymd, addDays, uid } from './store.js';
+import { goalsButton } from './goals.js';
 
-export const MAX_HABITS = 6;
+export const MAX_HABITS = 10;
 export const habits = () => state.goals.custom || [];
 const need = (g) => g.target || 1;
 
@@ -80,4 +81,125 @@ export function habitsCard(onEdit) {
     late.length ? h('p.fine', 'Finish yesterday’s before 8 am, or your groups see it as missed.') : null,
   );
   return box;
+}
+
+// ---------- Streaks and history ----------
+
+/** Days in a row done, up to today (today not done yet doesn't break it). */
+export function streak(g, today = ymd()) {
+  let n = 0, k = isDone(g, today) ? today : addDays(today, -1);
+  while (isDone(g, k) && (!g.since || k >= g.since)) { n++; k = addDays(k, -1); }
+  return n;
+}
+/** The longest run ever. */
+export function bestStreak(g) {
+  const days = Object.keys(state.checks).filter((k) => isDone(g, k)).sort();
+  let best = 0, run = 0, prev = null;
+  for (const k of days) { run = prev && addDays(prev, 1) === k ? run + 1 : 1; best = Math.max(best, run); prev = k; }
+  return best;
+}
+/** Share of the last `n` days done (only counting days since it was added). */
+export function rate(g, n = 30) {
+  let of = 0, done = 0;
+  for (let i = 0; i < n; i++) {
+    const k = addDays(ymd(), -i);
+    if (g.since && k < g.since) break;
+    of++; if (isDone(g, k)) done++;
+  }
+  return of ? done / of : 0;
+}
+
+/** Twelve weeks of squares, Monday at the top. Tap a past day to mark it done or not. */
+function heatMap(g, redraw) {
+  const today = ymd();
+  const dow = (new Date(today + 'T12:00').getDay() + 6) % 7;
+  const start = addDays(today, -(7 * 11 + dow));
+  const cols = [];
+  for (let w = 0; w < 12; w++) {
+    cols.push(h('div.hm-col', Array.from({ length: 7 }, (_, d) => {
+      const k = addDays(start, w * 7 + d);
+      if (k > today) return h('i.hm-cell.future');
+      const before = g.since && k < g.since;
+      return h('button.hm-cell' + (isDone(g, k) ? '.on' : '') + (k === today ? '.today' : '') + (before ? '.before' : ''), {
+        'aria-label': `${fmtDate(new Date(k + 'T12:00').getTime(), { weekday: 'short', month: 'short', day: 'numeric' })}: ${isDone(g, k) ? 'done' : 'not done'}`,
+        onclick: () => { setDone(g, k, !isDone(g, k)); redraw(); },
+      });
+    })));
+  }
+  return h('div.hm', h('div.hm-days', ['M', '', 'W', '', 'F', '', 'S'].map((d) => h('span', d))), h('div.hm-grid', cols));
+}
+
+const hourLabel = (hr) => new Date(2000, 0, 1, hr).toLocaleTimeString([], { hour: 'numeric' });
+
+function editHabit(g, redraw) {
+  actionSheet(g.name, [
+    { label: 'Rename', onClick: async () => { const n = (await promptBox('Rename', g.name))?.trim(); if (n) { commit((s) => { const x = s.goals.custom.find((y) => y.id === g.id); if (x) x.name = n.slice(0, 40); }); redraw(); } } },
+    { label: g.remind != null ? `Reminder: ${hourLabel(g.remind)}` : 'Add a reminder', onClick: () => reminderSheet(g, redraw) },
+    { label: 'Delete', danger: true, onClick: async () => {
+      if (!(await confirmBox(`Delete “${g.name}”?`, 'Your groups stop hearing about it. Past days stay in your history.', { ok: 'Delete', danger: true }))) return;
+      commit((s) => { s.goals.custom = s.goals.custom.filter((x) => x.id !== g.id); });
+      redraw();
+    } },
+  ]);
+}
+
+function reminderSheet(g, redraw) {
+  const hours = [6, 7, 8, 9, 12, 15, 17, 18, 19, 20, 21, 22];
+  const set = (hr) => {
+    commit((s) => { const x = s.goals.custom.find((y) => y.id === g.id); if (x) { if (hr == null) delete x.remind; else x.remind = hr; } });
+    s0.close(); redraw();
+    toast(hr == null ? 'Reminder off' : `Reminder at ${hourLabel(hr)} if it’s not done`);
+  };
+  const s0 = sheet(h('div.form',
+    h('div.sheet-head', h('button.link', { onclick: () => s0.close() }, 'Cancel'), h('div.sheet-title', 'Reminder'), h('span')),
+    h('p.fine', `Carver sends a notification at this time if “${g.name}” isn’t done yet that day. It comes from Carver’s server, so you need to be signed in with notifications on (Social or Settings).`),
+    h('div.hour-grid', hours.map((hr) => h('button.chip' + (g.remind === hr ? '.on' : ''), { onclick: () => set(hr) }, hourLabel(hr)))),
+    g.remind != null ? h('button.btn.dark.wide', { onclick: () => set(null) }, 'No reminder') : null));
+}
+
+async function addHabit(redraw) {
+  if (habits().length >= MAX_HABITS) { toast(`You can have ${MAX_HABITS} daily goals`); return; }
+  const name = (await promptBox('New daily goal', '', { placeholder: 'e.g. 50 pushups, Read 10 pages' }))?.trim();
+  if (!name) return;
+  commit((s) => { s.goals.custom.push({ id: uid(), name: name.slice(0, 40), since: ymd() }); });
+  redraw();
+}
+
+// ---------- The Habits tab ----------
+
+export function habitsPage() {
+  const el = h('div.page');
+  const body = h('div.scroll-body');
+  function draw() {
+    const list = habits(), today = ymd();
+    const doneToday = list.filter((g) => isDone(g, today)).length;
+    fill(body,
+      navBar({ title: 'Habits', back: false, large: true, right: [goalsButton('daily'), h('button.icon-btn.gold-text', { onclick: () => addHabit(draw), 'aria-label': 'Add a daily goal' }, icon('plus', 24))] }),
+      list.length ? [
+        h('section.card.habit-sum',
+          h('div', h('div.energy-v', `${doneToday}/${list.length}`), h('div.energy-k', 'done today')),
+          h('div.habit-sum-best', h('div.energy-v', `🔥 ${Math.max(0, ...list.map((g) => streak(g)))}`), h('div.energy-k', 'longest streak going'))),
+        h('section.card.habits', list.map((g) => habitSlider(g, today))),
+        h('div.section-head', h('h2.section-title', 'Streaks')),
+        list.map((g) => {
+          const cur = streak(g), best = bestStreak(g), pct = Math.round(rate(g) * 100);
+          return h('section.card.habit-card',
+            h('div.habit-top',
+              h('div', h('div.habit-name', g.name), h('div.habit-meta', [`🔥 ${cur} day${cur === 1 ? '' : 's'}`, `best ${best}`, `${pct}% of the last 30 days`, g.remind != null ? `⏰ ${hourLabel(g.remind)}` : null].filter(Boolean).join(' · '))),
+              h('button.icon-btn', { onclick: () => editHabit(g, draw), 'aria-label': `${g.name} options` }, icon('more'))),
+            heatMap(g, draw));
+        }),
+        h('p.fine', 'Tap a square to fix a day you forgot to mark. ··· on a goal adds a reminder. Your groups see finished goals right away, and at 8 am the next day if one was missed.'),
+        list.length < MAX_HABITS ? h('button.btn.dark.wide', { onclick: () => addHabit(draw) }, icon('plus', 16), 'Add a daily goal') : null,
+      ] : h('div.empty',
+        h('div.empty-icon', '✅'),
+        h('div.empty-title', 'Build a habit'),
+        h('div.empty-text', 'Daily goals are things you either do each day or don’t: 50 pushups, read 10 pages, no sugar. Slide one across when it’s done and watch the streak grow.'),
+        h('button.btn.gold.wide', { onclick: () => addHabit(draw) }, 'Add your first daily goal')),
+      h('div.bottom-space'),
+    );
+  }
+  draw();
+  el.append(body);
+  return { el, refresh: draw };
 }

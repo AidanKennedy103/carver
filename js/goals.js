@@ -147,9 +147,9 @@ export function openGoals(section = 'all') {
       h('label.form-label', `Your own (up to ${MAX_HABITS})`), customList,
       h('p.fine', 'Things you either do each day or don’t. Each one is a slider on Home: slide it when it’s done. Your groups see it right away, and at 8 am the next day if you missed it. You can also show one as a ring.')],
   };
-  const shown = ['workout', 'nutrition', 'fitness'].includes(section)
+  const shown = ['workout', 'nutrition', 'fitness', 'daily'].includes(section)
     ? [section] : ['workout', 'nutrition', 'fitness', 'daily'].filter((k) => k === 'daily' || tabOn(k));
-  const titles = { workout: 'Workout goals', nutrition: 'Nutrition goals', fitness: 'Fitness goals' };
+  const titles = { workout: 'Workout goals', nutrition: 'Nutrition goals', fitness: 'Fitness goals', daily: 'Daily goals' };
   const others = ['workout', 'nutrition', 'fitness'].filter((k) => k !== section && tabOn(k));
 
   const s = sheet(h('div.form.goals-form' + (shown.length === 1 ? '.one' : ''),

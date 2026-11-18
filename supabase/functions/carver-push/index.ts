@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}));
   try {
     if (body.event) await notify(String(body.event));
-    else if (body.cron) await sweep();
+    else if (body.cron) { await sweep(); await remind(); }
     else if (body.test) return Response.json(await test(String(body.test)), { headers: CORS });
     return new Response('ok', { headers: CORS });
   } catch (e) {
@@ -183,6 +183,25 @@ async function notify(id: string) {
 }
 
 // ---------- The hourly check ----------
+
+/** Daily goal reminders: at the hour someone picked, if that goal isn't done yet today. */
+async function remind() {
+  const { data: subs } = await db.from('carver_push').select('user_id, endpoint, p256dh, auth');
+  if (!subs?.length) return;
+  const users = [...new Set(subs.map((x) => x.user_id))];
+  const { data: states } = await db.from('carver_state').select('user_id, data').in('user_id', users);
+  const now = Date.now();
+  for (const st of states || []) {
+    const data = st.data || {};
+    const tz = validTz(data.profile?.tz) ? data.profile.tz : 'America/Toronto';
+    const hour = hourIn(now, tz), today = keyIn(now, tz);
+    const due = (data.goals?.custom || []).filter((h: Habit & { remind?: number }) => h.remind === hour && !habitDone(data, h, today));
+    if (!due.length) continue;
+    const mine = subs.filter((x) => x.user_id === st.user_id);
+    const names = due.map((h: Habit) => h.name);
+    await send(mine, { title: 'Carver', body: `Reminder: ${names.length === 1 ? names[0] : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1]} ${names.length === 1 ? 'isn’t' : 'aren’t'} done yet today`, tag: `remind-${today}-${hour}` });
+  }
+}
 
 const keyIn = (ts: number, tz: string) => new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(ts);
 const hourIn = (ts: number, tz: string) => +new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', hourCycle: 'h23' }).format(ts);

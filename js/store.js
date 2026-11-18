@@ -142,6 +142,7 @@ export const TAB_LIST = [
   { id: 'nutrition', label: 'Nutrition', icon: 'apple', emoji: '🍽️', sub: 'Food, calories and macros' },
   { id: 'fitness', label: 'Fitness', icon: 'activity', emoji: '🏃', sub: 'Runs, walks, rides and cardio' },
   { id: 'social', label: 'Social', icon: 'users', emoji: '👥', sub: 'Groups, leaderboards and challenges' },
+  { id: 'habits', label: 'Habits', icon: 'check', emoji: '✅', sub: 'Daily goals, streaks and reminders' },
 ];
 /** Tab ids you keep, in your order (not counting Home). */
 export function shownTabs() {
