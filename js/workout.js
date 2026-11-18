@@ -3,7 +3,7 @@
 // Also the plan editor and the workout detail screen.
 
 import { h, fill, icon, push, pop, navBar, actionSheet, confirmBox, promptBox, toast, fmtDate, fmtDurationWords, fmtNum, fmtSecs } from './ui.js';
-import { state, commit, save, uid, exercise, savePlan, deletePlan, workoutStats, toDisplay, unit, e1rm, MAX_PLANS, ymd, addDays, dayStart, weekStart, dayPlan, workoutDays, DAY_SHORT } from './store.js';
+import { state, commit, save, uid, exercise, savePlan, deletePlan, workoutStats, toDisplay, unit, e1rm, MAX_PLANS, ymd, addDays, dayStart, weekStart, dayPlan, workoutDays, restNote, DAY_SHORT } from './store.js';
 import { startWorkout, repeatWorkout, saveAsPlan, openWorkout, logPastWorkout, editWorkout } from './session.js';
 import { exerciseCard, newSet } from './block.js';
 import { pickExercises } from './picker.js';
@@ -11,7 +11,6 @@ import { openSettings } from './settings.js';
 import { volumeCard, tally, MUSCLE_ORDER, ALL_MUSCLES } from './volume.js';
 import { programCard, setup531, program } from './program531.js';
 import { goalsButton } from './goals.js';
-import { restBanner } from './home.js';
 
 export function workoutPage() {
   const el = h('div.page');
@@ -30,7 +29,6 @@ export function workoutPage() {
       nav,
       // 1. Working out: start (or resume) a workout that's logged as you go
       state.active ? activeCard(state.active) : [
-        restBanner(() => (next ? startWorkout(next) : startWorkout())),
         next ? upNext(next) : freestyleHero()],
       weekStrip(),
       programCard(),
@@ -80,15 +78,23 @@ export function workoutPage() {
       h('button.hero-name', { onclick: () => push(() => planEditor(p)) }, p.name),
       muscles.length ? h('div.hero-chips', muscles.map((m) => h('span.chip.small', m))) : null,
       h('div.hero-meta', [`${p.exercises.length} exercise${p.exercises.length === 1 ? '' : 's'}`, `${sets} sets`, mins ? `about ${mins} min` : null, last ? `last ${ago(last.start)}` : 'not done yet'].filter(Boolean).join(' · ')),
+      restLine(),
       h('button.btn.gold.wide.hero-go', { onclick: () => startWorkout(p), disabled: !p.exercises.length }, icon('play', 16), `Start ${p.name}`));
   }
 
   /** No plans yet: the big button is a freestyle workout. */
+  /** On a rest day: how the week is going, read just before the Start button. */
+  function restLine() {
+    const rn = restNote();
+    return rn ? h('div.hero-rest.' + rn.tone, h('b', rn.title), h('span', rn.sub)) : null;
+  }
+
   function freestyleHero() {
     return h('section.card.hero',
       h('div.hero-label', 'Start a workout'),
       h('div.hero-name', 'Freestyle'),
       h('div.hero-meta', 'Make it up as you go: add each exercise when you get to it and log your sets. The timer starts now.'),
+      restLine(),
       h('button.btn.gold.wide.hero-go', { onclick: () => startWorkout() }, icon('play', 16), 'Start freestyle workout'));
   }
 

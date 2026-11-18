@@ -1093,3 +1093,9 @@ button.macro-rows { width: 100%; text-align: left; }
 .odd-text span { font-size: 13px; color: var(--muted); }
 .odd-out { margin-top: 8px; font-size: 14px; color: var(--muted); }
 .odd-out summary { cursor: pointer; padding: 4px 0; }
+
+/* Rest-day note inside the Start a workout card */
+.hero-rest { display: flex; flex-direction: column; gap: 3px; margin-top: 14px; padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, .05); font-size: 13px; color: var(--muted); line-height: 1.4; }
+.hero-rest b { font-size: 14px; color: var(--text, #f2f2f7); }
+.hero-rest.behind { background: rgba(227, 176, 75, .14); }
+.hero-rest.behind b, .hero-rest.done b { color: var(--gold); }
