@@ -6,29 +6,14 @@ import { h, fill, icon, push, navBar, swipeSegment } from './ui.js';
 import { state, commit, exercise, weekStart } from './store.js';
 
 export const MUSCLE_ORDER = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Forearms', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Core'];
+// Smaller muscles: shown, but without the 10–20 set target (they mostly get work from the big lifts)
+export const MINOR_MUSCLES = ['Traps', 'Lower back', 'Obliques', 'Adductors', 'Abductors'];
+export const ALL_MUSCLES = [...MUSCLE_ORDER, ...MINOR_MUSCLES];
 export const TARGET = [10, 20];   // weekly hard sets that suit most people building muscle
-
-// Muscles that help in each built-in lift (half a set each)
-const HELPERS = {
-  bench: ['Triceps', 'Shoulders'], 'incline-bench': ['Triceps', 'Shoulders'], 'decline-bench': ['Triceps', 'Shoulders'],
-  'db-bench': ['Triceps', 'Shoulders'], 'db-incline': ['Triceps', 'Shoulders'], 'chest-press': ['Triceps', 'Shoulders'],
-  pushup: ['Triceps', 'Shoulders'], dips: ['Triceps', 'Shoulders'], cgbp: ['Chest', 'Shoulders'],
-  deadlift: ['Hamstrings', 'Glutes', 'Forearms'], 'rack-pull': ['Glutes', 'Forearms'],
-  'bb-row': ['Biceps'], 'db-row': ['Biceps'], 'tbar-row': ['Biceps'], 'chest-row': ['Biceps'], 'seated-row': ['Biceps'],
-  pullup: ['Biceps'], 'weighted-pullup': ['Biceps'], chinup: ['Biceps'], 'lat-pulldown': ['Biceps'],
-  'back-ext': ['Glutes', 'Hamstrings'],
-  ohp: ['Triceps'], 'db-shoulder': ['Triceps'], arnold: ['Triceps'], 'shoulder-press-m': ['Triceps'],
-  'face-pull': ['Back'], 'rear-delt-fly': ['Back'], 'upright-row': ['Back'], shrug: ['Back'],
-  squat: ['Glutes'], 'front-squat': ['Glutes', 'Core'], 'hack-squat': ['Glutes'], 'leg-press': ['Glutes'],
-  bss: ['Glutes'], lunge: ['Glutes'], 'goblet-squat': ['Glutes'],
-  rdl: ['Glutes', 'Back'], 'db-rdl': ['Glutes', 'Back'], 'hip-thrust': ['Hamstrings'],
-  'power-clean': ['Back', 'Quads', 'Glutes'], 'kb-swing': ['Glutes', 'Hamstrings'], 'farmers-walk': ['Forearms', 'Core'], burpee: ['Chest', 'Quads'],
-  'hanging-leg-raise': ['Forearms'],
-};
 
 /** items: [{ exId, sets }] → { Chest: { direct, helper, total, from: [{ name, sets, half }] }, … } */
 export function tally(items) {
-  const out = Object.fromEntries(MUSCLE_ORDER.map((m) => [m, { direct: 0, helper: 0, total: 0, from: new Map() }]));
+  const out = Object.fromEntries(ALL_MUSCLES.map((m) => [m, { direct: 0, helper: 0, total: 0, from: new Map() }]));
   const add = (m, n, name, half) => {
     const t = out[m];
     if (!t) return;
@@ -41,7 +26,7 @@ export function tally(items) {
     const ex = exercise(exId);
     if (ex.type === 'time' && ex.muscle === 'Cardio') continue;
     add(ex.muscle, sets, ex.name, false);
-    for (const m of HELPERS[exId] || []) add(m, sets, ex.name, true);
+    for (const m of ex.helps || []) if (m !== ex.muscle) add(m, sets, ex.name, true);
   }
   for (const t of Object.values(out)) {
     t.total = t.direct + t.helper / 2;
@@ -119,9 +104,9 @@ export function volumeScreen() {
           h('span', h('i.vol-key.direct'), 'Main muscle'),
           h('span', h('i.vol-key.helper'), 'Helping (counts half)'),
           h('span', h('i.vol-key.band'), `${TARGET[0]}–${TARGET[1]} sets`)),
-        total ? MUSCLE_ORDER.map((m) => muscleRow(m, t[m])) : h('div.feed-empty', view === 'program' ? 'Add exercises to your plans to see your weekly sets.' : 'Finish a workout to see your sets here.')),
+        total ? [...MUSCLE_ORDER.map((m) => muscleRow(m, t[m])), h('div.vol-sub', 'Smaller muscles'), ...MINOR_MUSCLES.map((m) => muscleRow(m, t[m], true))] : h('div.feed-empty', view === 'program' ? 'Add exercises to your plans to see your weekly sets.' : 'Finish a workout to see your sets here.')),
 
-      h('p.fine', 'Sets are working sets (warm-ups don’t count). Most people building muscle do well with about 10–20 hard sets per muscle each week; fewer can maintain, more can work if you recover well. Tap a muscle to see which exercises count.'),
+      h('p.fine', 'Sets are working sets (warm-ups don’t count). Most people building muscle do well with about 10–20 hard sets per muscle each week; fewer can maintain, more can work if you recover well. Tap a muscle to see which exercises count. Smaller muscles like traps and adductors get most of their work from the big lifts, so they have no target.'),
       h('div.bottom-space'),
     );
   }
@@ -130,19 +115,19 @@ export function volumeScreen() {
   return { el, refresh: draw };
 }
 
-function muscleRow(m, t) {
+function muscleRow(m, t, minor = false) {
   const max = 28;
   const pct = (v) => Math.min(100, (v / max) * 100);
-  const st = status(t.total);
+  const st = minor ? 'minor' : status(t.total);
   return h('details.vol-row',
     h('summary',
       h('span.vol-name', m),
       h('span.vol-track',
-        h('i.vol-band', { style: { left: pct(TARGET[0]) + '%', width: pct(TARGET[1]) - pct(TARGET[0]) + '%' } }),
+        minor ? null : h('i.vol-band', { style: { left: pct(TARGET[0]) + '%', width: pct(TARGET[1]) - pct(TARGET[0]) + '%' } }),
         h('i.vol-direct', { style: { width: pct(t.direct) + '%' } }),
         h('i.vol-helper', { style: { left: pct(t.direct) + '%', width: pct(t.helper / 2) + '%' } })),
       h('span.vol-num', r1(t.total)),
-      h('span.vol-tag.' + st, st === 'low' ? 'Low' : st === 'high' ? 'High' : 'Good')),
+      minor ? h('span.vol-tag.minor', '') : h('span.vol-tag.' + st, st === 'low' ? 'Low' : st === 'high' ? 'High' : 'Good')),
     t.from.length
       ? h('div.vol-from', t.from.map((f) => h('div', h('span', f.name), h('span', `${r1(f.sets)} set${f.sets === 1 ? '' : 's'}`))))
       : h('div.vol-from.muted', 'Nothing trains this yet.'));

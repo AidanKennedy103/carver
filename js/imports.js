@@ -87,9 +87,10 @@ const keyOf = (name) => name.toLowerCase().replace(/[’']/g, '').replace(/[^a-z
   .replace(/\b(\w{4,})s\b/g, '$1').replace(/\s+/g, '').trim();
 const LOOSE = /\b(bent over|bench|standing|flat)\b/g;
 
-const MUSCLE = [[/curl/, 'Biceps'], [/leg curl|hamstring|nordic|good morning/, 'Hamstrings'], [/tricep|pushdown|skull|\bdips?\b/, 'Triceps'], [/bench|chest|fly|pec|push ?up/, 'Chest'],
-  [/\brows?\b|pull ?down|pull ?up|\bchin|\blat\b|deadlift|\bback\b/, 'Back'], [/shoulder|overhead|military|lateral|delt|raise|arnold|shrug/, 'Shoulders'],
-  [/squat|leg press|lunge|extension|step ?up/, 'Quads'], [/hip|glute|thrust|bridge|abduct/, 'Glutes'], [/calf/, 'Calves'], [/crunch|plank|ab\b|abs|sit ?up|core|oblique|leg raise/, 'Core'],
+const MUSCLE = [[/adduct|inner thigh|copenhagen/, 'Adductors'], [/abduct|outer thigh|clamshell|lateral walk/, 'Abductors'], [/shrug/, 'Traps'], [/oblique|twist|woodchop|side bend|pallof|side plank/, 'Obliques'],
+  [/back extension|hyperextension|superman/, 'Lower back'], [/curl/, 'Biceps'], [/leg curl|hamstring|nordic|good morning/, 'Hamstrings'], [/tricep|pushdown|skull|\bdips?\b/, 'Triceps'], [/bench|chest|fly|pec|push ?up/, 'Chest'],
+  [/\brows?\b|pull ?down|pull ?up|\bchin|\blat\b|deadlift|\bback\b/, 'Back'], [/shoulder|overhead|military|lateral|delt|raise|arnold/, 'Shoulders'],
+  [/squat|leg press|lunge|extension|step ?up/, 'Quads'], [/hip|glute|thrust|bridge|kickback/, 'Glutes'], [/calf/, 'Calves'], [/crunch|plank|ab\b|abs|sit ?up|core|oblique|leg raise/, 'Core'],
   [/wrist|forearm|grip|farmer/, 'Forearms'], [/run|bike|cycle|row(ing)? machine|elliptical|stair|walk|jump rope|cardio/, 'Cardio']];
 const muscleOf = (name) => { const t = name.toLowerCase(); let hit = null; for (const [re, m] of MUSCLE) if (re.test(t)) { hit = m; if (m !== 'Biceps' || !/leg curl/.test(t)) break; } return hit || 'Full body'; };
 

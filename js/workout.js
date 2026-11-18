@@ -8,7 +8,7 @@ import { startWorkout, repeatWorkout, saveAsPlan, openWorkout } from './session.
 import { exerciseCard, newSet } from './block.js';
 import { pickExercises } from './picker.js';
 import { openSettings } from './settings.js';
-import { volumeCard, tally, MUSCLE_ORDER } from './volume.js';
+import { volumeCard, tally, MUSCLE_ORDER, ALL_MUSCLES } from './volume.js';
 import { programCard, setup531, program } from './program531.js';
 
 export function workoutPage() {
@@ -145,7 +145,7 @@ function nextPlan() {
 /** Working sets per muscle in one plan (helping muscles count half). */
 function planMuscles(plan) {
   const t = tally(plan.exercises.map((e) => ({ exId: e.exId, sets: e.sets.filter((s) => s.type !== 'w').length })));
-  const list = MUSCLE_ORDER.filter((m) => t[m].total > 0).sort((a, b) => t[b].total - t[a].total);
+  const list = ALL_MUSCLES.filter((m) => t[m].total > 0).sort((a, b) => t[b].total - t[a].total);
   if (!list.length) return null;
   return h('div.plan-muscles',
     h('div.form-label', 'Sets per muscle in this plan'),

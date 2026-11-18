@@ -4,6 +4,7 @@
 import { h, icon, actionSheet, fmtSecs, parseSecs, toast } from './ui.js';
 import { exercise, toDisplay, fromDisplay, unit, uid } from './store.js';
 import { pickExercises } from './picker.js';
+import { musclesText } from './exercises.js';
 
 export const REST_CHOICES = [0, 30, 45, 60, 90, 120, 150, 180, 240, 300];
 const SET_TYPES = { n: 'Normal set', w: 'Warm-up set', d: 'Drop set', f: 'Failure set' };
@@ -35,7 +36,7 @@ export function exerciseCard(opts) {
   const head = h('div.card-head',
     h('div.card-title-wrap',
       h('div.ex-title', info.name),
-      h('div.ex-meta', h('span', info.muscle), restBtn)),
+      h('div.ex-meta', h('span.ex-helps', musclesText(info, 2) + (info.uni ? ' · each side' : '')), restBtn)),
     live && ex.sets.length ? h('span.ex-count' + (complete ? '.all' : ''), complete ? icon('check', 14) : null, `${doneN}/${ex.sets.length}`) : null,
     h('button.icon-btn', {
       'aria-label': 'Exercise options',

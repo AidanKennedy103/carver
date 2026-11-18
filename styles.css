@@ -676,6 +676,9 @@ body.has-live .root .bottom-space { height: calc(160px + var(--safe-bottom)); }
 .vol-tag { font-size: 11px; font-weight: 700; text-align: center; border-radius: 6px; padding: 2px 0; }
 .vol-tag.ok { color: var(--gold); background: var(--gold-bg); }
 .vol-tag.low { color: #a1a1a6; background: var(--surface-2); }
+.vol-tag.minor { background: none; }
+.vol-sub { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 14px 0 4px; }
+.ex-meta .ex-helps { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .vol-tag.high { color: #f0a066; background: rgba(224, 128, 58, .15); }
 .vol-from { padding: 0 0 10px 90px; font-size: 13px; color: var(--muted); display: grid; gap: 4px; }
 .vol-from div { display: flex; justify-content: space-between; gap: 8px; }
