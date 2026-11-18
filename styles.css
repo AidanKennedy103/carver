@@ -991,3 +991,4 @@ button.macro-rows { width: 100%; text-align: left; }
 .ch-title { font-weight: 700; font-size: 17px; }
 .ch-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
 .ch-goal { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.start-opts.below { margin-top: 0; }

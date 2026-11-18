@@ -29,8 +29,7 @@ export function workoutPage() {
       nav,
       // 1. Working out: start (or resume) a workout that's logged as you go
       state.active ? activeCard(state.active) : [
-        next ? upNext(next) : freestyleHero(),
-        startOptions(next)],
+        next ? upNext(next) : freestyleHero()],
       weekStrip(),
       programCard(),
 
@@ -45,7 +44,9 @@ export function workoutPage() {
       h('p.section-sub', 'Routines you save and repeat, like Push, Pull and Legs. Making or editing a plan doesn’t log a workout: tap ▶ to start one.'),
       state.plans.length ? h('section.card.list-card.plan-list', state.plans.map((p) => planRow(p, p === next)))
         : h('button.card.empty-plan-row', { onclick: () => push(() => planEditor()) }, icon('plus', 18), h('span', 'Make your first plan')),
-      state.plans.length || state.workouts.length ? volumeCard() : null,
+      // 3. Other ways to work out
+      state.active ? null : [h('div.section-head', h('h2.section-title', 'Other ways to work out')), startOptions(next)],
+            state.plans.length || state.workouts.length ? volumeCard() : null,
 
       h('div.section-head', h('h2.section-title', 'History'), state.workouts.length ? h('span.section-count', `${state.workouts.length} workout${state.workouts.length === 1 ? '' : 's'}`) : null),
       state.workouts.length ? historyByWeek(showAll ? state.workouts : state.workouts.slice(0, 12)) : h('div.empty-small', 'Finished workouts show up here.'),
@@ -94,7 +95,7 @@ export function workoutPage() {
     const opt = (ico, title, sub, onclick) => h('button.start-opt', { onclick },
       h('span.start-ico', ico), h('span.start-text', h('span.start-title', title), h('span.start-sub', sub)), h('span.card-go', '›'));
     const others = state.plans.filter((p) => p !== next && p.exercises.length);
-    return h('section.card.list-card.start-opts',
+    return h('section.card.list-card.start-opts.below',
       next ? opt('⚡', 'Freestyle workout', 'Make it up as you go, no plan', () => startWorkout()) : null,
       others.length ? opt('▶', 'Start a different plan', others.map((p) => p.name).slice(0, 3).join(', ') + (others.length > 3 ? '…' : ''),
         () => actionSheet('Start which plan?', others.map((p) => ({ label: p.name, onClick: () => startWorkout(p) })))) : null,
