@@ -12,6 +12,8 @@ const LIFT_MET = 5;         // weight training ≈ 5 METs (kcal per kg per hour)
 
 let range = 28;
 export const NEED = { food: 14, weigh: 4, spread: 10 };
+// Confidence: Low until there's a lot of data. High = about a month of near-daily logging.
+export const SURE = { mid: { food: 18, weigh: 7 }, high: { food: 24, weigh: 12 } };
 
 /**
  * Estimate maintenance calories (TDEE) from intake and weight trend:
@@ -45,8 +47,22 @@ export function metabolism(days = 28) {
   // Lifting at ~5 METs, plus cardio (Health's active calories, or an estimate)
   const liftKcal = ws.reduce((n, w) => n + ((LIFT_MET - 1) * kg * workoutStats(w).duration) / 36e5, 0);
   const workoutKcal = (liftKcal + acts.reduce((n, a) => n + activityKcal(a), 0)) / days;
-  const confidence = logged.length >= 24 && tr.length >= 12 ? 'Good' : logged.length >= 18 && tr.length >= 7 ? 'Fair' : 'Rough';
-  return { ready: true, tdee, intake, dKg, span, workoutKcal, resting: tdee - workoutKcal, logged: logged.length, weighins: tr.length, confidence, workouts: ws.length, activities: acts.length };
+  const at = (lv) => logged.length >= lv.food && tr.length >= lv.weigh;
+  const confidence = at(SURE.high) ? 'High' : at(SURE.mid) ? 'Medium' : 'Low';
+  const toHigh = { food: Math.max(0, SURE.high.food - logged.length), weigh: Math.max(0, SURE.high.weigh - tr.length) };
+  return { ready: true, tdee, intake, dKg, span, workoutKcal, resting: tdee - workoutKcal, logged: logged.length, weighins: tr.length, confidence, toHigh, workouts: ws.length, activities: acts.length };
+}
+
+/** How much to trust the number: a 3-step meter and what it takes to firm up. */
+function confidenceBar(m) {
+  const step = { Low: 1, Medium: 2, High: 3 }[m.confidence];
+  const more = [m.toHigh.food ? `${m.toHigh.food} more day${m.toHigh.food === 1 ? '' : 's'} of food` : null, m.toHigh.weigh ? `${m.toHigh.weigh} more weigh-in${m.toHigh.weigh === 1 ? '' : 's'}` : null].filter(Boolean).join(' and ');
+  return h('div.conf.' + m.confidence.toLowerCase(),
+    h('div.conf-top', h('b', m.confidence === 'Low' ? '⚠️ Low confidence: an early guess' : m.confidence === 'Medium' ? 'Medium confidence: getting closer' : '✓ High confidence'),
+      h('span.conf-meter', [1, 2, 3].map((i) => h('i' + (i <= step ? '.on' : ''))))),
+    m.confidence === 'High'
+      ? h('span.conf-sub', 'Based on about a month of steady logging. Keep logging and it keeps up with you.')
+      : h('span.conf-sub', `${m.confidence === 'Low' ? 'Could be off by a few hundred calories.' : 'Close, but could still be off by a couple hundred calories.'} It becomes reliable with about ${SURE.high.food} days of food and ${SURE.high.weigh} weigh-ins in 4 weeks: ${more} to go.${m.confidence === 'Low' ? ' Don’t change your diet much on it yet.' : ''}`));
 }
 
 /** Weight trend with a smaller line of calories eaten (7-day average) and your maintenance level under it. */
@@ -112,12 +128,13 @@ export function trendsPage() {
       h('div.section-head', h('h2.section-title', 'Your metabolism')),
       m.ready
         ? h('section.card.meta-card',
-          h('div.meta-top',
-            h('div', h('div.energy-v', fmtNum(m.tdee)), h('div.energy-k', 'kcal a day to maintain')),
+          confidenceBar(m),
+          h('div.meta-top' + (m.confidence === 'High' ? '' : '.unsure'),
+            h('div', h('div.energy-v', m.confidence === 'High' ? '' : '≈ ', fmtNum(m.tdee)), h('div.energy-k', 'kcal a day to maintain')),
             h('div.energy-goal', h('div.meta-rest', fmtNum(m.resting)), h('div.energy-k', 'without workouts'))),
           h('p.fine', `You ate ${fmtNum(m.intake)} kcal a day on average and your weight trend moved ${m.dKg >= 0 ? '+' : '−'}${bodyDisplay(Math.abs(m.dKg))} ${bodyUnit()} over ${Math.round(m.span)} days. Your ${m.workouts} gym workout${m.workouts === 1 ? '' : 's'}${m.activities ? ` and ${m.activities} activit${m.activities === 1 ? 'y' : 'ies'}` : ''} burned about ${fmtNum(m.workoutKcal)} kcal a day on top of your resting burn.${m.activities ? '' : ' Import runs and rides on Fitness to sharpen this.'}`),
           metaChart(m, Math.max(28, Math.min(range, 56))),
-          h('div.meta-foot', h('span', `Confidence: ${m.confidence}`), h('span', `${m.logged} days of food · ${m.weighins} weigh-ins`)),
+          h('div.meta-foot', h('span', `${m.confidence} confidence`), h('span', `${m.logged} days of food · ${m.weighins} weigh-ins`)),
           h('p.fine', 'An estimate that sharpens the more days you log. Eat about 300–500 kcal under maintenance to lose fat, or 200–300 over to build muscle.'))
         : h('section.card.meta-card',
           h('div.empty-title.left', 'Not enough data yet'),

@@ -1069,3 +1069,17 @@ button.macro-rows { width: 100%; text-align: left; }
 .key-line { display: inline-block; width: 16px; height: 3px; border-radius: 2px; }
 .key-line.thin { height: 2px; }
 .key-line.dash { height: 0; background: none !important; border-top: 1.5px dashed; }
+
+/* Metabolism confidence */
+.conf { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; margin-bottom: 12px; border-radius: 12px; background: var(--surface-2); }
+.conf.low { background: rgba(224, 128, 58, .12); }
+.conf.low b { color: #f0a066; }
+.conf.high b { color: var(--gold); }
+.conf-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; }
+.conf-sub { font-size: 13px; color: var(--muted); line-height: 1.4; }
+.conf-meter { display: inline-flex; gap: 3px; flex: none; }
+.conf-meter i { width: 14px; height: 6px; border-radius: 3px; background: var(--surface-3); }
+.conf.low .conf-meter i.on { background: #f0a066; }
+.conf.medium .conf-meter i.on { background: #d4a24a; }
+.conf.high .conf-meter i.on { background: var(--gold); }
+.meta-top.unsure .energy-v { color: #c9c9ce; }

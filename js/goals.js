@@ -198,7 +198,7 @@ export async function suggestion(aim) {
   const p = Math.round(kg ? Math.min(kg * 2.2, (kcal * 0.4) / 4) : (kcal * 0.3) / 4);   // ~1 g per lb, capped at 40% of calories
   const f = Math.round((kcal * 0.27) / 9);
   const c = Math.max(0, Math.round((kcal - p * 4 - f * 9) / 4));
-  return { kcal, p, c, f, from: m.ready ? `your maintenance estimate (${Math.round(m.tdee).toLocaleString()} kcal, ${m.confidence.toLowerCase()} confidence)` : `your weight (a rough start: about 15 kcal per lb; Trends sharpens this after 10 days of logging)`, kg };
+  return { kcal, p, c, f, from: m.ready ? `your maintenance estimate (${Math.round(m.tdee).toLocaleString()} kcal, ${m.confidence.toLowerCase()} confidence${m.confidence === 'High' ? '' : ', so treat it as a starting point'})` : `your weight (a rough start: about 15 kcal per lb; Trends sharpens this after 10 days of logging)`, kg };
 }
 
 async function suggestGoals() {
