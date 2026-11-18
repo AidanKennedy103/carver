@@ -239,7 +239,7 @@ function progressCards() {
         ? [h('div.orm-val' + (m.confidence === 'High' ? '' : '.dim-val'), m.confidence === 'High' ? '' : '≈ ', fmtNum(m.tdee), h('span.orm-unit', 'kcal')), h('div.orm-sub', 'to maintain')]
         : [h('div.orm-val.dim-val', '—'), h('div.orm-sub', 'Maintenance calories')],
       kcals.length > 1 ? sparkline(kcals, { color: COLORS.calories }) : null,
-      h('div.card-foot', m.ready ? (m.confidence === 'High' ? 'High confidence · charts' : `${m.confidence} confidence · needs more data`) : [m.need.food ? `${m.need.food} more food day${m.need.food === 1 ? '' : 's'}` : null, m.need.weigh ? `${m.need.weigh} more weigh-in${m.need.weigh === 1 ? '' : 's'}` : null, !m.need.food && !m.need.weigh && m.need.spread ? `${m.need.spread} more day${m.need.spread === 1 ? '' : 's'} of weigh-ins` : null].filter(Boolean).join(' · ') + ' to estimate')));
+      h('div.card-foot', m.ready ? `${m.confidence} confidence` : [m.need.food ? `${m.need.food} more food day${m.need.food === 1 ? '' : 's'}` : null, m.need.weigh ? `${m.need.weigh} more weigh-in${m.need.weigh === 1 ? '' : 's'}` : null, !m.need.food && !m.need.weigh && m.need.spread ? `${m.need.spread} more day${m.need.spread === 1 ? '' : 's'} of weigh-ins` : null].filter(Boolean).join(' · ') + ' to estimate')));
 }
 
 // ---------- Rest days ----------
@@ -279,7 +279,7 @@ export function homePage() {
     fill(body,
       h('header.home-head',
         h('div.home-hello',
-          h('div.home-date', fmtDate(Date.now(), { weekday: 'long', month: 'long', day: 'numeric' })),
+          h('div.home-date', fmtDate(Date.now(), { weekday: 'long', month: 'short', day: 'numeric' })),
           h('h1.home-title', name ? `${greeting()}, ${name}` : greeting())),
         h('div.home-head-btns',
           goalsButton(),
