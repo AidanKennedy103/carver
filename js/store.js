@@ -6,7 +6,7 @@ import { LIBRARY } from './exercises.js';
 import { FOODS, NUTRIENT_KEYS } from './foods.js';
 
 const KEY = 'carver.v1';
-export const MAX_PLANS = 5;
+export const MAX_PLANS = 8;
 export const LB_PER_KG = 2.20462262;
 
 const fresh = () => ({
