@@ -319,6 +319,18 @@ export function restNote(today = ymd()) {
   return { tone: 'behind', title: 'Rest day, but you’re falling behind', sub: `${n} of ${goal} this week and only ${left} workout day${left === 1 ? '' : 's'} left. ${left + 1 >= need ? 'A workout today keeps you on pace.' : `To make ${goal}, you’d need to train on ${need - left} rest day${need - left === 1 ? '' : 's'}, today included.`}` };
 }
 
+/** Food days you left out of averages and the metabolism estimate (they looked off). */
+export const daySkipped = (k) => !!state.food.skip?.[k];
+/** Mark a day: 'skip' (leave it out), 'keep' (it was real), or null (ask again). */
+export function setDayCheck(k, v) {
+  commit((s) => {
+    s.food.skip = { ...(s.food.skip || {}) }; s.food.keep = { ...(s.food.keep || {}) };
+    delete s.food.skip[k]; delete s.food.keep[k];
+    if (v === 'skip') s.food.skip[k] = true;
+    if (v === 'keep') s.food.keep[k] = true;
+  });
+}
+
 export function overview() {
   const ws = state.workouts;
   const thisWeek = weekStart();

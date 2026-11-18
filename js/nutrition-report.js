@@ -3,7 +3,7 @@
 // your top foods, and the vitamins and minerals you tend to run low on).
 
 import { h, fill, navBar, swipeSegment } from './ui.js';
-import { state, ymd, addDays, dayLog, dayTotals, food, kcalHit } from './store.js';
+import { state, ymd, addDays, dayLog, dayTotals, food, kcalHit, daySkipped } from './store.js';
 import { MACROS, MICROS, NUTRIENT_KEYS } from './foods.js';
 import { COLORS } from './charts.js';
 import { MEALS, MACRO_COLOR, r0, fmtAmt, dayLabel } from './food-util.js';
@@ -66,7 +66,7 @@ export function microsScreen(date) {
 export function report(days) {
   const keys = [];
   for (let i = days - 1; i >= 0; i--) keys.push(addDays(ymd(), -i));
-  const logged = keys.filter((k) => dayLog(k).length);
+  const logged = keys.filter((k) => dayLog(k).length && !daySkipped(k));
   const sum = {};
   for (const k of NUTRIENT_KEYS) sum[k] = 0;
   const byMeal = Object.fromEntries(MEALS.map((m) => [m.id, 0]));

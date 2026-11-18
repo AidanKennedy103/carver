@@ -2,7 +2,7 @@
 // from what you eat and how your weight moves.
 
 import { h, fill, navBar, fmtNum, fmtDate, swipeSegment } from './ui.js';
-import { state, ymd, dayTotals, weekStart, workoutStats, toDisplay, unit, bodyDisplay, bodyUnit } from './store.js';
+import { state, ymd, dayTotals, weekStart, workoutStats, toDisplay, unit, bodyDisplay, bodyUnit, daySkipped, setDayCheck } from './store.js';
 import { lineChart, barChart, COLORS } from './charts.js';
 import { trend, latestWeight } from './body.js';
 import { activityKcal } from './fitness.js';
@@ -20,21 +20,39 @@ export const SURE = { mid: { food: 18, weigh: 7 }, high: { food: 24, weigh: 12 }
  *   maintenance = average intake − (weight change × 7700 kcal/kg) / days
  * then take out workout calories to estimate what you burn without training.
  */
+/**
+ * Finished days with food logged in the window: [{ k, kcal, odd? }].
+ * A day "looks off" when it's far from your usual (under half or over 1.8× your
+ * median, or under 1,000 kcal): usually a day you didn't finish logging. Those
+ * are asked about and left out until you say they were real.
+ */
+export function foodDays(days = 28) {
+  const out = [];
+  for (let i = days - 1; i >= 1; i--) {
+    const k = ymd(Date.now() - i * 864e5);
+    const t = dayTotals(k);
+    if (t.entries) out.push({ k, kcal: t.kcal });   // nothing logged: not a day at all
+  }
+  const sorted = out.map((d) => d.kcal).sort((a, b) => a - b);
+  const med = sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0;
+  for (const d of out) {
+    if (state.food.keep?.[d.k]) continue;
+    if (d.kcal < Math.max(1000, med * 0.5)) d.odd = 'much lower than usual';
+    else if (sorted.length >= 5 && d.kcal > med * 1.8) d.odd = 'much higher than usual';
+  }
+  return out;
+}
+
 export function metabolism(days = 28) {
   const end = Date.now();
   const startTs = end - days * 864e5;
-  const logged = [];
-  for (let ts = startTs + 864e5; ts <= end; ts += 864e5) {
-    const k = ymd(ts);
-    if (k === ymd()) continue;                 // today isn't finished
-    const t = dayTotals(k);
-    if (t.entries && t.kcal > 600) logged.push(t.kcal);
-  }
+  const fd = foodDays(days);
+  const logged = fd.filter((d) => !d.odd && !daySkipped(d.k)).map((d) => d.kcal);
   const tr = trend().filter((p) => p.x >= startTs);
   // Enough to see past day-to-day water swings: two weeks of food and 4 weigh-ins at least 10 days apart end to end
   const spread = tr.length > 1 ? (tr[tr.length - 1].x - tr[0].x) / 864e5 : 0;
   if (logged.length < NEED.food || tr.length < NEED.weigh || spread < NEED.spread) {
-    return { ready: false, logged: logged.length, weighins: tr.length, spread: Math.floor(spread),
+    return { ready: false, odd: fd.filter((d) => d.odd && !daySkipped(d.k)).length, logged: logged.length, weighins: tr.length, spread: Math.floor(spread),
       need: { food: Math.max(0, NEED.food - logged.length), weigh: Math.max(0, NEED.weigh - tr.length), spread: Math.max(0, Math.ceil(NEED.spread - spread)) } };
   }
   const span = Math.max(7, (tr[tr.length - 1].x - tr[0].x) / 864e5);
@@ -51,6 +69,28 @@ export function metabolism(days = 28) {
   const confidence = at(SURE.high) ? 'High' : at(SURE.mid) ? 'Medium' : 'Low';
   const toHigh = { food: Math.max(0, SURE.high.food - logged.length), weigh: Math.max(0, SURE.high.weigh - tr.length) };
   return { ready: true, tdee, intake, dKg, span, workoutKcal, resting: tdee - workoutKcal, logged: logged.length, weighins: tr.length, confidence, toHigh, workouts: ws.length, activities: acts.length };
+}
+
+/** Days that look off: ask whether to leave them out. */
+function oddDaysCard(redraw) {
+  const fd = foodDays(56);
+  const ask = fd.filter((d) => d.odd && !daySkipped(d.k));
+  const out = fd.filter((d) => daySkipped(d.k));
+  if (!ask.length && !out.length) return null;
+  const day = (k) => fmtDate(new Date(k + 'T12:00').getTime(), { weekday: 'short', month: 'short', day: 'numeric' });
+  const set = (k, v) => { setDayCheck(k, v); redraw(); };
+  return h('section.card.odd-card',
+    ask.length ? [
+      h('div.odd-title', `⚠️ ${ask.length === 1 ? 'This day looks' : 'These days look'} off`),
+      h('p.fine', 'A day you didn’t finish logging, or a typo, throws off your metabolism, so these are left out for now. Keep any that were real.'),
+      ask.slice(0, 8).map((d) => h('div.odd-row',
+        h('div.odd-text', h('b', day(d.k)), h('span', `${fmtNum(d.kcal)} kcal · ${d.odd}`)),
+        h('button.btn.small.dark', { onclick: () => set(d.k, 'keep') }, 'Keep'),
+        h('button.btn.small.gold-soft', { onclick: () => set(d.k, 'skip') }, 'Leave out'))),
+    ] : null,
+    out.length ? h('details.odd-out',
+      h('summary', `${out.length} day${out.length === 1 ? '' : 's'} left out`),
+      out.map((d) => h('div.odd-row', h('div.odd-text', h('b', day(d.k)), h('span', `${fmtNum(d.kcal)} kcal`)), h('button.link.small-link', { onclick: () => set(d.k, null) }, 'Put back')))) : null);
 }
 
 /** How much to trust the number: a 3-step meter and what it takes to firm up. */
@@ -105,11 +145,11 @@ export function trendsPage() {
 
     // Daily food
     const days = [];
-    for (let ts = start + 864e5; ts <= now; ts += 864e5) { const k = ymd(ts); const t = dayTotals(k); days.push({ x: ts, k, kcal: t.kcal, p: t.p, logged: t.entries > 0 }); }
+    for (let ts = start + 864e5; ts <= now; ts += 864e5) { const k = ymd(ts); const t = dayTotals(k); days.push({ x: ts, k, kcal: t.kcal, p: t.p, logged: t.entries > 0 && !daySkipped(k) }); }
     const short = range > 60;   // long ranges: weekly averages instead of daily bars
     const foodSeries = (key) => short
       ? weeklyAvg(days, key)
-      : days.map((d) => ({ x: d.x, y: Math.round(d[key]) }));
+      : days.filter((d) => d.logged).map((d) => ({ x: d.x, y: Math.round(d[key]) }));
 
     // Weekly training
     const weeks = [];
@@ -126,6 +166,7 @@ export function trendsPage() {
 
       // Metabolism
       h('div.section-head', h('h2.section-title', 'Your metabolism')),
+      oddDaysCard(draw),
       m.ready
         ? h('section.card.meta-card',
           confidenceBar(m),
