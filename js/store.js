@@ -23,7 +23,8 @@ const fresh = () => ({
   body: { weights: [], photos: [] }, // weights: { id, ts, kg, source }; photos: { id, ts } (images in IndexedDB)
   checks: {},                      // custom daily goals: { 'YYYY-MM-DD': { goalId: amount } }
   monthly: {},                     // { 'YYYY-MM': { goals: [], note } }
-  program: null,                   // a running program (5/3/1): see program531.js
+  program: null,                   // a running program (5/3/1 or Coach): see program531.js, coach.js
+  recovery: {},                    // morning check-ins: { 'YYYY-MM-DD': { sleep, quality, sore, energy } }
 });
 
 // Older saves miss newer sections: fill them in (one level deep)
@@ -144,6 +145,7 @@ export const TAB_LIST = [
   { id: 'social', label: 'Social', icon: 'users', emoji: '👥', sub: 'Groups, leaderboards and challenges' },
   { id: 'habits', label: 'Habits', icon: 'check', emoji: '✅', sub: 'Daily goals, streaks and reminders' },
   { id: 'coach', label: 'Coach', icon: 'trophy', emoji: '🧭', sub: 'Ready-made programs that add weight for you' },
+  { id: 'recovery', label: 'Recovery', icon: 'moon', emoji: '😴', sub: 'Sleep, soreness and a daily readiness score' },
 ];
 /** Tab ids you keep, in your order (not counting Home). */
 export function shownTabs() {

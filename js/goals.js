@@ -142,15 +142,19 @@ export function openGoals(section = 'all') {
         fitField('Active time', 'fitMins', 'min'),
         fitField('Distance', 'fitDist', distUnit(), (m) => Math.round((m / dKm) * 10) / 10, (v) => v * dKm)),
       h('p.fine', 'Runs, walks, rides and other cardio on the Fitness tab. Leave any blank for no goal. Health guidelines suggest about 150 minutes of moderate activity a week.')],
+    recovery: () => [
+      h('div.goal-section', '😴 Recovery'),
+      h('div.group', field('Sleep each night', 'sleep', 'h', 0.5)),
+      h('p.fine', 'Most adults do best on 7 to 9 hours. Readiness on the Recovery tab scores your sleep against this.')],
     daily: () => [
       h('div.goal-section', '✅ Daily goals'),
       h('label.form-label', `Your own (up to ${MAX_HABITS})`), customList,
       h('p.fine', 'Things you either do each day or don’t. Each one is a slider on Home: slide it when it’s done. Your groups see it right away, and at 8 am the next day if you missed it. You can also show one as a ring.')],
   };
-  const shown = ['workout', 'nutrition', 'fitness', 'daily'].includes(section)
-    ? [section] : ['workout', 'nutrition', 'fitness', 'daily'].filter((k) => k === 'daily' || tabOn(k));
-  const titles = { workout: 'Workout goals', nutrition: 'Nutrition goals', fitness: 'Fitness goals', daily: 'Daily goals' };
-  const others = ['workout', 'nutrition', 'fitness'].filter((k) => k !== section && tabOn(k));
+  const shown = ['workout', 'nutrition', 'fitness', 'recovery', 'daily'].includes(section)
+    ? [section] : ['workout', 'nutrition', 'fitness', 'recovery', 'daily'].filter((k) => k === 'daily' || tabOn(k));
+  const titles = { workout: 'Workout goals', nutrition: 'Nutrition goals', fitness: 'Fitness goals', recovery: 'Recovery goals', daily: 'Daily goals' };
+  const others = ['workout', 'nutrition', 'fitness', 'recovery'].filter((k) => k !== section && tabOn(k));
 
   const s = sheet(h('div.form.goals-form' + (shown.length === 1 ? '.one' : ''),
     h('div.sheet-head', h('span'), h('div.sheet-title', titles[section] || 'Goals'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),

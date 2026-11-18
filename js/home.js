@@ -56,8 +56,9 @@ function ringCatalog() {
     { id: 'kcal', label: 'Calories', color: COLORS.calories, cheer: 'Hit your calorie goal!', day: (k) => { const v = dayTotals(k).kcal; return { value: v, goal: g.kcal, text: `${fmtNum(v)} of ${fmtNum(g.kcal)} kcal`, hit: kcalHit(v, g.kcal, k), over: kcalLook(v, g.kcal, k) === 'over' }; } },
     { id: 'protein', label: 'Protein', color: COLORS.protein, cheer: 'Hit your protein goal!', day: (k) => { const v = dayTotals(k).p; return { value: v, goal: g.p, text: `${Math.round(v)} of ${g.p} g`, hit: v >= g.p }; } },
     { id: 'water', label: 'Water', color: '#2e8bd8', cheer: 'Hit your water goal!', day: (k) => { const v = waterOn(k), gw = g.water || 2500; return { value: v, goal: gw, text: `${(v / 1000).toFixed(1)} of ${(gw / 1000).toFixed(1)} L`, hit: v >= gw }; } },
+    { id: 'sleep', label: 'Sleep', color: '#7d57c9', cheer: 'Slept enough!', day: (k) => { const v = state.recovery?.[k]?.sleep || 0, gs = g.sleep || 8; return { value: v, goal: gs, text: v ? `${v} of ${gs} h` : 'Not logged', hit: v >= gs }; } },
     { id: 'weigh', label: 'Weigh-in', color: WEIGH_COLOR, cheer: 'Weighed in!', day: (k) => { const n = state.body.weights.some((w) => ymd(w.ts) === k) ? 1 : 0; return { value: n, goal: 1, text: n ? 'Done today' : 'Not yet today', hit: !!n }; } },
-  ].filter((r) => (r.id === 'gym' ? tabOn('workout') : ['kcal', 'protein', 'water'].includes(r.id) ? tabOn('nutrition') : true)).concat([
+  ].filter((r) => (r.id === 'gym' ? tabOn('workout') : ['kcal', 'protein', 'water'].includes(r.id) ? tabOn('nutrition') : r.id === 'sleep' ? tabOn('recovery') : true)).concat([
     ...g.custom.map((c) => ({ id: c.id, custom: c, label: c.name, color: COLORS.custom, cheer: `${c.name}: done!`, day: (k) => { const d = isDone(c, k); return { value: d ? 1 : 0, goal: 1, text: d ? 'Done' : 'Not yet', hit: d }; } })),
   ]);
 }
