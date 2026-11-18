@@ -167,8 +167,9 @@ function workoutScreen() {
         h('div.live-progress', progress)),
       w.exercises.length ? null : h('div.empty',
         h('div.empty-icon', icon('dumbbell', 40)),
-        h('div.empty-title', 'Get started'),
-        h('div.empty-text', 'Add an exercise to start logging sets.')),
+        h('div.empty-title', w.past ? 'What did you do?' : 'Freestyle workout'),
+        h('div.empty-text', w.past ? 'Add the exercises you did, then type in your sets.'
+          : 'Make it up as you go: add an exercise when you get to it, log your sets, then add the next. You can save it as a plan when you finish.')),
       w.exercises.map((ex, i) => exerciseCard({
         ex, index: i, count: w.exercises.length, mode: 'live', current: i === w.exercises.findIndex((e) => e.sets.some((x) => !x.done)),
         prev: previousSets(ex.exId, w.id),
@@ -346,5 +347,6 @@ function showSummary(w, prs) {
         h('span.pr-name', exercise(p.exId).name),
         h('span.pr-val', p.kind + ': ' + (p.kg != null ? `${toDisplay(p.kg)} ${unit()}` : `${p.reps} reps`))))) : null,
     h('button.btn.gold.wide', { onclick: () => s.close() }, 'Done'),
+    w.planId ? null : h('button.btn.dark.wide.summary-plan', { onclick: () => { s.close(); saveAsPlan(w); } }, 'Save as a plan to repeat it'),
   ));
 }

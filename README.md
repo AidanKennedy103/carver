@@ -26,7 +26,8 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 - **Profile:** your name, "carving since", week streak, all-time workouts, weight lifted, records, hours trained, and recent personal records.
 
 ### Workout
-- **Goals on every page:** Workout, Nutrition and Fitness each have a Goals card (with this week's progress) that opens just that page's goals. Home's 🎯 Goals opens all of them. Fitness goals are weekly: activities, active minutes, distance.
+- **🎯 Goals on every page:** the same button, top right of Home, Workout, Nutrition and Fitness. Each opens that page's goals (Home opens all). Fitness goals are weekly: activities, active minutes, distance, shown on the This week tiles.
+- **Start a workout vs. make a plan:** the top of the Workout tab is for working out: your next plan, a **Freestyle** workout (make it up as you go), another plan, or a past workout. **Your plans** below are routines saved for later; making or editing one never logs anything. A freestyle workout can be saved as a plan when you finish.
 - **Pick your tabs:** Settings → Tabs turns Workout, Nutrition or Fitness off. Home drops their rings and rows too.
 - **Up next:** your plans rotate in order, so the next one is ready at the top with its muscles, sets, how long it took last time and when you last did it. While a workout is going, that card becomes **Resume** with your progress.
 - **This week:** Monday to Sunday with the days you trained and the days you planned.

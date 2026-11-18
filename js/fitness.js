@@ -5,7 +5,7 @@ import { h, fill, icon, navBar, sheet, toast, confirmBox, fmtDate, fmtNum, fmtDu
 import { state, commit, uid, distUnit, weekStart } from './store.js';
 import { barChart, COLORS } from './charts.js';
 import { latestWeight, findDate } from './body.js';
-import { goalsCard } from './goals.js';
+import { goalsButton } from './goals.js';
 
 export const ACTIVITY_TYPES = [
   { id: 'run', name: 'Run', icon: '🏃', met: 9.8, words: ['run', 'running', 'jog'] },
@@ -221,17 +221,6 @@ function activityRow(a) {
     h('span.food-kcal', `${fmtNum(activityKcal(a))}`, h('span.food-sub', a.kcal ? ' kcal' : ' kcal est.')));
 }
 
-/** Weekly fitness goals (activities, minutes, distance) and how this week is going. */
-function fitnessGoals(week) {
-  const g = state.goals, sum = (f) => week.reduce((n, a) => n + (f(a) || 0), 0);
-  const mins = Math.round(sum((a) => a.dur) / 6e4), dist = sum((a) => a.dist);
-  return goalsCard('fitness', [
-    g.fitPerWeek ? { label: 'Activities this week', text: `${week.length} of ${g.fitPerWeek}`, value: week.length, goal: g.fitPerWeek } : null,
-    g.fitMins ? { label: 'Active time', text: `${mins} of ${g.fitMins} min`, value: mins, goal: g.fitMins } : null,
-    g.fitDist ? { label: 'Distance', text: `${fmtDist(dist).split(' ')[0]} of ${fmtDist(g.fitDist)}`, value: dist, goal: g.fitDist } : null,
-  ], { emptyText: 'Set a weekly goal: activities, active minutes or distance.' });
-}
-
 export function fitnessPage() {
   const el = h('div.page');
   const body = h('div.scroll-body');
@@ -242,6 +231,7 @@ export function fitnessPage() {
     const wk = weekStart();
     const week = list.filter((a) => a.start >= wk);
     const sum = (arr, f) => arr.reduce((n, a) => n + (f(a) || 0), 0);
+    const g = state.goals, mins = Math.round(sum(week, (a) => a.dur) / 6e4), dist = sum(week, (a) => a.dist);
     const weeks = [];
     for (let w = weekStart(Date.now() - 11 * 7 * 864e5); w <= Date.now(); w = weekStart(w + 8 * 864e5)) {
       const ws = list.filter((a) => a.start >= w && a.start < w + 7 * 864e5);
@@ -251,15 +241,14 @@ export function fitnessPage() {
     const shown = showAll ? list : list.slice(0, 20);
 
     fill(body,
-      navBar({ title: 'Fitness', back: false, large: true, right: [h('button.icon-btn.gold-text', { onclick: () => activitySheet(), 'aria-label': 'Add activity' }, icon('plus', 24))] }),
+      navBar({ title: 'Fitness', back: false, large: true, right: [goalsButton('fitness'), h('button.icon-btn.gold-text', { onclick: () => activitySheet(), 'aria-label': 'Add activity' }, icon('plus', 24))] }),
 
       h('div.section-head', h('h2.section-title', 'This week')),
       h('div.tiles.three',
-        h('div.tile', h('div.tile-v', week.length), h('div.tile-k', 'Activities'), h('div.tile-sub', `${fmtDurationWords(sum(week, (a) => a.dur))}`)),
-        h('div.tile', h('div.tile-v', week.some((a) => a.dist) ? fmtDist(sum(week, (a) => a.dist)).split(' ')[0] : '0'), h('div.tile-k', 'Distance'), h('div.tile-sub', distUnit())),
+        h('div.tile' + (g.fitPerWeek && week.length >= g.fitPerWeek ? '.hit' : ''), h('div.tile-v', week.length, g.fitPerWeek ? h('span.tile-of', ` / ${g.fitPerWeek}`) : null), h('div.tile-k', 'Activities'),
+          h('div.tile-sub', g.fitMins ? `${mins} of ${g.fitMins} min` : fmtDurationWords(sum(week, (a) => a.dur)))),
+        h('div.tile' + (g.fitDist && dist >= g.fitDist ? '.hit' : ''), h('div.tile-v', week.some((a) => a.dist) ? fmtDist(dist).split(' ')[0] : '0', g.fitDist ? h('span.tile-of', ` / ${fmtDist(g.fitDist).split(' ')[0]}`) : null), h('div.tile-k', 'Distance'), h('div.tile-sub', distUnit())),
         h('div.tile', h('div.tile-v', fmtNum(sum(week, activityKcal))), h('div.tile-k', 'Burned'), h('div.tile-sub', 'active kcal'))),
-
-      fitnessGoals(week),
 
       h('div.btn-pair',
         h('button.btn.gold', { onclick: importActivitiesSheet }, icon('apple', 18), 'Import'),

@@ -5,7 +5,7 @@ import { h, fill, icon, push, toast, actionSheet, confirmBox, promptBox, navBar,
 import { state, commit, uid, ymd, addDays, dayStart, dayLog, dayTotals, food, logFood, deleteLog, waterOn, addWater, kcalLook, foodAim } from './store.js';
 import { MACROS } from './foods.js';
 import { COLORS } from './charts.js';
-import { openGoals, goalsCard } from './goals.js';
+import { goalsButton } from './goals.js';
 import { scanBarcode } from './barcode.js';
 import { MEALS, MACRO_COLOR, r0, amountText, dayLabel } from './food-util.js';
 import { quickAdd } from './quickadd.js';
@@ -34,7 +34,7 @@ export function nutritionPage() {
     const showLeft = !!state.settings.macroLeft;
 
     fill(body,
-      navBar({ title: 'Nutrition', back: false, large: true, right: [h('button.nav-goals', { onclick: () => openGoals('nutrition') }, '🎯 Goals')] }),
+      navBar({ title: 'Nutrition', back: false, large: true, right: [goalsButton('nutrition')] }),
 
       h('div.date-bar',
         h('button.icon-btn', { onclick: () => { viewDate = addDays(viewDate, -1); draw(); }, 'aria-label': 'Previous day' }, icon('back')),
@@ -61,12 +61,6 @@ export function nutritionPage() {
           h('button.link.micros-link', { onclick: () => push(reportScreen) }, 'Report', icon('back', 16)),
           h('button.link.micros-link', { onclick: () => push(() => microsScreen(viewDate)) }, 'Micronutrients', icon('back', 16)))),
 
-      goalsCard('nutrition', [
-        { label: 'Aim', text: { cut: 'Lose fat', maintain: 'Maintain', build: 'Build muscle' }[foodAim()] },
-        { label: 'Calories', text: `${g.kcal.toLocaleString()} kcal ${{ cut: 'or less', maintain: '± 10%', build: 'or more' }[foodAim()]}` },
-        { label: 'Protein · carbs · fat', text: `${g.p} · ${g.c} · ${g.f} g` },
-        { label: 'Water', text: `${((g.water || 2500) / 1000).toFixed(1)} L` },
-      ]),
 
       h('div.add-row',
         h('button.add-tile', { onclick: () => quickAdd({ date: viewDate }) }, h('span.add-ico', '⚡'), 'Quick add'),

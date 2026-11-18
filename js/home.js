@@ -8,7 +8,7 @@ import { openSettings } from './settings.js';
 import { goTab } from './tabs.js';
 import { oneRmSection } from './onerm.js';
 import { rings, sparkline, COLORS } from './charts.js';
-import { openGoals } from './goals.js';
+import { openGoals, goalsButton } from './goals.js';
 import { habitsCard, isDone } from './habits.js';
 import { quickAdd } from './quickadd.js';
 import { takeProgressPhoto, progressPage } from './progress.js';
@@ -270,7 +270,7 @@ export function homePage() {
           h('div.home-date', fmtDate(Date.now(), { weekday: 'long', month: 'long', day: 'numeric' })),
           h('h1.home-title', name ? `${greeting()}, ${name}` : greeting())),
         h('div.home-head-btns',
-          h('button.nav-goals', { onclick: () => openGoals() }, '🎯 Goals'),
+          goalsButton(),
           h('button.icon-btn', { onclick: openSettings, 'aria-label': 'Settings' }, icon('gear')))),
 
       // Rings (swipe for Today / Week)

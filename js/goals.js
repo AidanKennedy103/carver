@@ -161,20 +161,9 @@ export function openGoals(section = 'all') {
   if (shown.includes('nutrition')) balance(false);   // show which one fills in, without changing your saved goals
 }
 
-/**
- * A goals card for the top of a page: what you're aiming for (and how this week
- * is going), with a clear way in to change it.
- * rows: [{ label, text, value?, goal? }] (value/goal draw a bar)
- */
-export function goalsCard(section, rows, { emptyText } = {}) {
-  const set = rows.filter(Boolean);
-  return h('button.card.goals-card', { onclick: () => openGoals(section), 'aria-label': `Edit ${section} goals` },
-    h('div.goals-top', h('span.goals-title', '🎯 Goals'), h('span.goals-edit', set.length ? 'Edit' : 'Set goals')),
-    set.length ? set.map((r) => h('div.goals-row',
-      h('div.goals-line', h('span.goals-label', r.label), h('span.goals-val' + (r.value != null && r.value >= r.goal ? '.hit' : ''), r.text, r.value != null && r.value >= r.goal ? ' ✓' : '')),
-      r.value != null ? h('div.goals-bar', h('i', { style: { width: Math.min(100, (r.value / Math.max(r.goal, 1e-9)) * 100) + '%' } })) : null))
-      : h('div.goals-empty', emptyText || 'Tap to set a goal.'));
-}
+/** The 🎯 Goals button: top right of every main page, opening that page's goals. */
+export const goalsButton = (section = 'all') =>
+  h('button.nav-goals', { onclick: () => openGoals(section), 'aria-label': section === 'all' ? 'All goals' : `${section[0].toUpperCase() + section.slice(1)} goals` }, '🎯 Goals');
 
 // ---------- Suggested food goals ----------
 

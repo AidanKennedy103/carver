@@ -10,7 +10,7 @@ import { pickExercises } from './picker.js';
 import { openSettings } from './settings.js';
 import { volumeCard, tally, MUSCLE_ORDER, ALL_MUSCLES } from './volume.js';
 import { programCard, setup531, program } from './program531.js';
-import { goalsCard } from './goals.js';
+import { goalsButton } from './goals.js';
 
 export function workoutPage() {
   const el = h('div.page');
@@ -19,7 +19,7 @@ export function workoutPage() {
 
   const nav = navBar({
     title: 'Workout', back: false, large: true,
-    right: [h('button.icon-btn', { onclick: openSettings, 'aria-label': 'Settings' }, icon('gear'))],
+    right: [goalsButton('workout'), h('button.icon-btn', { onclick: openSettings, 'aria-label': 'Settings' }, icon('gear'))],
   });
 
   function draw() {
@@ -27,21 +27,24 @@ export function workoutPage() {
     const next = nextPlan();
     fill(body,
       nav,
-      state.active ? activeCard(state.active) : next ? upNext(next) : firstPlanCard(),
+      // 1. Working out: start (or resume) a workout that's logged as you go
+      state.active ? activeCard(state.active) : [
+        next ? upNext(next) : freestyleHero(),
+        startOptions(next)],
       weekStrip(),
-      workoutGoals(),
       programCard(),
 
+      // 2. Plans: routines you save for later. Making one doesn't log anything.
       h('div.section-head',
-        h('h2.section-title', 'Plans', h('span.section-count', `${state.plans.length} of ${MAX_PLANS}`)),
+        h('h2.section-title', 'Your plans', h('span.section-count', `${state.plans.length} of ${MAX_PLANS}`)),
         h('span.head-links',
           program() ? null : h('button.link', { onclick: setup531 }, '5/3/1'),
           h('button.link' + (plansFull ? '.off' : ''), {
             onclick: () => plansFull ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor()),
-          }, icon('plus', 16), 'New'))),
-      state.plans.length ? h('section.card.list-card.plan-list', state.plans.map((p) => planRow(p, p === next))) : null,
-      state.active ? null : h('button.quick-start', { onclick: () => startWorkout() }, icon('plus', 18), h('span', 'Empty workout'), h('span.quick-sub', 'Add exercises as you go')),
-      state.active ? null : h('button.quick-start', { onclick: () => logPastWorkout() }, icon('calendar', 18), h('span', 'Log a past workout'), h('span.quick-sub', 'One you didn’t track')),
+          }, icon('plus', 16), 'Make a plan'))),
+      h('p.section-sub', 'Routines you save and repeat, like Push, Pull and Legs. Making or editing a plan doesn’t log a workout: tap ▶ to start one.'),
+      state.plans.length ? h('section.card.list-card.plan-list', state.plans.map((p) => planRow(p, p === next)))
+        : h('button.card.empty-plan-row', { onclick: () => push(() => planEditor()) }, icon('plus', 18), h('span', 'Make your first plan')),
       state.plans.length || state.workouts.length ? volumeCard() : null,
 
       h('div.section-head', h('h2.section-title', 'History'), state.workouts.length ? h('span.section-count', `${state.workouts.length} workout${state.workouts.length === 1 ? '' : 's'}`) : null),
@@ -70,19 +73,32 @@ export function workoutPage() {
     const sets = p.exercises.reduce((n, e) => n + e.sets.length, 0);
     const mins = last ? Math.round(workoutStats(last).duration / 6e4) : null;
     return h('section.card.hero',
-      h('div.hero-label', 'Up next'),
+      h('div.hero-label', 'Start a workout · next plan'),
       h('button.hero-name', { onclick: () => push(() => planEditor(p)) }, p.name),
       muscles.length ? h('div.hero-chips', muscles.map((m) => h('span.chip.small', m))) : null,
       h('div.hero-meta', [`${p.exercises.length} exercise${p.exercises.length === 1 ? '' : 's'}`, `${sets} sets`, mins ? `about ${mins} min` : null, last ? `last ${ago(last.start)}` : 'not done yet'].filter(Boolean).join(' · ')),
       h('button.btn.gold.wide.hero-go', { onclick: () => startWorkout(p), disabled: !p.exercises.length }, icon('play', 16), `Start ${p.name}`));
   }
 
-  function firstPlanCard() {
-    return h('button.card.hero.empty-hero', { onclick: () => push(() => planEditor()) },
-      h('div.hero-label', 'Get set up'),
-      h('div.hero-name', 'Make your first plan'),
-      h('div.hero-meta', 'Save up to 10 routines, like Push, Pull and Legs. Carver keeps them in order and has the next one ready to start.'),
-      h('span.btn.gold.wide.hero-go', icon('plus', 16), 'New plan'));
+  /** No plans yet: the big button is a freestyle workout. */
+  function freestyleHero() {
+    return h('section.card.hero',
+      h('div.hero-label', 'Start a workout'),
+      h('div.hero-name', 'Freestyle'),
+      h('div.hero-meta', 'Make it up as you go: add each exercise when you get to it and log your sets. The timer starts now.'),
+      h('button.btn.gold.wide.hero-go', { onclick: () => startWorkout() }, icon('play', 16), 'Start freestyle workout'));
+  }
+
+  /** The other ways to work out, under the big Start button. */
+  function startOptions(next) {
+    const opt = (ico, title, sub, onclick) => h('button.start-opt', { onclick },
+      h('span.start-ico', ico), h('span.start-text', h('span.start-title', title), h('span.start-sub', sub)), h('span.card-go', '›'));
+    const others = state.plans.filter((p) => p !== next && p.exercises.length);
+    return h('section.card.list-card.start-opts',
+      next ? opt('⚡', 'Freestyle workout', 'Make it up as you go, no plan', () => startWorkout()) : null,
+      others.length ? opt('▶', 'Start a different plan', others.map((p) => p.name).slice(0, 3).join(', ') + (others.length > 3 ? '…' : ''),
+        () => actionSheet('Start which plan?', others.map((p) => ({ label: p.name, onClick: () => startWorkout(p) })))) : null,
+      opt('📅', 'Log a past workout', 'One you did but didn’t track', () => logPastWorkout()));
   }
 
   /** Monday to Sunday: workouts done, days you planned, today. */
@@ -98,18 +114,7 @@ export function workoutPage() {
         const cls = did.has(k) ? '.did' : dayPlan(k) === 'planned' && k >= today ? '.plan' : '';
         return h('div.wk-col' + cls + (k === today ? '.today' : ''), h('span.wk-d', d[0]), h('span.wk-dot', did.has(k) ? icon('check', 14) : null));
       })),
-      n >= goal ? h('div.wk-sum', 'Weekly goal hit 🔥') : null);
-  }
-
-  /** Your workout goals, and this week so far. */
-  function workoutGoals() {
-    const n = state.workouts.filter((w) => w.start >= weekStart()).length;
-    const goal = state.goals.workoutsPerWeek;
-    const days = workoutDays();
-    return goalsCard('workout', [
-      { label: 'Workouts this week', text: `${n} of ${goal}`, value: n, goal },
-      { label: 'Training days', text: days.length ? days.map((i) => DAY_SHORT[i]).join(', ') : 'Any day' },
-    ]);
+      h('div.wk-sum', h('b', `${n} of ${goal}`), n >= goal ? ' this week · goal hit 🔥' : ' workouts this week'));
   }
 
   function planRow(p, isNext) {
@@ -275,8 +280,9 @@ function planEditor(existing = null) {
 
   const nav = navBar({
     title: existing ? 'Edit plan' : 'New plan', back: false,
-    right: [h('button.btn.gold.small', { onclick: doSave }, 'Save')],
+    right: [h('button.btn.gold.small', { onclick: doSave }, 'Save plan')],
   });
+  const planNote = h('div.plan-note', '📝 ', h('span', 'You’re ', h('b', existing ? 'editing a plan' : 'making a plan'), ': a routine saved for later. Nothing is logged here. To work out, start it from the Workout tab.'));
   nav.querySelector('.nav-left').append(h('button.link', {
     onclick: async () => {
       if (dirty && !(await confirmBox('Discard changes?', null, { ok: 'Discard', danger: true, cancel: 'Keep editing' }))) return;
@@ -296,7 +302,8 @@ function planEditor(existing = null) {
 
   function draw() {
     const y = body.scrollTop;
-    fill(body, 
+    fill(body,
+      planNote,
       nameIn,
       plan.exercises.length ? null : h('div.empty',
         h('div.empty-icon', icon('dumbbell', 40)),
