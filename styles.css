@@ -1059,3 +1059,13 @@ button.macro-rows { width: 100%; text-align: left; }
 .comp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
 .comp-grid:empty { display: none; }
 .measure-on { display: block; margin: 22px auto 0; font-size: 14px; }
+
+/* Metabolism: what's still needed, and the chart legend */
+.need-row { margin: 10px 0; }
+.need-line { display: flex; justify-content: space-between; font-size: 14px; }
+.need-line b.done { color: var(--gold); }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); margin: 6px 2px 2px; }
+.chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.key-line { display: inline-block; width: 16px; height: 3px; border-radius: 2px; }
+.key-line.thin { height: 2px; }
+.key-line.dash { height: 0; background: none !important; border-top: 1.5px dashed; }

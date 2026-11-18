@@ -18,7 +18,7 @@ export function chooseOneRm() {
 export function oneRmSection() {
   const ids = oneRmExercises();
   const head = h('div.section-head',
-    h('h2.section-title', 'One-rep max'),
+    h('h2.section-title', 'Strength Tracking'),
     h('button.link', { onclick: chooseOneRm }, ids.length ? 'Edit' : 'Choose'));
   if (!ids.length) {
     return [head, h('button.card.empty-plan', { onclick: chooseOneRm },
@@ -49,7 +49,7 @@ function oneRmDetail(id) {
   const fmt = (kg) => `${Math.round(+toDisplay(kg))} ${unit()}`;
   const best = hist.reduce((m, p) => (p.y > (m?.y || 0) ? p : m), null);
   const el = h('div.page',
-    navBar({ title: 'One-rep max', backLabel: 'Home' }),
+    navBar({ title: 'Strength Tracking', backLabel: 'Home' }),
     h('div.scroll-body',
       h('h2.detail-title', info.name),
       h('div.detail-date', 'Estimated from your best set each workout (Epley formula)'),

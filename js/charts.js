@@ -68,13 +68,17 @@ function addTooltip(wrap, svg, pts, W, render) {
  * data: [{ x: timestamp, y: number, label? }]
  * opts: { height, color, axes, fmtY, fmtX, tip(point) -> html, goal (y value line), area }
  */
+/** The overlay value closest in time to x (within 4 days). */
+const nearest = (list, x) => { let b = null, bd = 4 * 864e5; for (const d of list) { const dd = Math.abs(d.x - x); if (dd <= bd) { bd = dd; b = d.y; } } return b; };
+
 export function lineChart(data, opts = {}) {
   const { height = 160, color = COLORS.gold, axes = true, fmtY = (v) => Math.round(v), fmtX = (t) => new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), goal = null, area = true, dots = true } = opts;
   const W = 340, H = height;
   const padL = axes ? 36 : 4, padR = axes ? 8 : 4, padT = 10, padB = axes ? 22 : 6;
   const wrap = h('div.chart');
   if (!data.length) { wrap.append(h('div.chart-empty', opts.empty || 'No data yet')); return wrap; }
-  const xs = data.map((d) => d.x), ys = data.map((d) => d.y).concat(goal != null ? [goal] : []);
+  const ov = opts.overlay?.data?.length > 1 ? opts.overlay : null;   // { data, color, ref, fmt }: a smaller line with its own scale, in the bottom of the chart
+  const xs = data.map((d) => d.x).concat(ov ? ov.data.map((d) => d.x) : []), ys = data.map((d) => d.y).concat(goal != null ? [goal] : []);
   let x0 = Math.min(...xs), x1 = Math.max(...xs);
   if (x0 === x1) { x0 -= 864e5 * 3; x1 += 864e5 * 3; }
   const ticks = niceTicks(Math.min(...ys), Math.max(...ys));
@@ -100,7 +104,22 @@ export function lineChart(data, opts = {}) {
   }
   if (goal != null) svg.append(s('line', { x1: padL, x2: W - padR, y1: py(goal), y2: py(goal), class: 'chart-goal' }));
 
-  const pts = data.map((d) => ({ ...d, px: px(d.x), py: py(d.y) }));
+  if (ov) {
+    // Its own scale in the lower ~40% of the plot, drawn under the main line
+    const band = (H - padT - padB) * 0.4, base = H - padB - 3;
+    const vals = ov.data.map((d) => d.y).concat(ov.ref != null ? [ov.ref] : []);
+    let lo = Math.min(...vals), hi = Math.max(...vals);
+    if (hi - lo < 50) { lo -= 25; hi += 25; }
+    const oy = (v) => base - ((v - lo) / (hi - lo)) * band;
+    if (ov.ref != null) {
+      svg.append(s('line', { x1: padL, x2: W - padR, y1: oy(ov.ref), y2: oy(ov.ref), stroke: ov.color, 'stroke-width': 1, 'stroke-dasharray': '3 4', opacity: 0.7 }));
+      if (ov.refLabel) { const t = s('text', { x: W - padR, y: oy(ov.ref) - 4, 'text-anchor': 'end', class: 'chart-axis', fill: ov.color }); t.textContent = ov.refLabel; svg.append(t); }
+    }
+    const op = ov.data.map((d, i) => `${i ? 'L' : 'M'}${px(d.x).toFixed(1)} ${oy(d.y).toFixed(1)}`).join(' ');
+    svg.append(s('path', { d: op, fill: 'none', stroke: ov.color, 'stroke-width': 1.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', opacity: 0.9 }));
+  }
+
+  const pts = data.map((d) => ({ ...d, px: px(d.x), py: py(d.y), over: ov ? nearest(ov.data, d.x) : undefined }));
   const path = pts.map((p, i) => `${i ? 'L' : 'M'}${p.px.toFixed(1)} ${p.py.toFixed(1)}`).join(' ');
   if (area && pts.length > 1) {
     const id = 'g' + Math.random().toString(36).slice(2, 8);

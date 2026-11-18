@@ -11,6 +11,7 @@ const KCAL_PER_KG = 7700;   // energy in a kilogram of body weight change (commo
 const LIFT_MET = 5;         // weight training ≈ 5 METs (kcal per kg per hour)
 
 let range = 28;
+export const NEED = { food: 14, weigh: 4, spread: 10 };
 
 /**
  * Estimate maintenance calories (TDEE) from intake and weight trend:
@@ -28,8 +29,11 @@ export function metabolism(days = 28) {
     if (t.entries && t.kcal > 600) logged.push(t.kcal);
   }
   const tr = trend().filter((p) => p.x >= startTs);
-  if (logged.length < 10 || tr.length < 2) {
-    return { ready: false, logged: logged.length, weighins: tr.length, need: { food: Math.max(0, 10 - logged.length), weigh: Math.max(0, 2 - tr.length) } };
+  // Enough to see past day-to-day water swings: two weeks of food and 4 weigh-ins at least 10 days apart end to end
+  const spread = tr.length > 1 ? (tr[tr.length - 1].x - tr[0].x) / 864e5 : 0;
+  if (logged.length < NEED.food || tr.length < NEED.weigh || spread < NEED.spread) {
+    return { ready: false, logged: logged.length, weighins: tr.length, spread: Math.floor(spread),
+      need: { food: Math.max(0, NEED.food - logged.length), weigh: Math.max(0, NEED.weigh - tr.length), spread: Math.max(0, Math.ceil(NEED.spread - spread)) } };
   }
   const span = Math.max(7, (tr[tr.length - 1].x - tr[0].x) / 864e5);
   const dKg = tr[tr.length - 1].y - tr[0].y;
@@ -41,8 +45,36 @@ export function metabolism(days = 28) {
   // Lifting at ~5 METs, plus cardio (Health's active calories, or an estimate)
   const liftKcal = ws.reduce((n, w) => n + ((LIFT_MET - 1) * kg * workoutStats(w).duration) / 36e5, 0);
   const workoutKcal = (liftKcal + acts.reduce((n, a) => n + activityKcal(a), 0)) / days;
-  const confidence = logged.length >= 21 && tr.length >= 10 ? 'Good' : logged.length >= 14 ? 'Fair' : 'Rough';
+  const confidence = logged.length >= 24 && tr.length >= 12 ? 'Good' : logged.length >= 18 && tr.length >= 7 ? 'Fair' : 'Rough';
   return { ready: true, tdee, intake, dKg, span, workoutKcal, resting: tdee - workoutKcal, logged: logged.length, weighins: tr.length, confidence, workouts: ws.length, activities: acts.length };
+}
+
+/** Weight trend with a smaller line of calories eaten (7-day average) and your maintenance level under it. */
+function metaChart(m, days) {
+  const start = Date.now() - days * 864e5;
+  const weight = trend().filter((p) => p.x >= start);
+  const daily = [];
+  for (let ts = start + 864e5; ts < Date.now(); ts += 864e5) {
+    const k = ymd(ts);
+    if (k === ymd()) continue;
+    const t = dayTotals(k);
+    if (t.entries && t.kcal > 600) daily.push({ x: new Date(k + 'T12:00').getTime(), kcal: t.kcal });
+  }
+  const kcal = daily.map((d) => {
+    const wk = daily.filter((e) => e.x <= d.x && e.x > d.x - 7 * 864e5);
+    return { x: d.x, y: Math.round(wk.reduce((n, e) => n + e.kcal, 0) / wk.length) };
+  });
+  return [
+    lineChart(weight.map((p) => ({ ...p, y: +bodyDisplay(p.y) })), {
+      height: 170, dots: false, fmtY: (v) => (Math.abs(v - Math.round(v)) < 0.05 ? Math.round(v) : v.toFixed(1)), label: 'Weight trend with calories eaten',
+      overlay: { data: kcal, color: COLORS.calories, ref: Math.round(m.tdee), refLabel: `${fmtNum(m.tdee)} kcal` },
+      tip: (p) => `<b>${bodyDisplay(p.raw)} ${bodyUnit()}</b><span>${p.over != null ? `${fmtNum(p.over)} kcal a day · ` : ''}${fmtDate(p.x, { month: 'short', day: 'numeric' })}</span>`,
+    }),
+    h('div.chart-legend',
+      h('span', h('i.key-line', { style: { background: COLORS.gold } }), 'Weight trend'),
+      h('span', h('i.key-line.thin', { style: { background: COLORS.calories } }), 'Calories (7-day avg)'),
+      h('span', h('i.key-line.dash', { style: { borderColor: COLORS.calories } }), `Maintenance ${fmtNum(m.tdee)}`)),
+  ];
 }
 
 export function trendsPage() {
@@ -84,11 +116,16 @@ export function trendsPage() {
             h('div', h('div.energy-v', fmtNum(m.tdee)), h('div.energy-k', 'kcal a day to maintain')),
             h('div.energy-goal', h('div.meta-rest', fmtNum(m.resting)), h('div.energy-k', 'without workouts'))),
           h('p.fine', `You ate ${fmtNum(m.intake)} kcal a day on average and your weight trend moved ${m.dKg >= 0 ? '+' : '−'}${bodyDisplay(Math.abs(m.dKg))} ${bodyUnit()} over ${Math.round(m.span)} days. Your ${m.workouts} gym workout${m.workouts === 1 ? '' : 's'}${m.activities ? ` and ${m.activities} activit${m.activities === 1 ? 'y' : 'ies'}` : ''} burned about ${fmtNum(m.workoutKcal)} kcal a day on top of your resting burn.${m.activities ? '' : ' Import runs and rides on Fitness to sharpen this.'}`),
+          metaChart(m, Math.max(28, Math.min(range, 56))),
           h('div.meta-foot', h('span', `Confidence: ${m.confidence}`), h('span', `${m.logged} days of food · ${m.weighins} weigh-ins`)),
           h('p.fine', 'An estimate that sharpens the more days you log. Eat about 300–500 kcal under maintenance to lose fat, or 200–300 over to build muscle.'))
         : h('section.card.meta-card',
           h('div.empty-title.left', 'Not enough data yet'),
-          h('p.fine', `Carver works out your maintenance calories from what you eat and how your weight moves. It needs at least 10 days of food logs and 2 weigh-ins in the last 4 weeks. ${m.need.food ? `${m.need.food} more day${m.need.food > 1 ? 's' : ''} of food` : ''}${m.need.food && m.need.weigh ? ' and ' : ''}${m.need.weigh ? `${m.need.weigh} more weigh-in${m.need.weigh > 1 ? 's' : ''}` : ''} to go.`)),
+          h('p.fine', 'Carver works out your maintenance calories from what you eat and how your weight moves. Daily weight swings with water, so it waits until there’s enough to see through that.'),
+          [[`Days of food logged`, m.logged, NEED.food], [`Weigh-ins`, m.weighins, NEED.weigh], [`Days between first and last weigh-in`, m.spread, NEED.spread]].map(([l, v, n]) => h('div.need-row',
+            h('div.need-line', h('span', l), h('b' + (v >= n ? '.done' : ''), v >= n ? '✓' : `${v} of ${n}`)),
+            h('div.lb-bar', h('i', { style: { width: Math.min(100, (v / n) * 100) + '%' } })))),
+          h('p.fine', 'Over the last 4 weeks. Log everything you eat for the day, and weigh in a few mornings a week.')),
 
       h('div.section-head', h('h2.section-title', 'Weight')),
       h('section.card.chart-card', lineChart(weight.map((p) => ({ ...p, y: +bodyDisplay(p.y) })), {

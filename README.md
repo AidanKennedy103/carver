@@ -22,7 +22,7 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 - **Progress & trends cards:** your weight and 30-day change, and your maintenance calories, each with a mini graph. Tap one to open Progress or Trends.
 - **Monthly nudges:** set this month's goals, take this month's progress photo, and see last month's recap.
 - **Calendar:** workout days are gold. A week turns gold when you hit your workouts-per-week goal. Tap a day to open that workout.
-- **One-rep max tracker:** pick up to 4 lifts (it starts with your most-logged ones). Each card shows your estimated 1RM (Epley formula), the change since you started, and a mini graph. Tap a card for a full chart and every workout's best set.
+- **Strength Tracking** (one-rep max tracker): pick up to 4 lifts (it starts with your most-logged ones). Each card shows your estimated 1RM (Epley formula), the change since you started, and a mini graph. Tap a card for a full chart and every workout's best set.
 - **Profile:** your name, "carving since", week streak, all-time workouts, weight lifted, records, hours trained, and recent personal records.
 
 ### Workout
@@ -211,4 +211,4 @@ cd scripts && npm install && cd .. && node scripts/make-icons.mjs
 - **Supabase's built-in email sends only a few emails an hour.** Once signed in you stay signed in, so that's fine for a beta. If friends hit the limit, connect a free email service (like Resend) under Authentication → Emails → SMTP.
 - **If both devices change the same setting before syncing**, the device that syncs last keeps its own. Lists (workouts, food, weights, activities, photos) are always merged.
 - **Nutrition values are approximate.** The starter foods use USDA figures (restaurant items use what the chain publishes, and menus change), and scanned foods come from Open Food Facts.
-- **The metabolism estimate needs at least 10 days of food logs and 2 weigh-ins in the last 4 weeks.** It gets more accurate the more consistently you log.
+- **The metabolism estimate needs at least 14 days of food logs and 4 weigh-ins (at least 10 days apart, first to last) in the last 4 weeks.** Once ready, its card shows your weight trend with a smaller line of calories eaten (7-day average) and your maintenance level under it. It gets more accurate the more consistently you log.

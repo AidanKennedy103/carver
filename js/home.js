@@ -239,7 +239,7 @@ function progressCards() {
         ? [h('div.orm-val', fmtNum(m.tdee), h('span.orm-unit', 'kcal')), h('div.orm-sub', 'to maintain')]
         : [h('div.orm-val.dim-val', '—'), h('div.orm-sub', 'Maintenance calories')],
       kcals.length > 1 ? sparkline(kcals, { color: COLORS.calories }) : null,
-      h('div.card-foot', m.ready ? `${m.confidence} estimate · charts` : `${m.need.food + m.need.weigh} more log${m.need.food + m.need.weigh === 1 ? '' : 's'} to estimate`)));
+      h('div.card-foot', m.ready ? `${m.confidence} estimate · charts` : [m.need.food ? `${m.need.food} more food day${m.need.food === 1 ? '' : 's'}` : null, m.need.weigh ? `${m.need.weigh} more weigh-in${m.need.weigh === 1 ? '' : 's'}` : null, !m.need.food && !m.need.weigh && m.need.spread ? `${m.need.spread} more day${m.need.spread === 1 ? '' : 's'} of weigh-ins` : null].filter(Boolean).join(' · ') + ' to estimate')));
 }
 
 // ---------- Rest days ----------
@@ -312,7 +312,7 @@ export function homePage() {
       h('div.section-head', h('h2.section-title', 'Progress & trends')),
       progressCards(),
 
-      // One-rep max
+      // Strength tracking (estimated one-rep max)
       tabOn('workout') ? oneRmSection() : null,
 
       // Calendar
