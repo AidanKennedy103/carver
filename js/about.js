@@ -28,6 +28,7 @@ export function aboutScreen() {
         p('Values are estimates and may be wrong or incomplete.')),
 
       sec('Open-source parts',
+        p('Nutrition data for many foods comes from USDA FoodData Central (public domain).'),
         p('Barcode reading on iPhone uses ZXing (Apache License 2.0). Sign-in and sync use supabase-js (MIT License). Thank you to their authors.')),
 
       h('p.fine.center', 'Carver beta'),

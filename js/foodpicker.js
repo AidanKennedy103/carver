@@ -191,7 +191,7 @@ export function amountSheet({ food: f, date = ymd(), meal = null, entry = null, 
   function update() {
     const grams = qty * opts[si].g;
     const n = nutrientsFor(f, grams);
-    preview.replaceChildren(
+    fill(preview,
       h('div.preview-kcal', h('b', r0(n.kcal).toLocaleString()), ' kcal', h('span.muted', ` · ${r0(grams)} g`)),
       h('div.preview-macros', MACROS.map((m) => h('div.pm', h('i.swatch', { style: { background: MACRO_COLOR[m.k] } }), h('b', `${r1(n[m.k])} g`), h('span', m.name)))),
       highlights(n),

@@ -6,6 +6,8 @@
 
 import { MORE_FOODS } from './foods-more.js';
 import { EXTRA_FOODS } from './foods-extra.js';
+import { USDA_FILL } from './foods-usda-fill.js';
+import { USDA_FOODS } from './foods-usda.js';
 
 export const MACROS = [
   { k: 'p', name: 'Protein', unit: 'g', kcal: 4 },
@@ -209,7 +211,9 @@ const BASE_FOODS = [
   F('spirits', 'Spirits (vodka, whisky…)', '🥃', 'Drinks', [['1 shot', 42]], { kcal: 231, p: 0, c: 0, f: 0 }),
 ];
 
-export const FOODS = [...BASE_FOODS, ...MORE_FOODS, ...EXTRA_FOODS];
+export const FOODS = [...BASE_FOODS, ...MORE_FOODS, ...EXTRA_FOODS, ...USDA_FOODS];
+// Fill in nutrients our entries were missing from USDA data (our own numbers win)
+for (const f of FOODS) if (USDA_FILL[f.id]) f.n = { ...USDA_FILL[f.id], ...f.n };
 
 /** Everyday basics (chicken breast, eggs, rice…): search lists these first among equal matches. */
 export const STAPLES = new Set(BASE_FOODS.filter((f) => !['Meals', 'Snacks', 'Drinks'].includes(f.cat)).map((f) => f.id));
