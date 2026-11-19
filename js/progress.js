@@ -8,7 +8,8 @@ import { photos, addPhoto, deletePhoto, loadInto } from './photos.js';
 import { monthlySection } from './monthly.js';
 import { account, enabled as cloudOn } from './cloud.js';
 import { sharePhoto } from './groups.js';
-import { compSection, measureSection, weightGoalText } from './bodycomp.js';
+import { compSection, measureSection, weightGoalText, metricChart } from './bodycomp.js';
+import { importHealth } from './health.js';
 import { goalsButton } from './goals.js';
 
 const fmtW = (kg) => `${toDisplay(kg)} ${unit()}`;
@@ -50,13 +51,10 @@ export function progressPage({ tab = false } = {}) {
           c30 != null ? h('div.energy-goal', h('div.weight-change', signed(c30)), h('div.energy-k', 'last 30 days')) : null)
           : h('div.empty-text.left', 'Log your weight to see your trend. Weighing in most mornings gives the clearest picture.'),
         weightGoalText() ? h('div.weight-goal', icon('target', 15), weightGoalText()) : null,
-        recent.length > 1 ? lineChart(recent.map((p) => ({ ...p, y: +toDisplay(p.y) })), {
-          height: 140, dots: false, fmtY: (v) => Math.round(v), label: 'Weight trend, last 90 days',
-          tip: (p) => `<b>${toDisplay(p.raw)} ${unit()}</b><span>Trend ${p.y} · ${fmtDate(p.x, { month: 'short', day: 'numeric' })}</span>`,
-        }) : null,
+        metricChart(trend()),
         h('div.btn-pair',
           h('button.btn.gold', { onclick: logWeightSheet }, icon('plus', 18), 'Log weight'),
-          h('button.btn.dark', { onclick: importSheet }, 'Import'))),
+          h('button.btn.dark', { onclick: importSheet }, icon('scale', 18), 'Scale & Health'))),
 
       compSection(),
 

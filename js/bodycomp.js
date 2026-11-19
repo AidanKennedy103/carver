@@ -31,7 +31,6 @@ export function compSection() {
   const fat = latest(list, 'fat');
   const w = latestWeight();
   const goal = state.goals.bodyFat;
-  const pts = list.filter((x) => x.fat != null && x.ts > Date.now() - 180 * 864e5).map((x) => ({ x: x.ts, y: x.fat }));
   const since = first30(list, 'fat');
   return [
     h('div.section-head', h('h2.section-title', 'Body composition'), h('button.link', { onclick: logComp }, '+ Add')),
@@ -40,7 +39,6 @@ export function compSection() {
         h('div', h('div.energy-v', `${Math.round(fat.fat * 10) / 10}`, h('span.orm-unit', '% fat')), h('div.energy-k', `${fmtDate(fat.ts, { month: 'short', day: 'numeric' })}${goal ? ` · goal ${goal}%` : ''}`)),
         w ? h('div.energy-goal', h('div.weight-change', `${bodyDisplay(w.kg * (1 - fat.fat / 100))} ${bodyUnit()}`), h('div.energy-k', 'lean mass')) : null) : null,
       since && fat && since !== fat ? h('p.fine', `${fat.fat - since.fat > 0 ? '+' : ''}${Math.round((fat.fat - since.fat) * 10) / 10}% body fat in the last 30 days.`) : null,
-      pts.length > 1 ? lineChart(pts, { height: 120, dots: pts.length < 30, fmtY: (v) => `${Math.round(v)}%`, label: 'Body fat, last 6 months', tip: (p) => `<b>${p.y}%</b><span>${fmtDate(p.x, { month: 'short', day: 'numeric' })}</span>` }) : null,
       h('div.comp-grid', COMP.filter((c) => c.k !== 'fat').map((c) => { const x = latest(list, c.k); return x ? h('div.tile', h('div.tile-v', showComp(c, x[c.k])), h('div.tile-k', c.label)) : null; })))
       : h('button.card.empty-plan-row', { onclick: logComp }, icon('chart', 18), h('span', 'Add your body fat or a smart-scale reading')),
   ];
@@ -68,6 +66,60 @@ function logComp() {
     commit((st) => { st.body.comp = [...(st.body.comp || []), r].sort((a, b) => a.ts - b.ts); });
     s.close(); toast('Saved');
   }
+}
+
+// ---------- One chart for every body metric ----------
+
+/** Lean mass at each body-fat reading, using the weigh-in closest to it (within 3 days). */
+function leanPoints() {
+  const ws = state.body.weights;
+  if (!ws.length) return [];
+  return comp().filter((c) => c.fat != null).map((c) => {
+    let best = null;
+    for (const w of ws) if (Math.abs(w.ts - c.ts) < 3 * 864e5 && (!best || Math.abs(w.ts - c.ts) < Math.abs(best.ts - c.ts))) best = w;
+    return best ? { x: c.ts, y: best.kg * (1 - c.fat / 100) } : null;
+  }).filter(Boolean);
+}
+
+/** The metrics you have at least two readings of: { k, label, pts (kg/%/cm), show, fmt }. */
+export function bodyMetrics(trendPts) {
+  const mass = (v) => +bodyDisplay(v), pct = (v) => Math.round(v * 10) / 10;
+  const out = [
+    { k: 'weight', label: 'Weight', pts: trendPts, show: mass, unit: bodyUnit() },
+    { k: 'fat', label: 'Body fat', pts: comp().filter((x) => x.fat != null).map((x) => ({ x: x.ts, y: x.fat })), show: pct, unit: '%' },
+    { k: 'lean', label: 'Lean mass', pts: leanPoints(), show: mass, unit: bodyUnit() },
+    { k: 'muscle', label: 'Muscle', pts: comp().filter((x) => x.muscle != null).map((x) => ({ x: x.ts, y: x.muscle })), show: mass, unit: bodyUnit() },
+    { k: 'water', label: 'Water', pts: comp().filter((x) => x.water != null).map((x) => ({ x: x.ts, y: x.water })), show: pct, unit: '%' },
+  ];
+  if (state.settings.measure) for (const [k, label] of SPOTS) {
+    const pts = measures().filter((x) => x[k] != null).map((x) => ({ x: x.ts, y: x[k] }));
+    out.push({ k, label, pts, show: (cm) => Math.round((imperial() ? cm / 2.54 : cm) * 10) / 10, unit: lenUnit() });
+  }
+  return out.filter((m) => m.pts.length > 1);
+}
+
+const RANGES = [['3M', 90], ['1Y', 365], ['All', 1e5]];
+/** The chart with a chip for each metric and a time range. Remembers your pick. */
+export function metricChart(trendPts) {
+  const list = bodyMetrics(trendPts);
+  if (!list.length) return null;
+  const wrap = h('div.metric-chart');
+  function draw() {
+    const k = list.some((m) => m.k === state.settings.bodyMetric) ? state.settings.bodyMetric : list[0].k;
+    const days = state.settings.bodyRange || 90;
+    const m = list.find((x) => x.k === k);
+    const pts = m.pts.filter((p) => p.x > Date.now() - days * 864e5);
+    const shown = (pts.length > 1 ? pts : m.pts).map((p) => ({ ...p, y: m.show(p.y) }));
+    const first = shown[0].y, last = shown[shown.length - 1].y, d = Math.round((last - first) * 10) / 10;
+    fill(wrap,
+      list.length > 1 ? h('div.chips.tight.metric-chips', list.map((x) => h('button.chip' + (x.k === k ? '.on' : ''), { onclick: () => { state.settings.bodyMetric = x.k; commit(); } }, x.label))) : null,
+      h('div.metric-now', h('b', `${last}`), h('span', ` ${m.unit}`), shown.length > 1 ? h('span.metric-d' + (d === 0 ? '' : ''), ` ${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d)} ${m.unit} ${pts.length > 1 ? `in ${RANGES.find((r) => r[1] === days)?.[0] === 'All' ? 'all time' : RANGES.find((r) => r[1] === days)?.[0] === '1Y' ? 'a year' : '3 months'}` : 'overall'}`) : null),
+      lineChart(shown, { height: 150, dots: shown.length < 30, fmtY: (v) => (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10), label: `${m.label} over time`,
+        tip: (p) => `<b>${p.y} ${m.unit}</b><span>${fmtDate(p.x, { month: 'short', day: 'numeric', year: 'numeric' })}</span>` }),
+      h('div.segment.metric-range', RANGES.map(([l, v]) => h('button' + (v === days ? '.on' : ''), { onclick: () => { state.settings.bodyRange = v; commit(); } }, l))));
+  }
+  draw();
+  return wrap;
 }
 
 // ---------- Measurements (optional) ----------

@@ -150,6 +150,7 @@ export function openSettings() {
     h('p.fine', account() ? 'Carver is a free beta. Your data is saved on this phone and in your account. The export is a JSON file of everything except progress photos.' : 'Carver is a free beta. Without an account, everything is saved only on this phone, so export a backup now and then. Progress photos aren’t in the backup.'),
     h('label.form-label', 'Bring in data from other apps'),
     h('div.group',
+      h('button.group-row', { onclick: () => import('./health.js').then((m) => m.importHealth()) }, h('span', 'Apple Health (steps, sleep, heart, weight, cardio)'), h('span.row-val', 'ZIP')),
       h('button.group-row', { onclick: () => workIn.click() }, h('span', 'Workouts from Hevy, Strong, 5/3/1 apps…'), h('span.row-val', 'CSV')),
       h('button.group-row', { onclick: () => mfpIn.click() }, h('span', 'Food and weight from MyFitnessPal'), h('span.row-val', 'ZIP')),
       h('button.group-row', { onclick: () => cronIn.click() }, h('span', 'Food from Cronometer'), h('span.row-val', 'CSV'))),

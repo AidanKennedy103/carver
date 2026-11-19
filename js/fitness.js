@@ -20,7 +20,7 @@ export const ACTIVITY_TYPES = [
   { id: 'yoga', name: 'Yoga', icon: '🧘', met: 2.5, words: ['yoga', 'pilates', 'stretch', 'flexibility', 'cooldown', 'mind'] },
   { id: 'other', name: 'Other', icon: '⭐', met: 5, words: [] },
 ];
-const STRENGTH = /strength|weight ?lift|weights|core training/i;   // logged in the Workout tab instead
+export const STRENGTH = /strength|weight ?lift|weights|core training/i;   // logged in the Workout tab instead
 export const activityType = (id) => ACTIVITY_TYPES.find((t) => t.id === id) || ACTIVITY_TYPES[ACTIVITY_TYPES.length - 1];
 
 const MI = 1609.344;
@@ -48,6 +48,7 @@ export function saveActivity(a) {
     s.activities.sort((x, y) => y.start - x.start);
   });
 }
+export function importActivities(list) { return addImported(list); }
 function addImported(list) {
   let added = 0;
   commit((s) => {
@@ -64,7 +65,7 @@ function addImported(list) {
 
 // ---------- Reading pasted text ----------
 
-function typeFrom(text) {
+export function typeFrom(text) {
   const t = text.toLowerCase();
   for (const ty of ACTIVITY_TYPES) if (ty.words.some((w) => t.includes(w))) return ty.id;
   return null;

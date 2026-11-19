@@ -1,8 +1,9 @@
 // Body weight: log it, import it (Apple Health via a Shortcut, or a Bluetooth
 // scale), and read the trend.
 
-import { h, icon, sheet, toast, actionSheet, confirmBox, fmtDate } from './ui.js';
+import { h, fill, icon, sheet, toast, actionSheet, confirmBox, fmtDate } from './ui.js';
 import { state, commit, uid, bodyDisplay as toDisplay, bodyFromDisplay as fromDisplay, bodyUnit as unit, LB_PER_KG } from './store.js';
+import { importHealth } from './health.js';
 
 export const weights = () => state.body.weights;   // oldest first
 
@@ -120,11 +121,20 @@ export function importSheet() {
   const box = h('textarea.field.paste-box', { rows: 4, placeholder: 'Paste weights here, e.g.\n2026-11-14 182.4\n2026-11-13 183.0' });
   const bt = 'bluetooth' in navigator;
   const s = sheet(h('div.form',
-    h('div.sheet-head', h('span'), h('div.sheet-title', 'Import weight'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
+    h('div.sheet-head', h('span'), h('div.sheet-title', 'Scale & Health'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
 
-    h('label.form-label', 'From Apple Health'),
-    h('p.fine', 'iPhone web apps can’t read Health directly, so a Shortcut copies your weights and you paste them here. Smart scales (Withings, Renpho, Eufy and others) sync to Health, so this covers them too.'),
-    h('button.btn.gold.wide', {
+    h('label.form-label', 'Apple Health'),
+    h('button.btn.gold.wide', { onclick: () => { s.close(); importHealth(); } }, 'Import Apple Health export'),
+    h('p.fine', 'Health app → your picture → Export All Health Data, save it to Files, then pick it here. Brings in every weigh-in and body-fat reading (Withings, Renpho, Eufy and other smart scales sync to Health), plus steps, sleep and heart data.'),
+
+    h('label.form-label', 'Bluetooth scale'),
+    bt
+      ? h('button.btn.dark.wide', { onclick: () => { s.close(); connectScale(); } }, icon('scale', 18), 'Connect a scale')
+      : h('p.fine', 'Safari on iPhone can’t use Bluetooth in web apps. Scales that use the standard Bluetooth weight or body-composition service (including the Carver scale) connect in Chrome on Android or a computer, or the free Bluefy browser on iPhone. Otherwise, let your scale’s app sync to Apple Health and import above.'),
+
+    h('label.form-label', 'Quick paste'),
+    h('p.fine', 'Or copy recent weights with a Shortcut and paste them.'),
+    h('button.btn.dark.wide', {
       onclick: async () => {
         try { const t = await navigator.clipboard.readText(); box.value = t; doImport(t); }
         catch { toast('Tap the box and paste instead'); box.focus(); }
@@ -142,11 +152,6 @@ export function importSheet() {
         h('li', 'Run it, open Carver, tap Paste from Health. Add it to your Home Screen or run it after weighing in.'),
       ),
       h('p.fine', 'Weights already in Carver are skipped, so pasting the same list twice is fine.')),
-
-    h('label.form-label', 'Bluetooth scale'),
-    bt
-      ? h('button.btn.dark.wide', { onclick: () => { s.close(); connectScale(); } }, icon('activity', 18), 'Connect a scale')
-      : h('p.fine', 'Safari on iPhone doesn’t support Bluetooth for web apps. If your scale uses the standard Bluetooth weight service, it connects in Chrome on Android or the Bluefy browser on iPhone. Otherwise, let the scale’s own app sync to Apple Health and use the Shortcut above.'),
   ), { full: false });
 
   function doImport(text) {
@@ -164,43 +169,85 @@ export function importSheet() {
  * Standard Bluetooth Weight Scale service (0x181D). Many scales use their own
  * private protocol instead; those need their app + Apple Health.
  */
+/**
+ * Body Composition Measurement (0x2A9C): body fat %, then optional fields by flag.
+ * Returns { fat, muscle (kg), water (%), weight (kg), lean (kg) }.
+ */
+export function parseBodyComp(d) {
+  const flags = d.getUint16(0, true), imperial = flags & 1;
+  const mass = (raw) => (imperial ? (raw * 0.01) / LB_PER_KG : raw * 0.005);
+  const out = { fat: d.getUint16(2, true) / 10 };
+  let p = 4;
+  if (flags & 0x2) p += 7;   // time stamp
+  if (flags & 0x4) p += 1;   // user id
+  if (flags & 0x8) p += 2;   // basal metabolism
+  if (flags & 0x10) p += 2;  // muscle %
+  if (flags & 0x20) { out.muscle = mass(d.getUint16(p, true)); p += 2; }
+  if (flags & 0x40) { out.lean = mass(d.getUint16(p, true)); p += 2; }
+  if (flags & 0x80) p += 2;  // soft lean mass
+  if (flags & 0x100) { out.waterKg = mass(d.getUint16(p, true)); p += 2; }
+  if (flags & 0x200) p += 2; // impedance
+  if (flags & 0x400) { out.weight = mass(d.getUint16(p, true)); p += 2; }
+  if (out.waterKg && out.weight) out.water = Math.round((out.waterKg / out.weight) * 1000) / 10;
+  return out;
+}
+/** Weight Measurement (0x2A9D): kg. */
+export function parseWeight(d) {
+  const raw = d.getUint16(1, true);
+  return d.getUint8(0) & 1 ? (raw * 0.01) / LB_PER_KG : raw * 0.005;
+}
+
+/** Any scale with the standard Bluetooth weight (0x181D) or body composition (0x181B) service. */
 export async function connectScale() {
   let dev;
   try {
-    dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [0x181d] }], optionalServices: [0x181b] });
+    dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [0x181d] }, { services: [0x181b] }, { namePrefix: 'Carver' }], optionalServices: [0x181d, 0x181b] });
   } catch (e) { if (e.name !== 'NotFoundError') toast('Bluetooth was cancelled or isn’t available'); return; }
   const status = h('div.scale-status', 'Connecting…');
   const val = h('div.energy-v', '—');
-  let reading = null, timer;
+  const extra = h('div.scale-extra');
+  let reading = null, compRead = null, timer;
   const s = sheet(h('div.form',
     h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', dev.name || 'Scale'), h('span')),
-    h('div.scale-box', val, h('div.energy-k', unit()), status),
+    h('div.scale-box', val, h('div.energy-k', unit()), extra, status),
   ), { onClose: () => { clearTimeout(timer); timer = 0; try { dev.gatt.disconnect(); } catch { /* fine */ } } });
+  // A reading that stays put for 2.5 seconds is the final one
+  const settle = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (reading) addWeight(reading, Date.now(), 'scale');
+      if (compRead?.fat) commit((st) => { st.body.comp = [...(st.body.comp || []), { id: uid(), ts: Date.now(), source: 'scale', fat: compRead.fat, ...(compRead.muscle ? { muscle: compRead.muscle } : {}), ...(compRead.water ? { water: compRead.water } : {}) }]; });
+      status.textContent = 'Saved';
+      toast(`Logged ${reading ? `${toDisplay(reading)} ${unit()}` : ''}${compRead?.fat ? `${reading ? ', ' : ''}${compRead.fat}% body fat` : ''} from your scale`);
+      setTimeout(() => s.close(), 900);
+    }, 2500);
+  };
   try {
     const server = await dev.gatt.connect();
-    const ch = await (await server.getPrimaryService(0x181d)).getCharacteristic(0x2a9d);
-    await ch.startNotifications();
+    let any = false;
+    try {
+      const ch = await (await server.getPrimaryService(0x181d)).getCharacteristic(0x2a9d);
+      await ch.startNotifications(); any = true;
+      ch.addEventListener('characteristicvaluechanged', (e) => {
+        const kg = parseWeight(e.target.value);
+        if (!kg) return;
+        reading = kg; val.textContent = toDisplay(kg); status.textContent = 'Hold still…'; settle();
+      });
+    } catch { /* no weight service */ }
+    try {
+      const ch = await (await server.getPrimaryService(0x181b)).getCharacteristic(0x2a9c);
+      await ch.startNotifications(); any = true;
+      ch.addEventListener('characteristicvaluechanged', (e) => {
+        compRead = parseBodyComp(e.target.value);
+        if (compRead.weight && !reading) { reading = compRead.weight; val.textContent = toDisplay(reading); }
+        fill(extra, [`${compRead.fat}% fat`, compRead.muscle ? `${toDisplay(compRead.muscle)} ${unit()} muscle` : null, compRead.water ? `${compRead.water}% water` : null].filter(Boolean).join(' · '));
+        settle();
+      });
+    } catch { /* no body composition service */ }
+    if (!any) throw new Error('none');
     status.textContent = 'Step on the scale';
-    ch.addEventListener('characteristicvaluechanged', (e) => {
-      const d = e.target.value;
-      const imperial = d.getUint8(0) & 1;
-      const raw = d.getUint16(1, true);
-      const kg = imperial ? (raw * 0.01) / LB_PER_KG : raw * 0.005;
-      if (!kg) return;
-      reading = kg;
-      val.textContent = toDisplay(kg);
-      status.textContent = 'Hold still…';
-      // A reading that stays put for 2 seconds is the final one
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        addWeight(reading, Date.now(), 'scale');
-        status.textContent = 'Saved';
-        toast(`Logged ${toDisplay(reading)} ${unit()} from your scale`);
-        setTimeout(() => s.close(), 900);
-      }, 2000);
-    });
   } catch {
-    status.textContent = 'This scale doesn’t use the standard weight service. Use its app with Apple Health instead.';
+    status.textContent = 'This scale doesn’t use the standard Bluetooth services. Use its app with Apple Health instead.';
   }
 }
 

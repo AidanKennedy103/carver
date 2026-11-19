@@ -24,7 +24,8 @@ const fresh = () => ({
   checks: {},                      // custom daily goals: { 'YYYY-MM-DD': { goalId: amount } }
   monthly: {},                     // { 'YYYY-MM': { goals: [], note } }
   program: null,                   // a running program (5/3/1 or Coach): see program531.js, coach.js
-  recovery: {},                    // morning check-ins: { 'YYYY-MM-DD': { sleep, quality, sore, energy } }
+  recovery: {},
+  health: { days: {} },             // from an Apple Health export: { days: { 'YYYY-MM-DD': { steps, active, sleep, deep, rem, rhr, hrv, vo2 } }, last }                    // morning check-ins: { 'YYYY-MM-DD': { sleep, quality, sore, energy } }
 });
 
 // Older saves miss newer sections: fill them in (one level deep)
