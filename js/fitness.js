@@ -254,6 +254,33 @@ export function dayPoints(key) {
 }
 export const pointsGoal = () => state.goals.movePts || 30;
 
+// Weekly points against the WHO guideline for adults: 150–300 minutes of moderate
+// activity a week (or 75–150 vigorous) is about 45–90 points.
+export const LEVELS = [
+  { name: 'Getting started', min: 0, day: 5, sub: 'Under the WHO minimum for health' },
+  { name: 'Active', min: 45, day: 10, sub: 'Meets the WHO guideline (150 min a week)' },
+  { name: 'Very active', min: 90, day: 20, sub: 'Double the minimum: extra health benefits' },
+  { name: 'Training hard', min: 180, day: 35, sub: 'Regular hard training' },
+  { name: 'Athlete', min: 300, day: 50, sub: 'Training like an athlete' },
+];
+export const levelOf = (weekPts) => [...LEVELS].reverse().find((l) => weekPts >= l.min);
+
+/** Pick a daily points goal by level (or type your own). */
+export function pointsGoalSheet(after) {
+  const cur = pointsGoal();
+  const s = sheet(h('div.form',
+    h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', 'Activity goal'), h('span')),
+    h('p.fine', 'Points measure effort: about 25 for a 30-minute run, an hour of lifting or 10,000 steps. Pick the level you want to reach each week.'),
+    h('div.group', LEVELS.slice(1).map((l) => h('button.group-row.level-row' + (cur === l.day ? '.on' : ''), { onclick: () => { commit((st) => { st.goals.movePts = l.day; }); s.close(); after?.(); } },
+      h('span.tab-pick-text', h('span', l.name), h('span.tab-pick-sub', `${l.sub} · ${l.min}+ a week`)),
+      h('span.row-val', `${l.day} a day`)))),
+    h('button.btn.dark.wide', { onclick: async () => {
+      const { promptBox } = await import('./ui.js');
+      const v = parseInt(await promptBox('Points a day', String(cur), { placeholder: '30' }), 10);
+      if (v > 0) { commit((st) => { st.goals.movePts = v; }); s.close(); after?.(); }
+    } }, 'Custom number')));
+}
+
 // ---------- The page ----------
 
 function activityRow(a) {
@@ -279,7 +306,20 @@ function pointsCard() {
         h('div.pts-title', 'Activity points'),
         h('div.pts-sub', p.total >= goal ? 'Goal hit today.' : `${goal - p.total} to go today.`),
         h('div.pts-parts', [p.steps ? `Steps ${p.steps}` : null, p.cardio ? `Cardio ${p.cardio}` : null, p.lifts ? `Lifting ${p.lifts}` : null].filter(Boolean).join(' · ') || 'Steps, cardio and lifting all count.'))),
-    h('div.pts-week', week.map((d) => h('div.pts-day' + (d.v >= goal ? '.hit' : ''), h('i', h('b', { style: { height: `${Math.min(100, (d.v / goal) * 100)}%` } })), h('span', 'MTWTFSS'[(new Date(d.k + 'T12:00').getDay() + 6) % 7])))));
+    h('div.pts-week', week.map((d) => h('div.pts-day' + (d.v >= goal ? '.hit' : ''), h('i', h('b', { style: { height: `${Math.min(100, (d.v / goal) * 100)}%` } })), h('span', 'MTWTFSS'[(new Date(d.k + 'T12:00').getDay() + 6) % 7])))),
+    levelBar(week.reduce((n, d) => n + d.v, 0)),
+    h('button.link.pts-goal', { onclick: () => pointsGoalSheet() }, `Goal: ${goal} a day (${levelOf(goal * 7).name.toLowerCase()})`, icon('back', 14)));
+}
+
+/** Where the last 7 days put you, from Getting started to Athlete. */
+function levelBar(weekPts) {
+  const top = 360, lv = levelOf(weekPts);
+  return h('div.lvl',
+    h('div.lvl-head', h('span', 'Last 7 days: ', h('b', `${weekPts} points`)), h('b.lvl-name', lv.name)),
+    h('div.lvl-bar',
+      LEVELS.map((l, i) => h('i.lvl-seg' + (l === lv ? '.on' : ''), { style: { left: `${(l.min / top) * 100}%`, width: `${(((LEVELS[i + 1]?.min ?? top) - l.min) / top) * 100}%` } })),
+      h('span.lvl-mark', { style: { left: `${Math.min(100, (weekPts / top) * 100)}%` } })),
+    h('div.lvl-sub', lv.sub));
 }
 
 /** Steps from Apple Health: today and the last 7 days. */

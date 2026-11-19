@@ -1587,3 +1587,19 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .wdot i.short { border: 2px solid var(--gold); width: 6px; height: 6px; }
 .wdot i.none { background: var(--surface-2); }
 .wdot i.future { background: transparent; border: 1px dashed var(--line); width: 8px; height: 8px; }
+
+/* Fitness: where your week sits, Getting started to Athlete */
+.lvl { margin-top: 14px; padding-top: 12px; border-top: .5px solid var(--line); }
+.lvl-head { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.lvl-head b { color: var(--text); }
+.lvl-name { color: var(--gold) !important; }
+.lvl-bar { position: relative; height: 8px; }
+.lvl-seg { position: absolute; top: 0; height: 100%; background: var(--surface-2); border-right: 2px solid var(--surface); }
+.lvl-seg:first-child { border-radius: 4px 0 0 4px; }
+.lvl-seg:last-of-type { border-radius: 0 4px 4px 0; border-right: 0; }
+.lvl-seg.on { background: rgba(227, 176, 75, .45); }
+.lvl-mark { position: absolute; top: -4px; width: 4px; height: 16px; margin-left: -2px; border-radius: 2px; background: var(--gold); }
+.lvl-sub { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.pts-goal { display: inline-flex; align-items: center; gap: 2px; margin-top: 10px; font-size: 14px; }
+.pts-goal svg { transform: scaleX(-1); }
+.level-row.on .row-val { color: var(--gold); font-weight: 700; }
