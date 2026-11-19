@@ -393,49 +393,66 @@ export function progressAfter(w) {
   return changes;
 }
 
-// ---------- Figures: what each program looks like at a glance ----------
+// ---------- Program graphics: one simple shape per program ----------
+//
+// Splits are a ring cut into their day types (whole for full body, halves for
+// upper/lower, thirds for push/pull/legs), with days a week in the middle.
+// 5/3/1 is three rising bars; the custom block is three sliders.
 
-const TONE = ['#e3b04b', '#b8862a', '#7d5c1f'];   // one colour per day type
-// Week at a glance: [label, tone] per day, null = rest
-const WEEKS = {
-  fb3: [['F', 0], null, ['F', 0], null, ['F', 0], null, null],
-  ul4: [['U', 0], ['L', 1], null, ['U', 0], ['L', 1], null, null],
-  ppl: [['Pu', 0], ['Pl', 1], ['Lg', 2], ['Pu', 0], ['Pl', 1], ['Lg', 2], null],
-  db3: [['A', 0], null, ['B', 1], null, ['A', 0], null, null],
+const SHADES = ['url(#pg-a)', 'url(#pg-b)', 'url(#pg-c)'];
+const GRAPHICS = {
+  fb3: { ring: [[0, 360, 0]], center: '3', sub: 'Full body', week: [1, 0, 1, 0, 1, 0, 0] },
+  ul4: { ring: [[270, 90, 0], [90, 270, 1]], center: '4', sub: 'Upper · Lower', week: [1, 1, 0, 1, 1, 0, 0] },
+  ppl: { ring: [[0, 120, 0], [120, 240, 1], [240, 360, 2]], center: '6', sub: 'Push · Pull · Legs', week: [1, 1, 1, 1, 1, 1, 0] },
+  db3: { ring: [[180, 360, 0], [0, 180, 1]], center: 'db', sub: 'Dumbbells A · B', week: [1, 0, 1, 0, 1, 0, 0] },
+  531: { bars: true, sub: '5s · 3s · 1s', week: [1, 1, 0, 1, 1, 0, 0] },
+  custom: { sliders: true, sub: 'Linear · DUP · Wave · RPE', week: null },
 };
 
-/** A small SVG: the training week as bars (splits), or the load over a block as a wave (5/3/1, your own). */
-export function programFigure(id, { wide = false } = {}) {
-  const W = wide ? 340 : 150, H = wide ? 110 : 110;
-  let body = '';
-  if (WEEKS[id]) {
-    const cols = 7, gap = 3, pad = 2, bw = (W - pad * 2 - gap * (cols - 1)) / cols, base = H - 18;
-    WEEKS[id].forEach((d, i) => {
-      const x = pad + i * (bw + gap);
-      if (d) {
-        body += `<rect x="${x}" y="6" width="${bw}" height="${base - 6}" rx="5" fill="${TONE[d[1]]}"/>`;
-        const label = wide ? ({ F: 'Full', U: 'Upper', L: 'Lower', Pu: 'Push', Pl: 'Pull', Lg: 'Legs' }[d[0]] || d[0]) : d[0];
-        body += `<text x="${x + bw / 2}" y="22" text-anchor="middle" font-size="${wide ? 11 : d[0].length > 1 ? 10 : 12}" font-weight="800" fill="#17110a">${label}</text>`;
-      } else body += `<rect x="${x}" y="${base - 10}" width="${bw}" height="10" rx="4" fill="#2e2e33"/>`;
-      body += `<text x="${x + bw / 2}" y="${H - 3}" text-anchor="middle" font-size="10" font-weight="600" fill="#8e8e93">${'MTWTFSS'[i]}</text>`;
+const pt = (a, r) => [50 + r * Math.sin((a * Math.PI) / 180), 50 - r * Math.cos((a * Math.PI) / 180)];
+/** An arc of the ring from angle a0 to a1 (degrees clockwise from 12 o'clock). */
+function arc(a0, a1, r = 36) {
+  if (a1 - a0 >= 360) return `<circle cx="50" cy="50" r="${r}"/>`;
+  const gap = 30, s = a0 + gap / 2, e = (a1 < a0 ? a1 + 360 : a1) - gap / 2;
+  const [x0, y0] = pt(s, r), [x1, y1] = pt(e, r);
+  return `<path d="M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${e - s > 180 ? 1 : 0} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}"/>`;
+}
+
+function graphicSvg(g) {
+  let out = '';
+  if (g.ring) {
+    out += `<circle cx="50" cy="50" r="36" fill="none" stroke="#232326" stroke-width="13"/>`;
+    for (const [a0, a1, tone] of g.ring) out += `<g fill="none" stroke="${SHADES[tone]}" stroke-width="13" stroke-linecap="round">${arc(a0, a1)}</g>`;
+    out += g.center === 'db'
+      ? `<g transform="translate(36 43)" fill="#e3b04b"><rect x="0" y="2" width="4" height="10" rx="1.5"/><rect x="4.5" y="3.5" width="2.5" height="7" rx="1"/><rect x="7" y="6" width="14" height="2" rx="1"/><rect x="21" y="3.5" width="2.5" height="7" rx="1"/><rect x="24" y="2" width="4" height="10" rx="1.5"/></g>`
+      : `<text x="50" y="52" text-anchor="middle" font-size="24" font-weight="800" fill="#f2e3bd">${g.center}</text><text x="50" y="64" text-anchor="middle" font-size="8" font-weight="600" fill="#8e8e93" letter-spacing=".5">DAYS</text>`;
+  } else if (g.bars) {
+    [[22, 0.42, 2], [44, 0.66, 1], [66, 0.9, 0]].forEach(([x, v, tone]) => {
+      const hgt = 70 * v;
+      out += `<rect x="${x - 8}" y="${86 - hgt}" width="16" height="${hgt}" rx="8" fill="${SHADES[tone]}"/>`;
     });
   } else {
-    // load over the weeks: 5/3/1 climbs in 3s with a deload; your own block rises in waves to a test
-    const pts = id === '531' ? [0.62, 0.72, 0.82, 0.42, 0.67, 0.77, 0.87, 0.46] : [0.5, 0.56, 0.62, 0.38, 0.6, 0.67, 0.74, 0.44, 0.72, 0.8, 0.88, 1];
-    const n = pts.length, gap = 3, pad = 2, bw = (W - pad * 2 - gap * (n - 1)) / n, top = 8, base = H - 18;
-    pts.forEach((v, i) => {
-      const x = pad + i * (bw + gap), hgt = (base - top) * v;
-      const low = (id === '531' && i % 4 === 3) || (id !== '531' && i % 4 === 3);
-      const test = id !== '531' && i === n - 1;
-      body += `<rect x="${x}" y="${base - hgt}" width="${bw}" height="${hgt}" rx="4" fill="${test ? '#f5f5f7' : low ? '#3a3a40' : TONE[i % 4 === 3 ? 2 : i < n / 2 ? 1 : 0]}"/>`;
+    [[30, 0.35], [50, 0.75], [70, 0.5]].forEach(([x, v]) => {
+      const ky = 84 - 68 * v;
+      out += `<rect x="${x - 2.5}" y="16" width="5" height="68" rx="2.5" fill="#232326"/><rect x="${x - 2.5}" y="${ky}" width="5" height="${84 - ky}" rx="2.5" fill="url(#pg-a)"/>`;
+      out += `<circle cx="${x}" cy="${ky}" r="8" fill="#f2e3bd"/>`;
     });
-    const line = pts.map((v, i) => `${i ? 'L' : 'M'}${(pad + i * (bw + gap) + bw / 2).toFixed(1)} ${(base - (base - top) * v - 6).toFixed(1)}`).join(' ');
-    body += `<path d="${line}" fill="none" stroke="#f5f5f7" stroke-opacity=".55" stroke-width="1.5" stroke-linejoin="round" stroke-dasharray="3 3"/>`;
-    body += `<text x="${pad}" y="${H - 3}" font-size="10" font-weight="600" fill="#8e8e93">week 1</text><text x="${W - pad}" y="${H - 3}" text-anchor="end" font-size="10" font-weight="600" fill="#8e8e93">${id === '531' ? 'week 8' : 'test'}</text>`;
   }
-  const el = h('div.pfig' + (wide ? '.wide' : ''));
-  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Program at a glance">${body}</svg>`;
-  return el;
+  return `<svg viewBox="0 0 100 100" aria-hidden="true"><defs>
+    <linearGradient id="pg-a" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6d27a"/><stop offset="1" stop-color="#d49a35"/></linearGradient>
+    <linearGradient id="pg-b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c8922f"/><stop offset="1" stop-color="#9c7024"/></linearGradient>
+    <linearGradient id="pg-c" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8c6a2a"/><stop offset="1" stop-color="#5f4719"/></linearGradient>
+  </defs>${out}</svg>`;
+}
+
+/** The graphic at the top of a program tile (or, wide, of its page, with the week below). */
+export function programFigure(id, { wide = false } = {}) {
+  const g = GRAPHICS[id] || GRAPHICS.custom;
+  const art = h('div.pgfx-art'); art.innerHTML = graphicSvg(g);
+  return h('div.pgfx' + (wide ? '.wide' : ''),
+    art,
+    h('div.pgfx-sub', g.sub),
+    wide && g.week ? h('div.pbadge-week', g.week.map((on, i) => h('span.pbadge-day' + (on ? '.on' : ''), 'MTWTFSS'[i]))) : null);
 }
 
 /** A square program tile for the grid. */

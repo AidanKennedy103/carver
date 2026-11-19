@@ -1227,17 +1227,27 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .empty-plan-row .icon { color: var(--gold); }
 .av-badge { color: var(--gold); }
 
-/* Program builder: two-wide tiles with a figure */
+/* Program builder: two-wide tiles */
 .pgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .ptile { display: flex; flex-direction: column; gap: 10px; padding: 10px; border-radius: var(--radius); background: var(--surface); text-align: left; min-width: 0; }
-.ptile.wide { aspect-ratio: auto; width: 100%; }
 .ptile:active { background: var(--surface-2); }
-.pfig { border-radius: 12px; background: radial-gradient(120% 90% at 20% 0%, #2a2112 0%, #161412 60%, #121214 100%); padding: 10px 10px 8px; }
-.pfig svg { width: 100%; height: auto; display: block; }
-.pfig.wide { flex: none; }
-.pfig.wide { margin-bottom: 4px; }
-.coach-head + .pfig, .scroll-body > .pfig.wide { margin-top: 6px; }
 .ptile-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .ptile-name { font-weight: 700; font-size: 16px; line-height: 1.2; }
 .ptile-line { font-size: 12px; color: var(--muted); }
 .ptile-tag { align-self: flex-start; margin-top: 4px; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); border: 1px solid rgba(227, 176, 75, .45); border-radius: 6px; padding: 1px 6px; }
+
+/* Week dots on a program page */
+.pbadge-week { display: flex; gap: 8px; }
+.pbadge-day { width: 26px; height: 26px; border-radius: 50%; background: #2e2e33; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #8e8e93; }
+.pbadge-day.on { background: #e3b04b; color: #17110a; box-shadow: 0 0 6px rgba(227, 176, 75, .5); }
+
+/* Program graphics */
+.pgfx { border-radius: 12px; padding: 14px 10px 10px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  background: radial-gradient(80% 70% at 50% 35%, rgba(227, 176, 75, .13) 0%, rgba(0, 0, 0, 0) 70%), #141312; }
+.pgfx-art { width: 74px; height: 74px; }
+.pgfx-art svg { width: 100%; height: 100%; display: block; }
+.pgfx-sub { font-size: 11px; font-weight: 600; color: #b9ab88; text-align: center; letter-spacing: .02em; }
+.pgfx.wide { padding: 22px 16px 16px; margin-top: 6px; gap: 10px; }
+.pgfx.wide .pgfx-art { width: 120px; height: 120px; }
+.pgfx.wide .pgfx-sub { font-size: 13px; }
+.pgfx.wide .pbadge-week { margin-top: 4px; }

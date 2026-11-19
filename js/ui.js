@@ -49,6 +49,7 @@ export const icon = (name, size = 22) => {
     scan: '<path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3M8 9v6M11 9v6M14 9v6M17 9v6"/>',
     up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
     plate: '<circle cx="12" cy="12" r="5.5"/><path d="M3 5v5a2 2 0 0 0 2 2v7M3 5v4M5 5v4M21 5c-1.5 0-2.5 2-2.5 5h2.5v9"/>',
+    sliders: '<path d="M6 4v16M12 4v16M18 4v16"/><circle cx="6" cy="14" r="2.4" fill="currentColor"/><circle cx="12" cy="8" r="2.4" fill="currentColor"/><circle cx="18" cy="16" r="2.4" fill="currentColor"/>',
     minus: '<path d="M5 12h14"/>',
     calendar: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
     timer: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>',
