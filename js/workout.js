@@ -83,7 +83,7 @@ export function workoutPage() {
   /** On a rest day: how the week is going, read just before the Start button. */
   function restLine() {
     const rn = restNote();
-    return rn ? h('div.hero-rest.' + rn.tone, h('b', rn.title), h('span', rn.sub)) : null;
+    return rn ? h('div.hero-rest.' + rn.tone, h('b', rn.title)) : null;
   }
 
   function freestyleHero() {
