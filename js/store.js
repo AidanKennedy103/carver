@@ -463,6 +463,13 @@ export function kcalHit(v, goal, key = ymd()) {
 }
 
 /** How a day's calories look: 'hit', 'over' (red: past a maximum, or 10%+ over when maintaining), or '' (not there yet). */
+/** A training day: a workout logged that day, or one of your planned workout days. */
+export const trainingDay = (key) => state.workouts.some((w) => ymd(w.start) === key) || dayPlan(key) === 'planned';
+/** The day's food goals: on training days, the optional extra calories (as carbs) are added. */
+export function dayGoals(key) {
+  const g = state.goals, boost = g.trainBoost || 0;
+  return boost && trainingDay(key) ? { ...g, kcal: g.kcal + boost, c: Math.round(g.c + boost / 4) } : g;
+}
 export function kcalLook(v, goal, key) {
   if (!goal || !v) return '';
   if (kcalHit(v, goal, key)) return 'hit';

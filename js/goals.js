@@ -132,6 +132,8 @@ export function openGoals(section = 'all') {
       h('button.btn.gold-soft.wide.suggest-btn', { onclick: () => { s.close(); suggestGoals(); } }, 'Suggest goals for me'),
       h('div.group', energyField('Calories', 'kcal', 'kcal'), energyField('Protein', 'p', 'g'), energyField('Carbs', 'c', 'g'), energyField('Fat', 'f', 'g')),
       hintEl,
+      h('div.group', field('Extra on training days', 'trainBoost', 'kcal', 25)),
+      h('p.fine', 'Added as carbs on days you train or plan to. Leave at 0 to eat the same every day.'),
       h('div.group', field('Water', 'water', 'ml', 50))],
     fitness: () => [
       h('div.goal-section', 'Fitness'),

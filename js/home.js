@@ -2,7 +2,7 @@
 // calendar, your one-rep maxes, and your profile overview.
 
 import { h, fill, icon, push, sheet, toast, promptBox, fmtDate, fmtNum, fmtDurationWords, swipe, navBar, confirmBox } from './ui.js';
-import { state, commit, exercise, overview, HOME_SECTIONS, HOME_DEFAULT, homeSections, toDisplay, unit, bodyDisplay, bodyUnit, tabOn, ymd, addDays, dayTotals, weekStart, dayStart, dayPlan, restNote, workoutDays, DAY_SHORT, workoutStats, waterOn, addWater, kcalLook, kcalHit } from './store.js';
+import { state, commit, exercise, dayGoals, overview, HOME_SECTIONS, HOME_DEFAULT, homeSections, toDisplay, unit, bodyDisplay, bodyUnit, tabOn, ymd, addDays, dayTotals, weekStart, dayStart, dayPlan, restNote, workoutDays, DAY_SHORT, workoutStats, waterOn, addWater, kcalLook, kcalHit } from './store.js';
 import { workoutDetail } from './workout.js';
 import { openSettings } from './settings.js';
 import { goTab } from './tabs.js';
@@ -289,7 +289,7 @@ function weekCard() {
 /** Today's calories and macros against your goals. */
 function macrosCard(t) {
   if (!tabOn('nutrition')) return null;
-  const g = state.goals, today = ymd();
+  const today = ymd(), g = dayGoals(today);
   const left = g.kcal - t.kcal, look = kcalLook(t.kcal, g.kcal, today);
   const pct = (v, goal) => Math.min(100, goal ? (v / goal) * 100 : 0) + '%';
   return [h('div.section-head', h('h2.section-title', 'Calories & macros')),
