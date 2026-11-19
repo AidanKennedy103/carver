@@ -472,12 +472,82 @@ function graphicSvg(g) {
 
 /** The graphic at the top of a program tile (or, wide, of its page, with the week below). */
 export function programFigure(id, { wide = false } = {}) {
+  const ch = CHALLENGES.find((x) => x.id === id);
+  if (ch) return h('div.pgfx.nums' + (wide ? '.wide' : ''), h('div.pgfx-nums' + (ch.nums.length > 11 ? '.long' : ''), ch.nums));
   const g = GRAPHICS[id] || GRAPHICS.custom;
   const art = h('div.pgfx-art'); art.innerHTML = graphicSvg(g);
   return h('div.pgfx' + (wide ? '.wide' : ''),
     art,
     h('div.pgfx-sub', g.sub),
     wide && g.week ? h('div.pbadge-week', g.week.map((on, i) => h('span.pbadge-day' + (on ? '.on' : ''), 'MTWTFSS'[i]))) : null);
+}
+
+// ---------- Popular workouts: one-off challenges ----------
+// sets: [exId, reps or seconds, how many sets]; Carver fills the workout in so
+// you just tick sets off. Unticked sets are left out when you finish.
+
+const R = (exId, reps, sets = 1) => ({ exId, reps, sets });
+export const CHALLENGES = [
+  {
+    id: 'cindy', name: 'Cindy', nums: '5 · 10 · 15', line: '20-min AMRAP', tag: 'Bodyweight',
+    about: 'As many rounds as you can in 20 minutes of 5 pull-ups, 10 push-ups and 15 air squats. 20+ rounds is strong.',
+    how: ['Set a 20-minute timer.', 'Do 5 pull-ups, 10 push-ups, 15 squats. That’s one round.', 'Repeat until time’s up and tick off each round.'],
+    scale: 'Swap pull-ups for inverted rows or band-assisted pull-ups, and do push-ups on your knees or a bench.',
+    ex: [R('pullup', 5, 20), R('pushup', 10, 20), R('bw-squat', 15, 20)],
+  },
+  {
+    id: 'murph', name: 'Murph', nums: '100 · 200 · 300', line: 'Hero workout · for time', tag: 'Hard',
+    about: 'A 1-mile run, 100 pull-ups, 200 push-ups, 300 squats, then another 1-mile run, for time. The classic Memorial Day hero workout, traditionally done in a 20 lb vest.',
+    how: ['Run 1 mile.', 'Split the middle into 20 rounds of 5 pull-ups, 10 push-ups and 15 squats (or do it any way you like).', 'Run 1 more mile and stop the clock.'],
+    scale: 'Half Murph: half a mile, 50 / 100 / 150. Skip the vest until the whole thing is under an hour.',
+    ex: [R('treadmill', 600, 1), R('pullup', 5, 20), R('pushup', 10, 20), R('bw-squat', 15, 20), R('treadmill', 600, 1)],
+  },
+  {
+    id: 'nickels', name: 'Nickels and Dimes', nums: '5 · 10', line: 'Pull-ups & push-ups', tag: 'Bodyweight',
+    about: '5 pull-ups then 10 push-ups, over and over. The pull-ups are the nickels, the push-ups the dimes.',
+    how: ['Pick a time: 20 or 30 minutes.', 'Do 5 pull-ups, then 10 push-ups. Rest as little as you can.', 'Keep going until time’s up; tick off each round.'],
+    scale: 'Keep the 1-to-2 ratio with smaller numbers: 3 pull-ups and 6 push-ups.',
+    ex: [R('pullup', 5, 15), R('pushup', 10, 15)],
+  },
+  {
+    id: '1230', name: '12-3-30', nums: '12 · 3 · 30', line: 'Incline walk', tag: 'Cardio',
+    about: 'Treadmill at a 12% incline, 3 mph, for 30 minutes. A low-impact walk: slower than running, but a steady, fat-burning effort.',
+    how: ['Set the treadmill to 12% incline and 3 mph.', 'Walk for 30 minutes without holding the rails.'],
+    scale: 'Start at 8–10% incline or 20 minutes and build up.',
+    ex: [R('treadmill', 1800, 1)],
+  },
+  {
+    id: 'fran', name: 'Fran', nums: '21 · 15 · 9', line: 'Thrusters & pull-ups · for time', tag: 'Sprint',
+    about: '21-15-9 reps of barbell thrusters (95 lb / 65 lb) and pull-ups, for time. Short and brutal: most people finish in 4–10 minutes.',
+    how: ['21 thrusters, 21 pull-ups.', '15 thrusters, 15 pull-ups.', '9 thrusters, 9 pull-ups. Stop the clock.'],
+    scale: 'Lighter bar (45–65 lb), and band-assisted pull-ups or inverted rows.',
+    ex: [{ exId: 'thruster', reps: [21, 15, 9] }, { exId: 'pullup', reps: [21, 15, 9] }],
+  },
+];
+
+/** What one challenge looks like as a workout to start. */
+function challengePlan(c) {
+  return {
+    id: null, name: c.name,
+    exercises: c.ex.map((e) => {
+      const time = exercise(e.exId).type === 'time';
+      const reps = Array.isArray(e.reps) ? e.reps : Array.from({ length: e.sets }, () => e.reps);
+      return { exId: e.exId, note: '', rest: 0, sets: reps.map((r) => ({ type: 'n', tReps: time ? null : r, tSecs: time ? r : null })) };
+    }),
+  };
+}
+
+function challengeSheet(c) {
+  const s0 = sheet(h('div.form',
+    h('div.sheet-head', h('button.link', { onclick: () => s0.close() }, 'Close'), h('div.sheet-title', c.name), h('span')),
+    h('div.chal-nums', c.nums),
+    h('p.coach-summary', c.about),
+    h('label.form-label', 'How'),
+    h('ol.chal-how', c.how.map((x) => h('li', x))),
+    h('label.form-label', 'Easier'),
+    h('p.fine', c.scale),
+    h('button.btn.gold.wide.coach-go', { onclick: () => { s0.close(); startWorkout(challengePlan(c)); } }, icon('play', 16), `Start ${c.name}`),
+    h('p.fine.center', 'Tick off each round as you go; any you don’t reach are left out.')));
 }
 
 /** A square program tile for the grid. */
@@ -659,6 +729,9 @@ export function coachPage() {
         PROGRAMS.filter((x) => x.id !== cp?.id).map((x) => tile({ id: x.id, name: x.name, line: `${x.days} days · ${x.minutes} min`, tag: x.level, onclick: () => push(() => programScreen(x)) })),
         p531 ? null : tile({ id: '531', name: '5/3/1', line: '4 days · 60 min', tag: 'Strength', onclick: setup531 }),
         tile({ id: 'custom', name: 'Custom block', line: 'Your plans, your rules', tag: 'Advanced', span: (PROGRAMS.filter((x) => x.id !== cp?.id).length + (p531 ? 0 : 1)) % 2 === 0, onclick: () => push(() => customScreen(cp?.custom || null)) })),
+
+      h('div.section-head', h('h2.section-title', 'Popular workouts')),
+      h('div.pgrid', CHALLENGES.map((c, i) => tile({ id: c.id, name: c.name, line: c.line, tag: c.tag, span: i === CHALLENGES.length - 1 && CHALLENGES.length % 2 === 1, onclick: () => challengeSheet(c) }))),
     ];
   }
 

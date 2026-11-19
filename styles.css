@@ -1370,3 +1370,10 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .ptile { text-align: center; }
 .ptile-text { align-items: center; text-align: center; }
 .ptile-tag { align-self: center; }
+
+/* Popular workouts: the rep scheme is the graphic */
+.pgfx.nums { min-height: 104px; justify-content: center; }
+.pgfx-nums { font-size: 30px; font-weight: 800; letter-spacing: -.02em; color: transparent; background: linear-gradient(180deg, #f6d27a 0%, #c8922f 100%); -webkit-background-clip: text; background-clip: text; white-space: nowrap; }
+.pgfx-nums.long { font-size: 21px; }
+.chal-nums { text-align: center; font-size: 40px; font-weight: 800; color: var(--gold); letter-spacing: -.02em; margin: 6px 0 4px; }
+.chal-how { margin: 0 0 4px; padding-left: 20px; font-size: 15px; line-height: 1.5; }
