@@ -123,7 +123,6 @@ export function openGoals(section = 'all') {
     workout: () => [
       h('div.goal-section', 'Workout'),
       h('label.form-label', 'Workouts per week'), wkSeg,
-      h('p.fine', 'Hit this and the week turns gold on your calendar.'),
       h('label.form-label', 'Which days'), dayRow, dayHint],
     nutrition: () => [
       h('div.goal-section', 'Nutrition'),
@@ -141,7 +140,7 @@ export function openGoals(section = 'all') {
         fitField('Activities', 'fitPerWeek', 'per week'),
         fitField('Active time', 'fitMins', 'min'),
         fitField('Distance', 'fitDist', distUnit(), (m) => Math.round((m / dKm) * 10) / 10, (v) => v * dKm)),
-      h('p.fine', 'Runs, rides and other cardio. Leave blank for no goal. About 150 active minutes a week is a common guideline.')],
+      h('p.fine', 'Leave blank for no goal.')],
     body: () => {
       const wIn = h('input.field.goal-input', { value: g.weight ? bodyDisplay(g.weight) : '', placeholder: 'none', inputmode: 'decimal', 'aria-label': 'Goal weight' });
       wIn.addEventListener('change', () => { const v = num(wIn.value); commit((st) => { st.goals.weight = v > 0 ? bodyFromDisplay(v) : 0; }); });
@@ -150,16 +149,16 @@ export function openGoals(section = 'all') {
         h('div.group',
           h('label.goal-row', h('span', 'Goal weight'), h('span.goal-field', wIn, h('span.goal-unit', bodyUnit()))),
           field('Goal body fat', 'bodyFat', '%', 0.5)),
-        h('p.fine', 'Optional. Your weight card shows how far you have to go.')];
+        ];
     },
     recovery: () => [
       h('div.goal-section', 'Recovery'),
       h('div.group', field('Sleep each night', 'sleep', 'h', 0.5)),
-      h('p.fine', 'Most adults do best on 7 to 9 hours. Readiness on the Recovery tab scores your sleep against this.')],
+      h('p.fine', 'Most adults do best on 7–9 hours.')],
     daily: () => [
       h('div.goal-section', 'Daily goals'),
       h('label.form-label', `Your own (up to ${MAX_HABITS})`), customList,
-      h('p.fine', 'Yes-or-no goals for each day. Slide one on Home when it’s done; your groups see it.')],
+      h('p.fine', 'Slide one on Home when it’s done.')],
   };
   const shown = ['workout', 'nutrition', 'fitness', 'recovery', 'body', 'daily'].includes(section)
     ? [section] : ['workout', 'nutrition', 'fitness', 'recovery', 'body', 'daily'].filter((k) => k === 'daily' || k === 'body' || tabOn(k));
@@ -214,7 +213,7 @@ async function suggestGoals() {
           [['Calories', sug.kcal, 'kcal'], ['Protein', sug.p, 'g'], ['Carbs', sug.c, 'g'], ['Fat', sug.f, 'g']].map(([l, v, u]) => h('div.goal-row', h('span', l), h('span.row-val', `${v.toLocaleString()} ${u}`)))),
         h('p.fine', `Calories come from ${sug.from}. Protein is about 1 g per lb of body weight${sug.kg ? ` (${bodyDisplay(sug.kg)} ${bodyUnit()})` : ''}, fat about 27% of calories, and carbs fill the rest. A starting point, not medical advice.`),
         h('button.btn.gold.wide', { onclick: () => { commit((st) => { Object.assign(st.goals, { kcal: sug.kcal, p: sug.p, c: sug.c, f: sug.f, aim: aim.id }); }); s.close(); toast('Goals updated'); } }, 'Use these goals'),
-      ] : h('p.fine', 'Log your weight first (Home → Progress), and Carver can suggest goals.'),
+      ] : h('p.fine', 'Log your weight first and Carver can suggest goals.'),
     );
   };
   const s = sheet(h('div.form',

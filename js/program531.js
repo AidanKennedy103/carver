@@ -148,7 +148,7 @@ export function setup531() {
     h('div.group', rows),
     h('p.fine', p ? 'Changing these rewrites this week’s weights.' : 'From your last 6 months (90% of your estimated max). If blank, enter about 90% of what you could lift once.'),
     h('label.form-label', 'After the main lift'), extraBtn,
-    h('p.fine', '5×10 at half the training max builds size. Exercises you add yourself are kept each week.'),
+    h('p.fine', '5×10 at half the training max builds size.'),
     p ? h('div.group', h('button.group-row.danger', {
       onclick: async () => {
         if (!(await confirmBox('Stop 5/3/1?', 'The plans stay as they are now; Carver just stops changing them each week.', { ok: 'Stop', danger: true }))) return;

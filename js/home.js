@@ -131,7 +131,7 @@ function editRings() {
             h('button', { 'aria-label': 'More days', onclick: () => setWeek(r.id, 1) }, '+')) : null,
           on && r.id === 'gym' ? h('span.muted.small', `${weekTarget('gym')}×/wk`) : null);
       })),
-      h('p.fine', `Pick up to ${MAX_RINGS}. Today shows today; Week counts the days you hit it since Monday, against the target set here.`),
+      h('p.fine', `Pick up to ${MAX_RINGS}.`),
       h('button.group-row.gold-text.plain', { onclick: () => { s.close(); openGoals(); } }, 'Goal amounts and your own goals…'),
     );
   }
@@ -229,7 +229,6 @@ function progressCards() {
   const m = metabolism(28);
   const kcals = [];
   for (let i = 27; i >= 1; i--) { const t = dayTotals(ymd(Date.now() - i * 864e5)); if (t.entries) kcals.push(t.kcal); }
-  const pics = state.body.photos?.length || 0;
   return h('div.orm-grid',
     h('button.card.orm-card.link-card', { onclick: () => (tabOn('body') ? goTab('body') : push(() => progressPage())), 'aria-label': 'Open Progress: weight, photos and monthly goals' },
       h('div.orm-name', 'Progress', h('span.card-go', '›')),
@@ -237,15 +236,13 @@ function progressCards() {
         ? [h('div.orm-val', bodyDisplay(last.kg), h('span.orm-unit', bodyUnit())),
           h('div.orm-sub', c30 != null ? `${c30 > 0 ? '+' : c30 < 0 ? '−' : ''}${bodyDisplay(Math.abs(c30))} ${bodyUnit()} in 30 days` : 'Weight')]
         : [h('div.orm-val.dim-val', '—'), h('div.orm-sub', 'Log your weight')],
-      tr.length > 1 ? sparkline(tr.map((p) => p.y)) : h('div.card-foot', `${pics} progress photo${pics === 1 ? '' : 's'}`),
-      tr.length > 1 ? h('div.card-foot', `${pics} photo${pics === 1 ? '' : 's'} · monthly goals`) : null),
+      tr.length > 1 ? sparkline(tr.map((p) => p.y)) : null),
     h('button.card.orm-card.link-card', { onclick: () => push(trendsPage), 'aria-label': 'Open Trends: charts and metabolism' },
       h('div.orm-name', 'Trends', h('span.card-go', '›')),
       m.ready
         ? [h('div.orm-val' + (m.confidence === 'High' ? '' : '.dim-val'), m.confidence === 'High' ? '' : '≈ ', fmtNum(m.tdee), h('span.orm-unit', 'kcal')), h('div.orm-sub', 'to maintain')]
         : [h('div.orm-val.dim-val', '—'), h('div.orm-sub', 'Maintenance calories')],
-      kcals.length > 1 ? sparkline(kcals, { color: COLORS.calories }) : null,
-      h('div.card-foot', m.ready ? `${m.confidence} confidence` : [m.need.food ? `${m.need.food} more food day${m.need.food === 1 ? '' : 's'}` : null, m.need.weigh ? `${m.need.weigh} more weigh-in${m.need.weigh === 1 ? '' : 's'}` : null, !m.need.food && !m.need.weigh && m.need.spread ? `${m.need.spread} more day${m.need.spread === 1 ? '' : 's'} of weigh-ins` : null].filter(Boolean).join(' · ') + ' to estimate')));
+      kcals.length > 1 ? sparkline(kcals, { color: COLORS.calories }) : null));
 }
 
 // ---------- Rest days ----------
@@ -292,14 +289,19 @@ function weekCard() {
 /** Today's calories and macros against your goals. */
 function macrosCard(t) {
   if (!tabOn('nutrition')) return null;
-  const g = state.goals;
-  const row = (label, v, goal, color, unitLabel) => h('div.home-macro',
-    h('div.home-macro-top', h('span', label), h('span.muted', `${fmtNum(v)} / ${fmtNum(goal)} ${unitLabel}`)),
-    h('div.bar', h('div.bar-fill', { style: { width: Math.min(100, goal ? (v / goal) * 100 : 0) + '%', background: color } })));
+  const g = state.goals, today = ymd();
+  const left = g.kcal - t.kcal, look = kcalLook(t.kcal, g.kcal, today);
+  const pct = (v, goal) => Math.min(100, goal ? (v / goal) * 100 : 0) + '%';
   return [h('div.section-head', h('h2.section-title', 'Calories & macros')),
-    h('button.card.home-macros', { onclick: () => goTab('nutrition') },
-      row('Calories', t.kcal, g.kcal, COLORS.calories, 'kcal'),
-      MACROS.map((m) => row(m.name, t[m.k], g[m.k], MACRO_COLOR[m.k], 'g')))];
+    h('button.card.hm', { onclick: () => goTab('nutrition'), 'aria-label': 'Open Nutrition' },
+      h('div.hm-top',
+        h('div', h('span.hm-kcal', fmtNum(t.kcal)), h('span.hm-of', ` / ${fmtNum(g.kcal)} kcal`)),
+        h('span.hm-left' + (look === 'over' ? '.over' : look === 'hit' ? '.hit' : ''), left >= 0 ? `${fmtNum(left)} left` : `${fmtNum(-left)} over`)),
+      h('div.hm-bar', h('i', { style: { width: pct(t.kcal, g.kcal), background: look === 'over' ? '#e0574a' : COLORS.calories } })),
+      h('div.hm-macros', MACROS.map((m) => h('div.hm-m',
+        h('span.hm-m-name', h('i', { style: { background: MACRO_COLOR[m.k] } }), m.name),
+        h('span.hm-m-v', Math.round(t[m.k]), h('small', ` / ${g[m.k]} g`)),
+        h('div.hm-m-bar', h('i', { style: { width: pct(t[m.k], g[m.k]), background: MACRO_COLOR[m.k] } }))))))];
 }
 
 /** Today's readiness, or a nudge to check in. */

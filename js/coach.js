@@ -567,7 +567,7 @@ function programScreen(t) {
 
       lifts.length ? [
         h('div.section-head', h('h2.section-title', 'Starting numbers')),
-        h('p.fine', 'A recent hard set for each main lift. Filled in from your history when possible.'),
+        h('p.fine', 'Filled in from your history when possible.'),
         maxes.el,
       ] : null,
 
@@ -632,7 +632,7 @@ export function coachPage() {
     const plans = state.plans;
     const full = plans.length >= MAX_PLANS;
     return [
-      h('p.coach-intro', 'Simple workouts you build yourself: pick exercises, sets, reps and weights. No block or automatic progression.'),
+      h('p.coach-intro', 'Your own workouts, no automatic progression.'),
       h('div.btn-pair.pb-new',
         h('button.btn.gold', { onclick: () => (full ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor())) }, icon('plus', 16), 'New workout'),
         h('button.btn.dark', { onclick: () => startWorkout() }, icon('bolt', 16), 'Freestyle')),
@@ -652,7 +652,7 @@ export function coachPage() {
   function programsView(cp, t, p531) {
     return [
       cp && t ? running(cp, t) : p531 ? [h('div.section-head', h('h2.section-title', 'Your program')), programCard()]
-        : h('p.coach-intro', 'Pick a program and Carver writes the plans and the weights. Run it ongoing or as an 8, 12 or 16-week block.'),
+        : h('p.coach-intro', 'Ready-made plans with the weights worked out.'),
 
       h('div.section-head', h('h2.section-title', cp || p531 ? 'Other programs' : 'Ready-made programs')),
       h('div.pgrid',
@@ -754,7 +754,7 @@ export function coachPage() {
           s.close(); toast('Targets updated');
         },
       }, 'Save')),
-      h('p.fine', 'A recent hard set for each lift. Every week’s targets are worked out again from these.'),
+      h('p.fine', 'Every week’s targets are worked out from these.'),
       m.el));
   }
 

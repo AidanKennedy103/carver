@@ -69,7 +69,7 @@ export function progressPage({ tab = false } = {}) {
           h('span.photo-date', fmtDate(p.ts, { month: 'short', day: 'numeric' })))))
         : h('button.card.empty-plan', { onclick: takeProgressPhoto },
           h('div.empty-title', 'Take your first progress photo'),
-          h('div.empty-text', 'Same spot, same light, once a month. Carver reminds you and lines them up in your monthly recap.')),
+          h('div.empty-text', 'Same spot, same light, once a month.')),
       pics.length > 12 ? h('button.link', { onclick: () => push(allPhotosScreen) }, `See all ${pics.length}`) : null,
       pics.length && !account() ? h('p.fine', 'Photos stay on this phone unless you sign in. They aren’t in the data export.') : null,
 

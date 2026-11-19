@@ -1349,3 +1349,24 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .start-hero .hero-name { margin-left: auto; margin-right: auto; text-align: center; }
 .start-hero .hero-chips { justify-content: center; }
 .start-hero .hero-meta, .start-hero .hero-rest { text-align: center; align-items: center; }
+
+/* Home: Calories & macros */
+.hm { display: block; width: 100%; text-align: left; padding: 16px; }
+.hm-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.hm-kcal { font-size: 30px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.hm-of { font-size: 14px; color: var(--muted); }
+.hm-left { font-size: 14px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.hm-left.hit { color: var(--gold); }
+.hm-left.over { color: #ff8a7d; }
+.hm-bar { height: 10px; border-radius: 5px; background: var(--surface-2); overflow: hidden; margin: 10px 0 16px; }
+.hm-bar i { display: block; height: 100%; border-radius: 5px; }
+.hm-macros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.hm-m { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.hm-m-name { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.hm-m-name i { width: 8px; height: 8px; border-radius: 50%; }
+.hm-m-v { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hm-m-v small { font-size: 12px; font-weight: 500; color: var(--muted); }
+.hm-m-bar { height: 5px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.hm-m-bar i { display: block; height: 100%; border-radius: 3px; }
+.ptile.span2 .ptile-text { align-items: center; text-align: center; }
+.ptile.span2 .ptile-tag { align-self: center; }

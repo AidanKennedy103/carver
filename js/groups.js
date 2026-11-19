@@ -523,7 +523,7 @@ function sharesSheet(g, after) {
   };
   const s = sheet(h('div.form',
     h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', 'What I share'), h('button.link.strong', { onclick: save }, 'Save')),
-    h('p.fine', `What ${g.name} sees when it happens. Only new things are posted; turning one off doesn’t remove past posts.`),
+    h('p.fine', `What ${g.name} sees. Turning one off doesn’t remove past posts.`),
     h('div.group', SHARES.map((x) => h('label.goal-row.share-row',
       h('span', x.label, x.sub ? h('span.share-sub', x.sub) : null),
       h('input.toggle', { type: 'checkbox', checked: shares[x.k] !== false, onchange: (e) => { shares[x.k] = e.target.checked; } })))),

@@ -191,7 +191,7 @@ export function habitsPage() {
               h('button.icon-btn', { onclick: () => editHabit(g, draw), 'aria-label': `${g.name} options` }, icon('more'))),
             heatMap(g, draw));
         }),
-        h('p.fine', 'Tap a square to fix a missed day. ··· adds a reminder.'),
+        h('p.fine', 'Tap a square to fix a day.'),
         list.length < MAX_HABITS ? h('button.btn.dark.wide', { onclick: () => addHabit(draw) }, icon('plus', 16), 'Add a daily goal') : null,
       ] : h('div.empty',
         h('div.empty-icon', icon('check', 40)),

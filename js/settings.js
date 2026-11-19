@@ -121,7 +121,7 @@ export function openSettings() {
     h('label.form-label', 'Home'),
     h('div.group', h('button.group-row', { onclick: () => { s.close(); Promise.all([import('./home.js'), import('./tabs.js')]).then(([m, tb]) => { tb.goTab('home'); m.startHomeEdit(); }); } }, h('span', 'Edit Home page'), h('span.card-go', '›'))),
     h('label.form-label', 'Tabs'), tabRows,
-    h('p.fine', 'Up to 5 tabs fit in the bar; the rest go under More. The arrow moves a tab left. Turning one off keeps its data.'),
+    h('p.fine', 'Up to 5 fit in the bar; the rest go under More.'),
     h('label.form-label', 'Weights you lift'), liftSeg,
     h('label.form-label', 'Body weight'), bodySeg,
     h('label.form-label', 'Distance'), distSeg,

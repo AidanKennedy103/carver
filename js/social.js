@@ -88,7 +88,7 @@ export function leaderboard(rows, people, period, board, set) {
           h('div.lb-main', h('div.lb-name', me ? 'You' : p.name), h('div.lb-bar', h('i', { style: { width: (p.v / top) * 100 + '%' } }))),
           h('b.lb-val', p.v));
       }),
-      h('p.fine', `${period === 'week' ? 'Since Monday' : 'This month'}. Counts what each person shares with this group.`)),
+      h('p.fine', period === 'week' ? 'Since Monday.' : 'This month.')),
   ];
 }
 
@@ -164,7 +164,7 @@ function newChallenge(g, after) {
       h('label.form-label', 'How long'),
       h('div.segment', [7, 14, 30].map((n) => h('button' + (days === n ? '.on' : ''), { onclick: () => { days = n; draw(); } }, n === 7 ? '1 week' : `${n} days`))),
       h('label.form-label', 'Name (optional)'), titleIn,
-      h('p.fine', 'Starts today. Everyone in the group is in it, and progress counts from what each person shares with the group.'),
+      h('p.fine', 'Starts today for everyone in the group.'),
     );
     sync();
   };

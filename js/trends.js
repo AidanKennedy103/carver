@@ -82,7 +82,7 @@ function oddDaysCard(redraw) {
   return h('section.card.odd-card',
     ask.length ? [
       h('div.odd-title', icon('alert', 15), `${ask.length === 1 ? 'This day looks' : 'These days look'} off`),
-      h('p.fine', 'A day you didn’t finish logging, or a typo, throws off your metabolism, so these are left out for now. Keep any that were real.'),
+      h('p.fine', 'Left out of your metabolism until you keep them.'),
       ask.slice(0, 8).map((d) => h('div.odd-row',
         h('div.odd-text', h('b', day(d.k)), h('span', `${fmtNum(d.kcal)} kcal · ${d.odd}`)),
         h('button.btn.small.dark', { onclick: () => set(d.k, 'keep') }, 'Keep'),
@@ -179,11 +179,11 @@ export function trendsPage() {
           h('p.fine', 'Sharpens as you log. Eat 300–500 below maintenance to lose fat, 200–300 above to build muscle.'))
         : h('section.card.meta-card',
           h('div.empty-title.left', 'Not enough data yet'),
-          h('p.fine', 'Worked out from what you eat and how your weight moves. It waits for enough data to see past daily water swings.'),
+          h('p.fine', 'From what you eat and how your weight moves. It waits for enough data to see past water swings.'),
           [[`Days of food logged`, m.logged, NEED.food], [`Weigh-ins`, m.weighins, NEED.weigh], [`Days between first and last weigh-in`, m.spread, NEED.spread]].map(([l, v, n]) => h('div.need-row',
             h('div.need-line', h('span', l), h('b' + (v >= n ? '.done' : ''), v >= n ? '✓' : `${v} of ${n}`)),
             h('div.lb-bar', h('i', { style: { width: Math.min(100, (v / n) * 100) + '%' } })))),
-          h('p.fine', 'Over the last 4 weeks. Log everything you eat for the day, and weigh in a few mornings a week.')),
+          h('p.fine', 'Last 4 weeks.')),
 
       h('div.section-head', h('h2.section-title', 'Weight')),
       h('section.card.chart-card', lineChart(weight.map((p) => ({ ...p, y: +bodyDisplay(p.y) })), {

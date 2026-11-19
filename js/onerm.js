@@ -23,7 +23,7 @@ export function oneRmSection() {
   if (!ids.length) {
     return [head, h('button.card.empty-plan', { onclick: chooseOneRm },
       h('div.empty-title', 'Track your strength'),
-      h('div.empty-text', 'Pick up to 4 lifts. Every set you log updates its estimated one-rep max.'))];
+      h('div.empty-text', 'Pick up to 4 lifts to graph.'))];
   }
   return [head, h('div.orm-grid', ids.map((id) => {
     const hist = e1rmHistory(id);

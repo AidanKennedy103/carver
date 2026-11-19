@@ -167,7 +167,7 @@ export function recoveryPage() {
         h('div.group-row', h('span', 'Sets in the last 2 days'), h('span.row-val', `${recent}${usual ? ` · usual ${Math.round(usual)}` : ''}`)),
         rec.length ? rec.map((x) => h('div.group-row', h('span', `${x.m}`), h('span.row-val', x.hrs < 48 ? `recovering · ${x.hrs < 24 ? `${x.hrs} h` : `${Math.round(x.hrs / 24)} day`} ago` : `mostly fresh · ${Math.round(x.hrs / 24)} days ago`)))
           : h('div.group-row', h('span', 'No muscles trained in the last 3 days'), h('span.row-val', 'all fresh'))),
-      h('p.fine', 'Muscles need about 48 hours between hard sessions. Readiness weighs sleep, soreness, energy and recent training. A guide, not a medical score.'),
+      h('p.fine', 'A guide, not a medical score.'),
       h('div.bottom-space'),
     );
   }

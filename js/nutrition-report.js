@@ -52,7 +52,7 @@ export function microsScreen(date) {
       h('div.section-head', h('h2.section-title', 'Energy split')),
       splitCard(t),
       microRows(t),
-      quick ? h('p.fine', `${quick} quick add${quick > 1 ? 's' : ''} count toward calories and macros only. Pick foods from the list to track vitamins and minerals.`) : null,
+      quick ? h('p.fine', `${quick} quick add${quick > 1 ? 's' : ''} only count toward calories and macros.`) : null,
       h('p.fine', 'Targets are general adult reference intakes. Values are approximate.'),
       h('div.bottom-space'),
     ),
@@ -157,12 +157,12 @@ export function reportScreen() {
 
         r.microDays ? [
           h('div.section-head', h('h2.section-title', 'Vitamins and minerals')),
-          h('p.fine', `Averaged over the ${r.microDays} day${r.microDays === 1 ? '' : 's'} where most of what you ate was logged as foods (quick adds have no vitamins or minerals).`),
+          h('p.fine', `Averaged over ${r.microDays} day${r.microDays === 1 ? '' : 's'} logged mostly as foods.`),
           r.low.length || r.high.length ? h('section.card.report-flags',
             r.low.length ? h('div', h('b', 'Often low: '), r.low.join(', ')) : null,
             r.high.length ? h('div.red-text', h('b', 'Over the limit: '), r.high.join(', ')) : null) : null,
           microRows(r.micro),
-        ] : h('p.fine', 'Vitamins and minerals show up once you have days logged mostly with foods from the list (quick adds only carry calories and macros).'),
+        ] : h('p.fine', 'Shows up once you log days mostly with foods from the list.'),
       ],
       h('div.bottom-space'),
     );

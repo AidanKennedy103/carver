@@ -166,7 +166,7 @@ export function activitySheet(existing = null) {
     chips,
     h('label.form-label', 'Started'), when,
     h('div.group', row('Time', mins, 'min'), row('Distance', dist, distUnit()), row('Calories', kcal, 'kcal')),
-    h('p.fine', 'Leave calories blank and Carver estimates them from the activity, your time and your weight.'),
+    h('p.fine', 'Leave calories blank to estimate them.'),
     existing ? h('button.btn.dark.wide.red-text', {
       onclick: async () => {
         if (!(await confirmBox('Delete this activity?', null, { ok: 'Delete', danger: true }))) return;
@@ -266,7 +266,7 @@ export function fitnessPage() {
         ? h('section.card.list-card', shown.map(activityRow))
         : h('button.card.empty-plan', { onclick: importActivitiesSheet },
           h('div.empty-title', 'Bring in your runs and rides'),
-          h('div.empty-text', 'Import from Apple Health or add one by hand. They feed your metabolism estimate.')),
+          h('div.empty-text', 'Import from Apple Health or add one.')),
       list.length > shown.length ? h('button.link', { onclick: () => { showAll = true; draw(); } }, `Show all ${list.length}`) : null,
       h('div.bottom-space'),
     );

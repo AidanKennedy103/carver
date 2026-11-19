@@ -66,7 +66,7 @@ export function whenSheet({ start, dur, title = 'When was it?', ok = 'Next', cho
     h('label.form-label', 'Started at'), timeIn,
     h('div.group', h('label.goal-row', h('span', 'How long'), h('span.goal-field', durIn, h('span.goal-unit', 'min')))),
     choose ? [h('label.form-label', 'Start from'), fromSel,
-      h('p.fine', 'Next, type in the weights and reps you did. Sets you fill in are saved; empty ones are left out.')] : null,
+      h('p.fine', 'Fill in the sets you did; empty ones are skipped.')] : null,
   ));
   function go() {
     const [y, m, d] = dateIn.value.split('-').map(Number);

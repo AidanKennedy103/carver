@@ -326,7 +326,7 @@ export function planEditor(existing = null) {
       plan.exercises.length ? null : h('div.empty',
         h('div.empty-icon', icon('dumbbell', 40)),
         h('div.empty-title', 'Add exercises'),
-        h('div.empty-text', 'Set how many sets, and the weight and reps you’re aiming for. They show as grey hints when you start the plan.')),
+        h('div.empty-text', 'Add exercises and set the weight and reps you’re aiming for.')),
       plan.exercises.map((ex, i) => exerciseCard({
         ex, index: i, count: plan.exercises.length, mode: 'plan',
         redraw: () => { touch(); draw(); },
