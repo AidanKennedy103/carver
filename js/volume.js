@@ -71,14 +71,11 @@ export function volumeCard() {
   const usePlans = state.plans.length > 0;
   const t = usePlans ? programTally() : loggedTally(0);
   const vals = MUSCLE_ORDER.map((m) => [m, t[m].total]);
-  const low = vals.filter(([, v]) => v < TARGET[0]).sort((a, b) => a[1] - b[1]);
-  const inRange = vals.length - low.length - vals.filter(([, v]) => v > TARGET[1]).length;
   return h('button.card.vol-card', { onclick: () => push(volumeScreen) },
     h('div.vol-card-top', h('span.vol-card-title', 'Weekly sets per muscle'), h('span.prompt-go', icon('back', 16))),
     h('div.vol-mini', vals.map(([m, v]) => h('div.vol-mini-col', { title: `${m}: ${r1(v)} sets` },
       h('div.vol-mini-bar', h('i.' + status(v), { style: { height: Math.min(100, (v / 24) * 100) + '%' } })),
-      h('span', m.slice(0, 2))))),
-    h('div.vol-card-sub', `${usePlans ? 'Your plans' : 'Last 7 days'}: ${inRange} of ${vals.length} muscles in the 10–20 set range${low.length ? ` · low: ${low.slice(0, 3).map(([m]) => m).join(', ')}` : ''}`));
+      h('span', m.slice(0, 2))))));
 }
 
 // ---------- Full screen ----------
