@@ -71,20 +71,15 @@ export function workoutPage() {
 
   /** The plan that's up next (the one after the plan you did last), ready to start. */
   function upNext(p) {
-    const last = lastDone(p);
     const muscles = topMuscles(p);
-    const sets = p.exercises.reduce((n, e) => n + e.sets.length, 0);
-    const mins = last ? Math.round(workoutStats(last).duration / 6e4) : null;
     return h('section.card.hero',
-      h('div.hero-label', 'Start a workout · next plan'),
+      h('div.hero-label', 'Next workout'),
       h('button.hero-name', { onclick: () => push(() => planEditor(p)) }, p.name),
       muscles.length ? h('div.hero-chips', muscles.map((m) => h('span.chip.small', m))) : null,
-      h('div.hero-meta', [`${p.exercises.length} exercise${p.exercises.length === 1 ? '' : 's'}`, `${sets} sets`, mins ? `about ${mins} min` : null, last ? `last ${ago(last.start)}` : 'not done yet'].filter(Boolean).join(' · ')),
       restLine(),
       h('button.btn.gold.wide.hero-go', { onclick: () => startWorkout(p), disabled: !p.exercises.length }, icon('play', 16), `Start ${p.name}`));
   }
 
-  /** No plans yet: the big button is a freestyle workout. */
   /** On a rest day: how the week is going, read just before the Start button. */
   function restLine() {
     const rn = restNote();
