@@ -1576,3 +1576,14 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .water-add { flex: none; }
 .meal-empty { display: flex; align-items: center; gap: 4px; padding: 8px 2px 0; margin-top: 8px; }
 .meal-empty .meal-name { flex: 1; font-size: 17px; font-weight: 700; color: var(--muted); }
+
+/* Nutrition: the week as dots */
+.wdots { display: grid; grid-template-columns: repeat(7, 1fr); margin: 2px 0 12px; }
+.wdot { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 6px 0; border-radius: 12px; font-size: 12px; color: var(--muted); }
+.wdot.on { background: var(--surface); color: var(--text); font-weight: 700; }
+.wdot i { width: 10px; height: 10px; border-radius: 50%; }
+.wdot i.hit { background: var(--gold); }
+.wdot i.over { background: var(--red); }
+.wdot i.short { border: 2px solid var(--gold); width: 6px; height: 6px; }
+.wdot i.none { background: var(--surface-2); }
+.wdot i.future { background: transparent; border: 1px dashed var(--line); width: 8px; height: 8px; }

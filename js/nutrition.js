@@ -4,7 +4,7 @@
 // quick add, recipes and reports live in their own files.
 
 import { h, fill, icon, push, toast, actionSheet, confirmBox, promptBox, navBar, swipe } from './ui.js';
-import { state, commit, uid, ymd, addDays, dayLog, dayTotals, food, logFood, deleteLog, waterOn, addWater, foodAim, dayGoals } from './store.js';
+import { state, commit, uid, ymd, addDays, dayLog, dayTotals, food, logFood, deleteLog, waterOn, addWater, foodAim, dayGoals, kcalLook } from './store.js';
 import { MACROS, MICROS } from './foods.js';
 import { goalsButton } from './goals.js';
 import { scanBarcode } from './barcode.js';
@@ -40,6 +40,7 @@ export function nutritionPage() {
         h('button.icon-btn', { onclick: () => { viewDate = addDays(viewDate, -1); draw(); }, 'aria-label': 'Previous day' }, icon('back')),
         h('button.date-label', { onclick: () => { viewDate = ymd(); draw(); } }, dayLabel(viewDate)),
         h('button.icon-btn.flip', { onclick: () => { viewDate = addDays(viewDate, 1); draw(); }, 'aria-label': 'Next day' }, icon('back'))),
+      weekDots(viewDate, (k) => { viewDate = k; draw(); }),
       // Calories left in the ring; each macro eaten against its goal
       h('section.card.fuel',
         h('div.fuel-top',
@@ -85,6 +86,19 @@ export function nutritionPage() {
   return { el, refresh: draw };
 }
 
+// ---------- The week ----------
+
+/** Mon–Sun of the week you're viewing: a dot per day. Gold = hit, red = over, outline = logged but short. */
+function weekDots(key, go) {
+  const d0 = new Date(key + 'T12:00'), mon = addDays(key, -((d0.getDay() + 6) % 7)), today = ymd();
+  return h('div.wdots', Array.from({ length: 7 }, (_, i) => {
+    const k = addDays(mon, i), t = dayTotals(k);
+    const look = k > today ? 'future' : !t.entries ? 'none' : kcalLook(t.kcal, dayGoals(k).kcal, k) || 'short';
+    return h('button.wdot' + (k === key ? '.on' : ''), { onclick: () => go(k), 'aria-label': `${dayLabel(k)}: ${look === 'hit' ? 'goal hit' : look === 'over' ? 'over' : look === 'short' ? `${r0(t.kcal)} kcal` : 'nothing logged'}` },
+      h('span', 'MTWTFSS'[i]), h('i.' + look));
+  }));
+}
+
 // ---------- The calorie ring, water ----------
 
 /** Calories as a ring, with what's left (or over) in the middle. */
@@ -92,7 +106,7 @@ function calRing(eaten, goal, left, over, soft) {
   const R = 44, C = 2 * Math.PI * R, pct = goal ? Math.min(1, eaten / goal) : 0;
   const el = h('div.plate', { role: 'img', 'aria-label': `${r0(eaten)} of ${r0(goal)} kcal` });
   el.innerHTML = `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke="#26262a" stroke-width="8"/>
-    <circle cx="50" cy="50" r="${R}" fill="none" stroke="${over ? 'var(--red)' : 'var(--gold)'}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(C * pct).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/></svg>`;
+    ${pct > 0 ? `<circle cx="50" cy="50" r="${R}" fill="none" stroke="${over ? 'var(--red)' : 'var(--gold)'}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(C * pct).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/>` : ''}</svg>`;
   el.append(h('div.plate-mid',
     h('b' + (over ? '.over' : ''), Math.abs(r0(left)).toLocaleString()),
     h('span', left < 0 ? (soft ? 'over · goal hit' : 'kcal over') : 'kcal left'),
