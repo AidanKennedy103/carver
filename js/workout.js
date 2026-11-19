@@ -12,6 +12,7 @@ import { volumeCard, tally, MUSCLE_ORDER, ALL_MUSCLES } from './volume.js';
 import { programCard, setup531, program } from './program531.js';
 import { coachPage, coachProgram, currentWeek, blockWeek, PROGRAMS } from './coach.js';
 import { goalsButton } from './goals.js';
+import { shareWorkout } from './share.js';
 
 export function workoutPage() {
   const el = h('div.page');
@@ -152,6 +153,7 @@ export function workoutPage() {
       { label: 'Start', onClick: () => startWorkout(p) },
       { label: 'Log it as a past workout', onClick: () => logPastWorkout(p) },
       { label: 'Edit plan', onClick: () => push(() => planEditor(p)) },
+      { label: 'Share', onClick: () => shareWorkout(p) },
       { label: 'Rename', onClick: async () => { const n = await promptBox('Rename plan', p.name); if (n) savePlan({ ...p, name: n }); } },
       { label: 'Duplicate', onClick: () => {
         if (state.plans.length >= MAX_PLANS) { toast(`You can keep ${MAX_PLANS} plans.`); return; }
@@ -247,6 +249,7 @@ export function workoutDetail(w) {
           { label: 'Edit workout', onClick: () => { pop(); editWorkout(w); } },
           { label: 'Repeat this workout', onClick: () => { pop(); repeatWorkout(w); } },
           { label: 'Save as a plan', onClick: () => saveAsPlan(w) },
+          { label: 'Share', onClick: () => shareWorkout(w) },
           { label: 'Rename', onClick: async () => { const n = await promptBox('Rename workout', w.name); if (n) { commit((s) => { const x = s.workouts.find((y) => y.id === w.id); if (x) x.name = n; }); pop(); } } },
           { label: 'Delete workout', danger: true, onClick: async () => {
             if (await confirmBox('Delete this workout?', 'This cannot be undone.', { ok: 'Delete', danger: true })) { commit((s) => { s.workouts = s.workouts.filter((x) => x.id !== w.id); }); pop(); }

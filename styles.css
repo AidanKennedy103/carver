@@ -1393,3 +1393,13 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .live-track { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; }
 .live-fill { display: block; height: 100%; width: 0; background: var(--gold); transition: width .5s linear; }
 .live-bar.resting .live-time { font-weight: 700; }
+
+/* Shared workout links */
+.share-name { font-size: 24px; font-weight: 800; margin: 4px 0 12px; text-align: center; }
+.share-list { padding: 4px 14px; margin-bottom: 14px; }
+.share-ex { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: .5px solid var(--line); }
+.share-ex:last-child { border-bottom: 0; }
+.share-ex-name { font-weight: 600; }
+.share-ex-sets { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.share-sheet .btn + .btn { margin-top: 8px; }
+.share-sheet p { line-height: 1.45; }

@@ -14,6 +14,7 @@ import { recoveryPage } from './recovery.js';
 import { progressPage } from './progress.js';
 import { openWorkout } from './session.js';
 import { initCloud } from './cloud.js';
+import { openShared } from './share.js';
 
 initScreens(document.getElementById('app'));
 initTabs({ home: homePage, workout: workoutPage, nutrition: nutritionPage, fitness: fitnessPage, social: socialPage, habits: habitsPage, recovery: recoveryPage, body: () => progressPage({ tab: true }) });
@@ -29,6 +30,10 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 
 // Came back to an unfinished workout? Open it straight away.
 if (state.active) openWorkout();
+
+// Opened a shared workout link
+openShared();
+addEventListener('hashchange', openShared);
 
 // Offline support and automatic updates
 if ('serviceWorker' in navigator && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
