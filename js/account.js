@@ -22,7 +22,7 @@ export function accountSection(closeSettings) {
       u
         ? h('div.group',
           h('div.group-row', h('span', u.email), h('span.row-val', st.syncing ? 'Syncing…' : '✓')),
-          h('button.group-row', { onclick: () => sync() }, h('span', 'Sync now'), h('span.row-val', st.error ? '⚠︎' : `Synced ${ago(st.last)}`)),
+          h('button.group-row', { onclick: () => sync() }, h('span', 'Sync now'), h('span.row-val', st.error ? 'Problem' : `Synced ${ago(st.last)}`)),
           h('button.group-row.danger', {
             onclick: () => actionSheet('Sign out?', [
               { label: 'Sign out', onClick: () => out(false) },

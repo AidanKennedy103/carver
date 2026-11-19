@@ -17,9 +17,9 @@ export const sleepGoal = () => state.goals.sleep || 8;
 export const recoveryOn = (k = ymd()) => state.recovery?.[k] || null;
 
 const SCALES = {
-  quality: { label: 'How did you sleep?', faces: ['😫', '😕', '😐', '🙂', '😴'], words: ['Awful', 'Poor', 'OK', 'Good', 'Great'] },
-  sore: { label: 'How sore are you?', faces: ['💪', '🙂', '😐', '😣', '🥵'], words: ['Not at all', 'A little', 'Some', 'Quite', 'Very'] },
-  energy: { label: 'Energy right now', faces: ['🪫', '😮‍💨', '😐', '⚡', '🚀'], words: ['Drained', 'Low', 'OK', 'Good', 'Raring to go'] },
+  quality: { label: 'How did you sleep?', words: ['Awful', 'Poor', 'OK', 'Good', 'Great'] },
+  sore: { label: 'How sore are you?', words: ['Not at all', 'A little', 'Some', 'Quite', 'Very'] },
+  energy: { label: 'Energy right now', words: ['Drained', 'Low', 'OK', 'Good', 'Great'] },
 };
 
 /** Working sets in the 48 hours before `ts`, and the usual for 48 hours over the last 4 weeks. */
@@ -76,7 +76,7 @@ export function checkIn(k = ymd(), after) {
     h('div.chips.tight.no-drag', [5, 6, 6.5, 7, 7.5, 8, 8.5, 9].map((v) => h('button.chip' + (r.sleep === v ? '.on' : ''), { onclick: () => { r.sleep = v; sleepIn.value = v; draw(); } }, `${v} h`))),
     Object.entries(SCALES).map(([key, sc]) => [
       h('label.form-label', sc.label),
-      h('div.face-row', sc.faces.map((f, i) => h('button.face' + (r[key] === i + 1 ? '.on' : ''), { onclick: () => { r[key] = i + 1; draw(); }, 'aria-label': sc.words[i] }, h('span.face-emoji', f), h('span.face-word', sc.words[i])))),
+      h('div.face-row', sc.words.map((wd, i) => h('button.face' + (r[key] === i + 1 ? '.on' : ''), { onclick: () => { r[key] = i + 1; draw(); }, 'aria-label': wd }, h('span.face-num', i + 1), h('span.face-word', wd)))),
     ]));
   draw();
   const s = sheet(h('div.form',
@@ -115,7 +115,7 @@ function importSheet(after) {
   const ta = h('textarea.field.paste', { rows: 6, placeholder: '2026-11-17 7h 32m\n2026-11-16 6h 50m' });
   const s = sheet(h('div.form',
     h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', 'Bring in sleep'), h('button.link.strong', { onclick: go }, 'Add')),
-    h('p.fine', 'Paste one night per line: the date you woke up and how long you slept. A Shortcut can copy this from Apple Health (Find Health Samples → Sleep Analysis → for each, the end date and duration), or type it in.'),
+    h('p.fine', 'One night per line: the date you woke up and hours slept. A Shortcut can copy this from Apple Health (Sleep Analysis).'),
     ta));
   function go() {
     const list = parseSleep(ta.value);
@@ -143,12 +143,12 @@ export function recoveryPage() {
       rd ? h('section.card.ready-card.' + (rd.score >= 60 ? 'good' : rd.score >= 40 ? 'mid' : 'low'),
         h('div.ready-ring', { style: { '--p': rd.score } }, h('b', rd.score), h('span', 'ready')),
         h('div.ready-text', h('div.ready-word', rd.word), h('div.ready-sub', rd.sub),
-          h('div.ready-bits', [r.sleep != null ? `😴 ${r.sleep} h` : null, r.quality ? SCALES.quality.faces[r.quality - 1] : null, r.sore ? `sore ${SCALES.sore.words[r.sore - 1].toLowerCase()}` : null, r.energy ? `energy ${SCALES.energy.words[r.energy - 1].toLowerCase()}` : null].filter(Boolean).join(' · ')),
+          h('div.ready-bits', [r.sleep != null ? `${r.sleep} h sleep` : null, r.quality ? `slept ${SCALES.quality.words[r.quality - 1].toLowerCase()}` : null, r.sore ? `sore ${SCALES.sore.words[r.sore - 1].toLowerCase()}` : null, r.energy ? `energy ${SCALES.energy.words[r.energy - 1].toLowerCase()}` : null].filter(Boolean).join(' · ')),
           h('button.link.small-link', { onclick: () => checkIn(today, draw) }, 'Change')))
         : h('button.card.hero.empty-hero', { onclick: () => checkIn(today, draw) },
           h('div.hero-label', 'Good morning'),
           h('div.hero-name', 'How did you sleep?'),
-          h('div.hero-meta', 'Four quick taps: hours, sleep quality, soreness and energy. Carver tells you whether to push, train as planned or take it easy.'),
+          h('div.hero-meta', 'Four quick taps tell Carver whether to push, train as planned or take it easy.'),
           h('span.btn.gold.wide.hero-go', 'Check in')),
 
       h('div.section-head', h('h2.section-title', 'Sleep'), h('span.section-count', sleepAvg != null ? `${sleepAvg.toFixed(1)} h avg · goal ${sleepGoal()} h` : `goal ${sleepGoal()} h`)),
@@ -166,7 +166,7 @@ export function recoveryPage() {
         h('div.group-row', h('span', 'Sets in the last 2 days'), h('span.row-val', `${recent}${usual ? ` · usual ${Math.round(usual)}` : ''}`)),
         rec.length ? rec.map((x) => h('div.group-row', h('span', `${x.m}`), h('span.row-val', x.hrs < 48 ? `recovering · ${x.hrs < 24 ? `${x.hrs} h` : `${Math.round(x.hrs / 24)} day`} ago` : `mostly fresh · ${Math.round(x.hrs / 24)} days ago`)))
           : h('div.group-row', h('span', 'No muscles trained in the last 3 days'), h('span.row-val', 'all fresh'))),
-      h('p.fine', 'Muscles usually need about 48 hours between hard sessions. Readiness mixes sleep against your goal, how well you slept, soreness, energy, and whether the last two days were much bigger than usual. It’s a guide, not a medical score.'),
+      h('p.fine', 'Muscles need about 48 hours between hard sessions. Readiness weighs sleep, soreness, energy and recent training. A guide, not a medical score.'),
       h('div.bottom-space'),
     );
   }

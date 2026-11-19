@@ -219,21 +219,21 @@ function describe(e) {
   const d = e.data || {};
   const list = (names) => names.length <= 2 ? names.join(' and ') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
   switch (e.kind) {
-    case 'photo': return { ico: '📸', text: 'shared a progress photo', photo: d.path };
-    case 'challenge': return { ico: '🏁', text: `started a challenge: ${d.title}`, sub: d.end ? `Until ${fmtDate(Date.parse(d.end + 'T12:00'), { month: 'short', day: 'numeric' })}` : '' };
-    case 'started': return { ico: '📍', text: 'is at the gym', sub: d.name && d.name !== 'Workout' ? `Started ${d.name}` : '' };
+    case 'photo': return { ico: 'camera', text: 'shared a progress photo', photo: d.path };
+    case 'challenge': return { ico: 'flag', text: `started a challenge: ${d.title}`, sub: d.end ? `Until ${fmtDate(Date.parse(d.end + 'T12:00'), { month: 'short', day: 'numeric' })}` : '' };
+    case 'started': return { ico: 'pin', text: 'is at the gym', sub: d.name && d.name !== 'Workout' ? `Started ${d.name}` : '' };
     case 'workout': return {
-      ico: '🏋️', text: `finished ${d.name}`,
+      ico: 'dumbbell', text: `finished ${d.name}`,
       sub: [d.mins ? fmtDurationWords(d.mins * 6e4) : '', d.sets ? `${d.sets} sets` : '', d.kg ? `${fmtNum(+toDisplay(d.kg))} ${unit()}` : ''].filter(Boolean).join(' · '),
-      extra: (d.prs || []).map((p) => `🏆 ${p.ex} · ${p.kind}${p.kg != null ? ` ${toDisplay(p.kg)} ${unit()}` : p.reps ? ` ${p.reps} reps` : ''}`),
+      extra: (d.prs || []).map((p) => `PR · ${p.ex} · ${p.kind}${p.kg != null ? ` ${toDisplay(p.kg)} ${unit()}` : p.reps ? ` ${p.reps} reps` : ''}`),
     };
     case 'cardio': { const t = activityType(d.type); return { ico: t.icon, text: `did a ${t.name.toLowerCase()}`, sub: [d.m ? dist(d.m) : '', d.mins ? fmtDurationWords(d.mins * 6e4) : '', d.kcal ? `${fmtNum(d.kcal)} kcal` : ''].filter(Boolean).join(' · ') }; }
-    case 'protein': return { ico: '💪', text: 'hit their protein goal', sub: `${d.g} of ${d.goal} g` };
-    case 'kcal': return { ico: '🎯', text: 'hit their calorie goal', sub: `${fmtNum(d.kcal)} kcal` };
-    case 'week': return { ico: '🔥', text: 'closed their weekly gym goal', sub: `${d.n} workout${d.n === 1 ? '' : 's'} this week` };
-    case 'habit': return { ico: '✅', text: `did ${list(d.names || [d.name])}`, sub: d.day && e.created_at && d.day < ymd(Date.parse(e.created_at)) ? `for ${fmtDate(Date.parse(d.day + 'T12:00'), { weekday: 'long' })}` : '' };
-    case 'missed': return { ico: '❌', text: `missed ${list(d.names || [d.name])}`, sub: d.day ? `on ${fmtDate(Date.parse(d.day + 'T12:00'), { weekday: 'long' })}` : '', bad: true };
-    case 'weekly': return { ico: '📅', text: 'weekly summary', sub: d.week ? `Week of ${fmtDate(Date.parse(d.week + 'T12:00'), { month: 'short', day: 'numeric' })}` : '', lines: weeklyLines(d) };
+    case 'protein': return { ico: 'check', text: 'hit their protein goal', sub: `${d.g} of ${d.goal} g` };
+    case 'kcal': return { ico: 'target', text: 'hit their calorie goal', sub: `${fmtNum(d.kcal)} kcal` };
+    case 'week': return { ico: 'flame', text: 'closed their weekly gym goal', sub: `${d.n} workout${d.n === 1 ? '' : 's'} this week` };
+    case 'habit': return { ico: 'check', text: `did ${list(d.names || [d.name])}`, sub: d.day && e.created_at && d.day < ymd(Date.parse(e.created_at)) ? `for ${fmtDate(Date.parse(d.day + 'T12:00'), { weekday: 'long' })}` : '' };
+    case 'missed': return { ico: 'close', text: `missed ${list(d.names || [d.name])}`, sub: d.day ? `on ${fmtDate(Date.parse(d.day + 'T12:00'), { weekday: 'long' })}` : '', bad: true };
+    case 'weekly': return { ico: 'calendar', text: 'weekly summary', sub: d.week ? `Week of ${fmtDate(Date.parse(d.week + 'T12:00'), { month: 'short', day: 'numeric' })}` : '', lines: weeklyLines(d) };
     default: return { ico: '•', text: 'did something' };
   }
 }
@@ -241,17 +241,17 @@ function describe(e) {
 /** "Workouts 5/5", "Protein 5/7 days"… for a weekly summary. */
 export function weeklyLines(d) {
   const out = [];
-  if (d.workouts) out.push(['🏋️', 'Workouts', `${d.workouts.n}/${d.workouts.goal}`, d.workouts.n >= d.workouts.goal]);
-  if (d.protein) out.push(['💪', 'Protein goal', `${d.protein.days}/${d.protein.of}`, d.protein.days >= d.protein.of - 1]);
-  if (d.kcal) out.push(['🎯', 'Calorie goal', `${d.kcal.days}/${d.kcal.of}`, d.kcal.days >= d.kcal.of - 1]);
-  for (const x of d.habits || []) out.push(['✅', x.name, `${x.days}/${x.of}`, x.days >= x.of]);
+  if (d.workouts) out.push([null, 'Workouts', `${d.workouts.n}/${d.workouts.goal}`, d.workouts.n >= d.workouts.goal]);
+  if (d.protein) out.push([null, 'Protein goal', `${d.protein.days}/${d.protein.of}`, d.protein.days >= d.protein.of - 1]);
+  if (d.kcal) out.push([null, 'Calorie goal', `${d.kcal.days}/${d.kcal.of}`, d.kcal.days >= d.kcal.of - 1]);
+  for (const x of d.habits || []) out.push([null, x.name, `${x.days}/${x.of}`, x.days >= x.of]);
   return out;
 }
 
 // Each person keeps one color everywhere
 const AV_COLORS = ['#b8862a', '#16917f', '#c2493a', '#7d57c9', '#2e7fc4', '#b4527a', '#4f8f35', '#b06a2a'];
 const avColor = (id = '') => AV_COLORS[[...id].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7) % AV_COLORS.length];
-export const avatar = (name, id, badge) => h('span.av', { style: { background: avColor(id) } }, (name || '?').trim()[0]?.toUpperCase() || '?', badge ? h('span.av-badge', badge) : null);
+export const avatar = (name, id, badge) => h('span.av', { style: { background: avColor(id) } }, (name || '?').trim()[0]?.toUpperCase() || '?', badge ? h('span.av-badge', typeof badge === 'string' && /^[a-z]+$/.test(badge) ? icon(badge, 11) : badge) : null);
 
 /**
  * Make the feed read like a story, not a list of alerts: one line per person
@@ -289,7 +289,7 @@ export function eventRow(e, { showGroup = false, time = 'ago' } = {}) {
         : h('div.feed-line', h('b', e.me ? 'You' : e.who), ' ', x.text),
       x.sub || grp ? h('div.feed-sub', [x.sub, grp].filter(Boolean).join(' · ')) : null,
       (x.extra || []).map((t) => h('div.feed-pr', t)),
-      x.lines ? h('div.week-lines', x.lines.map(([ico, label, val, good]) => h('div.week-line' + (good ? '.good' : ''), h('span', ico), h('span.wl-name', label), h('b', val)))) : null,
+      x.lines ? h('div.week-lines', x.lines.map(([ico, label, val, good]) => h('div.week-line' + (good ? '.good' : ''), h('span.wl-dot'), h('span.wl-name', label), h('b', val)))) : null,
       x.photo ? groupPhoto(x.photo) : null),
     h('span.feed-when', time === 'clock' ? clock(e.created_at) : ago(e.created_at)));
 }
@@ -386,12 +386,12 @@ export function groupsCard() {
   const draw = (feed = cachedFeed()) => {
     if (!account()) {
       fill(box, h('button.card.prompt', { onclick: signInSheet },
-        h('span.prompt-ico', '👥'), h('span.today-text', h('span.today-k.strong', 'Train with friends'), h('span.today-v', 'Sign in to make a group and see each other’s workouts')), h('span.prompt-go', icon('back', 16))));
+        h('span.prompt-ico', icon('users', 20)), h('span.today-text', h('span.today-k.strong', 'Train with friends'), h('span.today-v', 'Sign in to make a group and see each other’s workouts')), h('span.prompt-go', icon('back', 16))));
       return;
     }
     if (!myGroups().length) {
       fill(box, h('button.card.prompt', { onclick: openSocial },
-        h('span.prompt-ico', '👥'), h('span.today-text', h('span.today-k.strong', 'Make a group'), h('span.today-v', 'Friends see when you train and hit your goals')), h('span.prompt-go', icon('back', 16))));
+        h('span.prompt-ico', icon('users', 20)), h('span.today-text', h('span.today-k.strong', 'Make a group'), h('span.today-v', 'Friends see when you train and hit your goals')), h('span.prompt-go', icon('back', 16))));
       return;
     }
     fill(box, h('button.card.list-card.feed-card', { onclick: openSocial },
@@ -449,7 +449,7 @@ export function groupsScreen({ tab = false, sections = null } = {}) {
         : !groups.length
           ? h('div.empty-groups',
             h('div.empty-title', 'Keep each other honest'),
-            h('div.empty-text', 'Make a group and share its invite code, or join a friend’s. Your group sees when you finish a workout or a daily goal, and at 8 am if you missed one yesterday. Every Monday everyone gets a weekly summary. You choose what each group sees.'),
+            h('div.empty-text', 'Make a group and share the invite code, or join a friend’s. They see your finished workouts and daily goals, plus a Monday summary. You choose what each group sees.'),
             h('div.btn-pair', h('button.btn.gold', { onclick: () => createGroup().then((x) => { if (x) { selected = x.id; refresh(); } }) }, 'Make a group'), h('button.btn.dark', { onclick: () => joinGroup().then((x) => { if (x) { selected = x.id; refresh(); } }) }, 'Join with code')))
           : [
             groups.length > 1 ? h('div.chips.tight', groups.map((x) => h('button.chip' + (x.id === selected ? '.on' : ''), { onclick: () => { selected = x.id; draw(); } }, x.name))) : null,

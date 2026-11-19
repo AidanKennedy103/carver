@@ -109,19 +109,19 @@ export const STYLES = {
   },
   dup: {
     name: 'Undulating', short: 'Heavy, medium and light days every week.',
-    about: 'Daily undulating periodization (DUP): each time a lift comes up in the week it gets a different rep target (heavy, medium, light). All three creep up a little each week.',
+    about: 'Each time a lift comes up in the week it gets a different target: heavy, medium or light. All three rise a little each week.',
     pros: ['Builds strength and size at the same time', 'Variety keeps sessions fresh', 'Great when you train a lift 2–3 times a week'],
     cons: ['Needs the lift in 2–3 of your plans', 'Harder to recover from', 'More numbers to keep track of (Carver does it)'],
   },
   wave: {
     name: 'Wave', short: 'Short waves that climb, each starting a bit higher.',
-    about: 'Step loading: each wave of 3 or 4 weeks gets heavier with fewer reps, then the next wave starts a little above where the last one started.',
+    about: 'Waves of 3 or 4 weeks get heavier with fewer reps. Each new wave starts a bit higher than the last.',
     pros: ['Built-in easier weeks help recovery', 'Steady progress over long blocks', 'A favourite for intermediate lifters'],
     cons: ['Slower than linear at the start', 'Needs patience', 'Waves can feel repetitive'],
   },
   rpe: {
     name: 'RPE', short: 'Weights set from how strong you are right now.',
-    about: 'Autoregulated: you pick reps and an effort level (RPE 10 = nothing left, 8 = two reps left). Before every workout Carver works out the weight from your latest sets, so good and bad weeks are both covered.',
+    about: 'Pick reps and an effort level (RPE 10 = nothing left, 8 = two reps left). Carver sets each weight from your latest sets.',
     pros: ['Adapts to good days and bad days', 'Uses your real current strength, no exact maxes needed', 'Hard to under- or over-shoot for long'],
     cons: ['Needs honest effort ratings', 'Targets move around more', 'Works best once you can judge reps in reserve'],
   },
@@ -409,9 +409,9 @@ function timeline(p, current = 0) {
 }
 
 function lengthText(length) {
-  if (length === 'ongoing') return 'No end date. Weights go up whenever you hit the top of an exercise’s rep range, workout to workout.';
+  if (length === 'ongoing') return 'No end date. Weights go up when you hit the top of the rep range.';
   const ph = BLOCKS[length].map((k) => PHASES[k].name.toLowerCase());
-  return `${length / 4} phases of 4 weeks (${ph.join(', ')}), each with 3 working weeks that get heavier and an easy deload week. Week ${length} is a test week that measures your new max. Carver works out the weight for every main-lift set, every week.`;
+  return `${length / 4} phases of 4 weeks (${ph.join(', ')}): 3 working weeks, then a deload. Week ${length} tests your new max. Carver sets every main-lift weight.`;
 }
 
 /** "185 lb × 5" inputs for each main lift, with the estimated max beside them. */
@@ -469,7 +469,7 @@ function programScreen(t) {
 
       lifts.length ? [
         h('div.section-head', h('h2.section-title', 'Starting numbers')),
-        h('p.fine', 'A recent hard set for each main lift: the weight and how many reps you got. Carver fills these in from your history when it can, and works out every target from them.'),
+        h('p.fine', 'A recent hard set for each main lift. Filled in from your history when possible.'),
         maxes.el,
       ] : null,
 
@@ -523,13 +523,13 @@ export function coachPage() {
     fill(body,
       navBar({ title: 'Coach', back: false, large: true, right: [goalsButton('workout')] }),
       cp && t ? running(cp, t) : p531 ? [h('div.section-head', h('h2.section-title', 'Your program')), programCard()]
-        : h('p.coach-intro', 'Pick a program and Carver writes the plans, puts them in order, and works out what to lift each workout. Run it ongoing, or as an 8, 12 or 16-week training block.'),
+        : h('p.coach-intro', 'Pick a program and Carver writes the plans and the weights. Run it ongoing or as an 8, 12 or 16-week block.'),
 
       h('div.section-head', h('h2.section-title', cp || p531 ? 'Other programs' : 'Programs')),
       h('section.card.list-card.coach-progs',
         h('button.coach-row.custom', { onclick: () => push(() => customScreen(cp?.custom || null)) },
           h('span.coach-row-text', h('span.coach-row-name', 'Build your own block', h('span.coach-tag', 'Advanced')), h('span.coach-row-meta', 'Linear · Undulating · Wave · RPE'),
-            h('span.coach-row-sum', 'Run your own plans as a periodized block. Pick the style, length, deloads and percentages; Carver works out every target.')),
+            h('span.coach-row-sum', 'Your own plans as a periodized block, with your own style and numbers.')),
           h('span.card-go', '›')),
         PROGRAMS.filter((x) => x.id !== cp?.id).map((x) => h('button.coach-row', { onclick: () => push(() => programScreen(x)) },
           h('span.coach-row-text', h('span.coach-row-name', x.name), h('span.coach-row-meta', meta(x)), h('span.coach-row-sum', x.summary)),
@@ -691,7 +691,7 @@ function customScreen(existing) {
 
     fill(body,
       h('div.coach-head', h('h1.coach-title', 'Build your own block'),
-        h('p.coach-summary', 'Turn your own plans into a periodized training block. Choose how it progresses and the numbers behind it; Carver works out every main-lift target, week by week. Everything else in your plans stays as you set it.')),
+        h('p.coach-summary', 'Run your own plans as a periodized block. Pick the style and numbers; Carver sets every main-lift weight. Other exercises stay as you set them.')),
 
       h('div.section-head', h('h2.section-title', 'Style')),
       h('section.card.list-card.cb-styles', Object.entries(STYLES).map(([k, x]) => h('button.cb-style' + (c.style === k ? '.on' : ''), { onclick: () => { c.style = k; draw(); } },
@@ -706,7 +706,7 @@ function customScreen(existing) {
         onclick: () => { c.lifts = c.lifts.includes(k) ? c.lifts.filter((x) => x !== k) : [...c.lifts, k]; draw(); },
       }, exercise(k).name)))
         : h('p.fine', 'Make your plans on the Workout tab first, then pick the lifts here.'),
-      c.style === 'dup' && c.lifts.length ? h('p.fine', `Undulating gives each lift a different day type each time it comes up in your plans, in plan order (${c.days.map((d) => d.name).join(', ')}). Lifts in only one plan always get the first.`) : null,
+      c.style === 'dup' && c.lifts.length ? h('p.fine', `Day types follow your plan order: ${c.days.map((d) => d.name).join(', ')}. A lift in only one plan always gets the first.`) : null,
 
       h('div.section-head', h('h2.section-title', 'Structure')),
       h('section.card.cb-card',

@@ -169,7 +169,7 @@ export function monthlySection() {
     past.length ? h('section.card.list-card', past.map((k) => {
       const r = recap(k);
       return h('button.food-line', { onclick: () => push(() => recapScreen(k)) },
-        h('span.food-ico', '🗓️'),
+        h('span.food-ico', icon('calendar', 18)),
         h('span.food-text', h('span.food-name', monthName(k, { month: 'long', year: 'numeric' })),
           h('span.food-sub', [r.workouts && `${r.workouts} workouts`, r.prs.length && `${r.prs.length} PRs`, r.weight && signed(r.weight.to - r.weight.from)].filter(Boolean).join(' · ') || 'Some data')),
         state.monthly[k]?.seen ? null : h('span.dot-new'));
@@ -184,9 +184,9 @@ export function monthlyPrompts({ takePhoto }) {
   const last = prevMonth(key);
   const day = new Date().getDate();
   if (day <= 10 && !state.monthly[last]?.seen && recap(last).hasData) {
-    out.push({ icon: '🗓️', text: `Your ${monthName(last)} recap is ready`, sub: 'Photos, weight and lifting highlights', action: () => push(() => recapScreen(last)) });
+    out.push({ icon: 'calendar', text: `Your ${monthName(last)} recap is ready`, sub: 'Photos, weight and lifting highlights', action: () => push(() => recapScreen(last)) });
   }
-  if (!monthGoals(key).length) out.push({ icon: '🎯', text: `Set your ${monthName(key)} goals`, sub: 'Build muscle, lose fat, get stronger…', action: () => setGoalsSheet(key) });
-  if (!photos().some((p) => monthKey(p.ts) === key)) out.push({ icon: '📸', text: 'Time for this month’s progress photo', sub: 'Same spot, same light as last time', action: takePhoto });
+  if (!monthGoals(key).length) out.push({ icon: 'target', text: `Set your ${monthName(key)} goals`, sub: 'Build muscle, lose fat, get stronger…', action: () => setGoalsSheet(key) });
+  if (!photos().some((p) => monthKey(p.ts) === key)) out.push({ icon: 'camera', text: 'Time for this month’s progress photo', sub: 'Same spot, same light as last time', action: takePhoto });
   return out;
 }

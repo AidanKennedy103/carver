@@ -1204,3 +1204,25 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
   .rest-banner .btn { width: 100%; }
 }
 @keyframes banner-in { from { opacity: 0; transform: translateY(-4px); } }   /* banners stay inside the screen (pop scales up) */
+
+/* Icons where emojis used to be */
+.tab-pick-ico { flex: none; width: 32px; height: 32px; border-radius: 9px; background: var(--gold-bg); color: var(--gold); display: grid; place-items: center; margin-right: 10px; }
+.tab-pick-main .tab-pick-text { flex: 1; }
+.hit-banner .icon, .prompt-ico .icon, .today-ico .icon, .nudge-ico .icon { color: var(--gold); }
+.prompt-ico { width: 36px; height: 36px; border-radius: 10px; background: var(--gold-bg); display: grid; place-items: center; flex: none; }
+.odd-title, .weight-goal, .water-title { display: flex; align-items: center; gap: 6px; }
+.plan-note .icon { color: var(--gold); flex: none; margin-top: 1px; }
+.add-ico .icon { color: var(--gold); }
+.chg { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--gold-bg); color: var(--gold); }
+.chg.down { background: var(--surface-2); color: var(--muted); }
+.lb-place.top1, .lb-place.top2, .lb-place.top3 { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; color: #17110a; }
+.lb-place.top1 { background: var(--gold); }
+.lb-place.top2 { background: #c8c8cf; }
+.lb-place.top3 { background: #b07a4a; }
+.av-badge .icon { display: grid; place-items: center; }
+.wl-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--surface-3); flex: none; }
+.week-line.good .wl-dot { background: var(--gold); }
+.face-num { font-size: 20px; font-weight: 800; line-height: 1.1; }
+.face.on .face-num { color: var(--gold); }
+.empty-plan-row .icon { color: var(--gold); }
+.av-badge { color: var(--gold); }

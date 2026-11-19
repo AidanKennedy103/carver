@@ -2,7 +2,7 @@
 // missed, and the Monday summary. On iPhone this needs iOS 16.4+ and Carver
 // added to the Home Screen. The server side is supabase/functions/carver-push.
 
-import { h, fill, toast } from './ui.js';
+import { h, fill, icon, toast } from './ui.js';
 import { CONFIG } from './config.js';
 import { client, account } from './cloud.js';
 
@@ -89,7 +89,7 @@ export function pushRow() {
       unsupported: 'This browser can’t show notifications.',
     }[st];
     fill(box,
-      h('div.push-text', h('b', '🔔 Notifications'), h('span', msg)),
+      h('div.push-text', h('b', 'Notifications'), h('span', msg)),
       st === 'off' ? h('button.btn.gold.small', { onclick: async () => { try { await enablePush(); toast('Notifications on'); } catch (e) { toast(e.message); } draw(); } }, 'Turn on') : null,
       st === 'on' ? h('div.btn-pair',
         h('button.btn.dark.small', { onclick: async (e) => {
@@ -111,7 +111,7 @@ export function pushNudge() {
   pushState().then((st) => {
     if (st !== 'off' && st !== 'install') return;
     fill(box, h('section.card.nudge',
-      h('span.nudge-ico', '🔔'),
+      h('span.nudge-ico', icon('bell', 20)),
       h('div.nudge-text', h('b', 'Get notified'), h('span', st === 'install' ? 'Add Carver to your Home Screen to get notifications.' : 'Hear when your group trains, finishes or misses a daily goal.')),
       st === 'off' ? h('button.btn.gold.small', { onclick: async () => { try { await enablePush(); toast('Notifications on'); fill(box); } catch (e) { toast(e.message); } } }, 'Turn on') : null));
   }).catch(() => {});

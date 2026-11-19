@@ -106,7 +106,7 @@ export function volumeScreen() {
           h('span', h('i.vol-key.band'), `${TARGET[0]}–${TARGET[1]} sets`)),
         total ? [...MUSCLE_ORDER.map((m) => muscleRow(m, t[m])), h('div.vol-sub', 'Smaller muscles'), ...MINOR_MUSCLES.map((m) => muscleRow(m, t[m], true))] : h('div.feed-empty', view === 'program' ? 'Add exercises to your plans to see your weekly sets.' : 'Finish a workout to see your sets here.')),
 
-      h('p.fine', 'Sets are working sets (warm-ups don’t count). Most people building muscle do well with about 10–20 hard sets per muscle each week; fewer can maintain, more can work if you recover well. Tap a muscle to see which exercises count. Smaller muscles like traps and adductors get most of their work from the big lifts, so they have no target.'),
+      h('p.fine', 'Working sets only. Most people grow well on 10–20 hard sets per muscle a week. Tap a muscle to see what counts. Smaller muscles mostly get work from the big lifts, so they have no target.'),
       h('div.bottom-space'),
     );
   }

@@ -6,7 +6,7 @@
 // (muscle and bone in kg). Measurements are off until you turn them on:
 // state.body.measures = [{ id, ts, waist, chest, … }] in cm.
 
-import { h, fill, sheet, toast, confirmBox, fmtDate } from './ui.js';
+import { h, fill, sheet, toast, confirmBox, fmtDate, icon } from './ui.js';
 import { state, commit, uid, bodyDisplay, bodyFromDisplay, bodyUnit } from './store.js';
 import { lineChart } from './charts.js';
 import { latestWeight } from './body.js';
@@ -42,7 +42,7 @@ export function compSection() {
       since && fat && since !== fat ? h('p.fine', `${fat.fat - since.fat > 0 ? '+' : ''}${Math.round((fat.fat - since.fat) * 10) / 10}% body fat in the last 30 days.`) : null,
       pts.length > 1 ? lineChart(pts, { height: 120, dots: pts.length < 30, fmtY: (v) => `${Math.round(v)}%`, label: 'Body fat, last 6 months', tip: (p) => `<b>${p.y}%</b><span>${fmtDate(p.x, { month: 'short', day: 'numeric' })}</span>` }) : null,
       h('div.comp-grid', COMP.filter((c) => c.k !== 'fat').map((c) => { const x = latest(list, c.k); return x ? h('div.tile', h('div.tile-v', showComp(c, x[c.k])), h('div.tile-k', c.label)) : null; })))
-      : h('button.card.empty-plan-row', { onclick: logComp }, '📊', h('span', 'Add your body fat or a smart-scale reading')),
+      : h('button.card.empty-plan-row', { onclick: logComp }, icon('chart', 18), h('span', 'Add your body fat or a smart-scale reading')),
   ];
 }
 
@@ -134,6 +134,6 @@ export function weightGoalText() {
   const g = state.goals.weight, w = latestWeight();
   if (!g || !w) return null;
   const d = w.kg - g;
-  if (Math.abs(d) < 0.25) return 'At your goal weight 🎯';
+  if (Math.abs(d) < 0.25) return 'At your goal weight';
   return `${bodyDisplay(Math.abs(d))} ${bodyUnit()} to go · goal ${bodyDisplay(g)} ${bodyUnit()}`;
 }

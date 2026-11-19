@@ -154,7 +154,7 @@ function reminderSheet(g, redraw) {
   };
   const s0 = sheet(h('div.form',
     h('div.sheet-head', h('button.link', { onclick: () => s0.close() }, 'Cancel'), h('div.sheet-title', 'Reminder'), h('span')),
-    h('p.fine', `Carver sends a notification at this time if “${g.name}” isn’t done yet that day. It comes from Carver’s server, so you need to be signed in with notifications on (Social or Settings).`),
+    h('p.fine', `A notification at this time if “${g.name}” isn’t done yet. Needs an account with notifications on.`),
     h('div.hour-grid', hours.map((hr) => h('button.chip' + (g.remind === hr ? '.on' : ''), { onclick: () => set(hr) }, hourLabel(hr)))),
     g.remind != null ? h('button.btn.dark.wide', { onclick: () => set(null) }, 'No reminder') : null));
 }
@@ -180,23 +180,23 @@ export function habitsPage() {
       list.length ? [
         h('section.card.habit-sum',
           h('div', h('div.energy-v', `${doneToday}/${list.length}`), h('div.energy-k', 'done today')),
-          h('div.habit-sum-best', h('div.energy-v', `🔥 ${Math.max(0, ...list.map((g) => streak(g)))}`), h('div.energy-k', 'longest streak going'))),
+          h('div.habit-sum-best', h('div.energy-v', `${Math.max(0, ...list.map((g) => streak(g)))}`), h('div.energy-k', 'longest streak going'))),
         h('section.card.habits', list.map((g) => habitSlider(g, today))),
         h('div.section-head', h('h2.section-title', 'Streaks')),
         list.map((g) => {
           const cur = streak(g), best = bestStreak(g), pct = Math.round(rate(g) * 100);
           return h('section.card.habit-card',
             h('div.habit-top',
-              h('div', h('div.habit-name', g.name), h('div.habit-meta', [`🔥 ${cur} day${cur === 1 ? '' : 's'}`, `best ${best}`, `${pct}% of the last 30 days`, g.remind != null ? `⏰ ${hourLabel(g.remind)}` : null].filter(Boolean).join(' · '))),
+              h('div', h('div.habit-name', g.name), h('div.habit-meta', [`${cur}-day streak`, `best ${best}`, `${pct}% last 30 days`, g.remind != null ? `reminder ${hourLabel(g.remind)}` : null].filter(Boolean).join(' · '))),
               h('button.icon-btn', { onclick: () => editHabit(g, draw), 'aria-label': `${g.name} options` }, icon('more'))),
             heatMap(g, draw));
         }),
-        h('p.fine', 'Tap a square to fix a day you forgot to mark. ··· on a goal adds a reminder. Your groups see finished goals right away, and at 8 am the next day if one was missed.'),
+        h('p.fine', 'Tap a square to fix a missed day. ··· adds a reminder.'),
         list.length < MAX_HABITS ? h('button.btn.dark.wide', { onclick: () => addHabit(draw) }, icon('plus', 16), 'Add a daily goal') : null,
       ] : h('div.empty',
-        h('div.empty-icon', '✅'),
+        h('div.empty-icon', icon('check', 40)),
         h('div.empty-title', 'Build a habit'),
-        h('div.empty-text', 'Daily goals are things you either do each day or don’t: 50 pushups, read 10 pages, no sugar. Slide one across when it’s done and watch the streak grow.'),
+        h('div.empty-text', 'Things you do each day or don’t, like 50 pushups or reading 10 pages. Slide one across when it’s done.'),
         h('button.btn.gold.wide', { onclick: () => addHabit(draw) }, 'Add your first daily goal')),
       h('div.bottom-space'),
     );

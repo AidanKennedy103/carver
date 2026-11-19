@@ -63,8 +63,8 @@ export function nutritionPage() {
 
 
       h('div.add-row',
-        h('button.add-tile', { onclick: () => quickAdd({ date: viewDate }) }, h('span.add-ico', '⚡'), 'Quick add'),
-        h('button.add-tile', { onclick: () => addFood({ date: viewDate }) }, h('span.add-ico', '🔎'), 'Search food'),
+        h('button.add-tile', { onclick: () => quickAdd({ date: viewDate }) }, h('span.add-ico', icon('bolt', 20)), 'Quick add'),
+        h('button.add-tile', { onclick: () => addFood({ date: viewDate }) }, h('span.add-ico', icon('search', 20)), 'Search food'),
         h('button.add-tile', { onclick: () => scanBarcode((f) => amountSheet({ food: f, date: viewDate })) }, h('span.add-ico', '▦'), 'Scan')),
 
       waterCard(viewDate),
@@ -151,7 +151,7 @@ function waterCard(date) {
   const full = Math.min(glasses, Math.floor(ml / 250));
   return h('section.card.water',
     h('div.water-top',
-      h('span.water-title', '💧 Water'),
+      h('span.water-title', icon('drop', 16), 'Water'),
       h('span.water-val', `${L(ml)} `, h('span.muted', `/ ${L(goal)}`)),
       ml ? h('button.icon-btn.water-minus', { onclick: () => addWater(date, -250), 'aria-label': 'Remove 250 ml of water' }, '−') : null),
     h('div.water-glasses', { role: 'img', 'aria-label': `${full} of ${glasses} glasses` }, Array.from({ length: glasses }, (_, i) => h('i' + (i < full ? '.on' : '')))),

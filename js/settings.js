@@ -36,7 +36,7 @@ export function openSettings() {
       const on = shown.includes(t.id), i = shown.indexOf(t.id);
       return h('div.group-row.tab-pick',
         h('button.tab-pick-main', { role: 'switch', 'aria-checked': String(on), onclick: () => setTabs(on ? shown.filter((x) => x !== t.id) : [...shown, t.id]) },
-          h('span.tab-pick-text', h('span', `${t.emoji} ${t.label}`), h('span.tab-pick-sub', t.sub)), h('span.switch' + (on ? '.on' : ''), h('i'))),
+          h('span.tab-pick-ico', icon(t.icon, 18)), h('span.tab-pick-text', h('span', t.label), h('span.tab-pick-sub', t.sub)), h('span.switch' + (on ? '.on' : ''), h('i'))),
         on && i > 0 ? h('button.icon-btn.tab-up', { 'aria-label': `Move ${t.label} left`, onclick: () => { const l = shown.slice(); [l[i - 1], l[i]] = [l[i], l[i - 1]]; setTabs(l); } }, icon('back', 16)) : h('span.tab-up-gap'));
     }));
   };
@@ -119,7 +119,7 @@ export function openSettings() {
         },
       }, h('span', 'Your name'), nameVal)),
     h('label.form-label', 'Tabs'), tabRows,
-    h('p.fine', 'Turn on the parts you want and off the ones you don’t. The arrow moves a tab left. Up to 5 fit in the bar; the rest go under More. Turning one off keeps its data.'),
+    h('p.fine', 'Up to 5 tabs fit in the bar; the rest go under More. The arrow moves a tab left. Turning one off keeps its data.'),
     h('label.form-label', 'Weights you lift'), liftSeg,
     h('label.form-label', 'Body weight'), bodySeg,
     h('label.form-label', 'Distance'), distSeg,
@@ -141,7 +141,7 @@ export function openSettings() {
       h('button.group-row', { onclick: () => mfpIn.click() }, h('span', 'Food and weight from MyFitnessPal'), h('span.row-val', 'ZIP')),
       h('button.group-row', { onclick: () => cronIn.click() }, h('span', 'Food from Cronometer'), h('span.row-val', 'CSV'))),
     fileIn, cronIn, workIn, mfpIn,
-    h('p.fine', 'Hevy: Profile → Settings → Export & Import Data → Export Workouts. Strong: Settings → Export Strong Data. Other apps: export your workout history as a CSV. Exercises are matched to Carver’s; ones it doesn’t have are added as your own. Workouts you repeat (like “Push Day”) can become plans.'),
+    h('p.fine', 'Hevy: Settings → Export & Import Data → Export Workouts. Strong: Settings → Export Strong Data. Other apps: export a CSV. Unknown exercises become your own; repeated workouts can become plans.'),
     h('p.fine', 'MyFitnessPal: Settings → Export Data (emails you a zip; may need Premium). You get each meal’s totals per day and your weigh-ins, not the single foods.'),
     h('p.fine', 'Cronometer: on cronometer.com go to More → Account → Export Data, export “Food & Recipe Entries”. Anything already imported is skipped.'),
     h('div.group',

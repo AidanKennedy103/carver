@@ -125,7 +125,7 @@ function editRings() {
             h('button', { 'aria-label': 'More days', onclick: () => setWeek(r.id, 1) }, '+')) : null,
           on && r.id === 'gym' ? h('span.muted.small', `${weekTarget('gym')}×/wk`) : null);
       })),
-      h('p.fine', `Pick up to ${MAX_RINGS}. Today shows how each goal is going today. Week counts the days you've hit it since Monday, against the days a week you set here. Workouts per week is set in Goals.`),
+      h('p.fine', `Pick up to ${MAX_RINGS}. Today shows today; Week counts the days you hit it since Monday, against the target set here.`),
       h('button.group-row.gold-text.plain', { onclick: () => { s.close(); openGoals(); } }, 'Goal amounts and your own goals…'),
     );
   }
@@ -303,7 +303,7 @@ export function homePage() {
           })))
           : h('button.link', { onclick: editRings }, 'Pick your rings')),
       { left: view === 'day' ? setView('week') : null, right: view === 'week' ? setView('day') : null, target: () => body.querySelector('.rings-card') }),
-      view === 'day' ? goals.filter((g) => g.hit && (g.id === 'protein' || g.id === 'kcal')).map((g) => h('div.hit-banner', h('span', '🏆'), g.cheer)) : null,
+      view === 'day' ? goals.filter((g) => g.hit && (g.id === 'protein' || g.id === 'kcal')).map((g) => h('div.hit-banner', icon('trophy', 18), g.cheer)) : null,
       tabOn('workout') && !state.active ? restBanner(() => goTab('workout')) : null,
 
       habitsCard(openGoals),
@@ -328,13 +328,13 @@ export function homePage() {
             h('span.today-v', todayWorkouts.length || todayActs.length ? [...todayWorkouts.map((w) => `${w.name} · ${fmtDurationWords(workoutStats(w).duration)}`), ...todayActs.map((a) => `${activityType(a.type).name} · ${fmtDurationWords(a.dur)}`)].join(', ') : state.active ? 'In progress' : dayPlan(today) === 'rest' ? (restNote()?.tone === 'behind' ? 'Rest day · behind this week' : 'Rest day') : dayPlan(today) === 'planned' ? 'Planned today' : 'Not yet')),
           todayWorkouts.length || todayActs.length ? h('span.ring-check.big', '✓') : h('button.btn.gold-soft.small', { onclick: () => goTab(tabOn('workout') ? 'workout' : 'fitness') }, state.active ? 'Resume' : tabOn('workout') ? 'Start' : 'Add')) : null,
         tabOn('nutrition') ? h('div.today-row',
-          h('span.today-ico', '🍽️'),
+          h('span.today-ico', icon('plate', 20)),
           h('span.today-text',
             h('span.today-k', 'Food'),
             h('span.today-v', t.entries ? `${fmtNum(t.kcal)} kcal · ${Math.round(t.p)} g protein` : 'Nothing logged')),
           h('button.btn.gold-soft.small', { onclick: () => quickAdd({}) }, 'Add')) : null,
         h('div.today-row',
-          h('span.today-ico', '⚖️'),
+          h('span.today-ico', icon('scale', 20)),
           h('span.today-text',
             h('span.today-k', 'Weigh-in'),
             h('span.today-v', todayWeigh ? `${bodyDisplay(todayWeigh.kg)} ${bodyUnit()}` : 'Not yet')),
@@ -342,7 +342,7 @@ export function homePage() {
 
       // Monthly nudges
       prompts.map((p) => h('button.card.prompt', { onclick: p.action },
-        h('span.prompt-ico', p.icon), h('span.today-text', h('span.today-k.strong', p.text), h('span.today-v', p.sub)), h('span.prompt-go', icon('back', 16)))),
+        h('span.prompt-ico', icon(p.icon, 20)), h('span.today-text', h('span.today-k.strong', p.text), h('span.today-v', p.sub)), h('span.prompt-go', icon('back', 16)))),
 
       // Groups
       cloudOn() ? h('div.section-head', h('h2.section-title', 'Groups')) : null,

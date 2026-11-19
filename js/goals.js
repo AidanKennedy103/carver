@@ -121,45 +121,45 @@ export function openGoals(section = 'all') {
 
   const sections = {
     workout: () => [
-      h('div.goal-section', '🏋️ Workout'),
+      h('div.goal-section', 'Workout'),
       h('label.form-label', 'Workouts per week'), wkSeg,
       h('p.fine', 'Hit this and the week turns gold on your calendar.'),
       h('label.form-label', 'Which days'), dayRow, dayHint],
     nutrition: () => [
-      h('div.goal-section', '🍽️ Nutrition'),
+      h('div.goal-section', 'Nutrition'),
       h('label.form-label', 'Your aim'), aimSeg,
-      h('p.fine', 'Build muscle: your calories are a minimum to reach. Lose fat: a maximum to stay under. Maintain: within 10% either way.'),
+      h('p.fine', 'Build muscle: calories are a minimum. Lose fat: a maximum. Maintain: within 10%.'),
       h('label.form-label', 'Daily food'),
-      h('button.btn.gold-soft.wide.suggest-btn', { onclick: () => { s.close(); suggestGoals(); } }, '✨ Suggest goals for me'),
+      h('button.btn.gold-soft.wide.suggest-btn', { onclick: () => { s.close(); suggestGoals(); } }, 'Suggest goals for me'),
       h('div.group', energyField('Calories', 'kcal', 'kcal'), energyField('Protein', 'p', 'g'), energyField('Carbs', 'c', 'g'), energyField('Fat', 'f', 'g')),
       hintEl,
       h('div.group', field('Water', 'water', 'ml', 50))],
     fitness: () => [
-      h('div.goal-section', '🏃 Fitness'),
+      h('div.goal-section', 'Fitness'),
       h('label.form-label', 'Each week'),
       h('div.group',
         fitField('Activities', 'fitPerWeek', 'per week'),
         fitField('Active time', 'fitMins', 'min'),
         fitField('Distance', 'fitDist', distUnit(), (m) => Math.round((m / dKm) * 10) / 10, (v) => v * dKm)),
-      h('p.fine', 'Runs, walks, rides and other cardio on the Fitness tab. Leave any blank for no goal. Health guidelines suggest about 150 minutes of moderate activity a week.')],
+      h('p.fine', 'Runs, rides and other cardio. Leave blank for no goal. About 150 active minutes a week is a common guideline.')],
     body: () => {
       const wIn = h('input.field.goal-input', { value: g.weight ? bodyDisplay(g.weight) : '', placeholder: 'none', inputmode: 'decimal', 'aria-label': 'Goal weight' });
       wIn.addEventListener('change', () => { const v = num(wIn.value); commit((st) => { st.goals.weight = v > 0 ? bodyFromDisplay(v) : 0; }); });
       return [
-        h('div.goal-section', '🧍 Body'),
+        h('div.goal-section', 'Body'),
         h('div.group',
           h('label.goal-row', h('span', 'Goal weight'), h('span.goal-field', wIn, h('span.goal-unit', bodyUnit()))),
           field('Goal body fat', 'bodyFat', '%', 0.5)),
         h('p.fine', 'Optional. Your weight card shows how far you have to go.')];
     },
     recovery: () => [
-      h('div.goal-section', '😴 Recovery'),
+      h('div.goal-section', 'Recovery'),
       h('div.group', field('Sleep each night', 'sleep', 'h', 0.5)),
       h('p.fine', 'Most adults do best on 7 to 9 hours. Readiness on the Recovery tab scores your sleep against this.')],
     daily: () => [
-      h('div.goal-section', '✅ Daily goals'),
+      h('div.goal-section', 'Daily goals'),
       h('label.form-label', `Your own (up to ${MAX_HABITS})`), customList,
-      h('p.fine', 'Things you either do each day or don’t. Each one is a slider on Home: slide it when it’s done. Your groups see it right away, and at 8 am the next day if you missed it. You can also show one as a ring.')],
+      h('p.fine', 'Yes-or-no goals for each day. Slide one on Home when it’s done; your groups see it.')],
   };
   const shown = ['workout', 'nutrition', 'fitness', 'recovery', 'body', 'daily'].includes(section)
     ? [section] : ['workout', 'nutrition', 'fitness', 'recovery', 'body', 'daily'].filter((k) => k === 'daily' || k === 'body' || tabOn(k));
@@ -175,7 +175,7 @@ export function openGoals(section = 'all') {
   if (shown.includes('nutrition')) balance(false);   // show which one fills in, without changing your saved goals
 }
 
-/** The 🎯 Goals button: top right of every main page, opening that page's goals. */
+/** The Goals button: top right of every main page, opening that page's goals. */
 export const goalsButton = (section = 'all') =>
   h('button.nav-goals', { onclick: () => openGoals(section), 'aria-label': section === 'all' ? 'All goals' : `${section[0].toUpperCase() + section.slice(1)} goals` }, icon('target', 16), 'Goals');
 

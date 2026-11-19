@@ -104,10 +104,10 @@ export function workoutPage() {
       h('span.start-ico', ico), h('span.start-text', h('span.start-title', title), h('span.start-sub', sub)), h('span.card-go', '›'));
     const others = state.plans.filter((p) => p !== next && p.exercises.length);
     return h('section.card.list-card.start-opts.below',
-      next ? opt('⚡', 'Freestyle workout', 'Make it up as you go, no plan', () => startWorkout()) : null,
+      next ? opt(icon('bolt', 18), 'Freestyle workout', 'Make it up as you go, no plan', () => startWorkout()) : null,
       others.length ? opt('▶', 'Start a different plan', others.map((p) => p.name).slice(0, 3).join(', ') + (others.length > 3 ? '…' : ''),
         () => actionSheet('Start which plan?', others.map((p) => ({ label: p.name, onClick: () => startWorkout(p) })))) : null,
-      opt('📅', 'Log a past workout', 'One you did but didn’t track', () => logPastWorkout()));
+      opt(icon('calendar', 18), 'Log a past workout', 'One you did but didn’t track', () => logPastWorkout()));
   }
 
   /** Monday to Sunday: workouts done, days you planned, today. */
@@ -123,7 +123,7 @@ export function workoutPage() {
         const cls = did.has(k) ? '.did' : dayPlan(k) === 'planned' && k >= today ? '.plan' : '';
         return h('div.wk-col' + cls + (k === today ? '.today' : ''), h('span.wk-d', d[0]), h('span.wk-dot', did.has(k) ? icon('check', 14) : null));
       })),
-      h('div.wk-sum', h('b', `${n} of ${goal}`), n >= goal ? ' this week · goal hit 🔥' : ' workouts this week'));
+      h('div.wk-sum', h('b', `${n} of ${goal}`), n >= goal ? ' this week · goal hit' : ' workouts this week'));
   }
 
   function planRow(p, isNext) {
@@ -291,7 +291,7 @@ function planEditor(existing = null) {
     title: existing ? 'Edit plan' : 'New plan', back: false,
     right: [h('button.btn.gold.small', { onclick: doSave }, 'Save plan')],
   });
-  const planNote = h('div.plan-note', '📝 ', h('span', 'You’re ', h('b', existing ? 'editing a plan' : 'making a plan'), ': a routine saved for later. Nothing is logged here. To work out, start it from the Workout tab.'));
+  const planNote = h('div.plan-note', icon('edit', 15), h('span', 'You’re ', h('b', existing ? 'editing a plan' : 'making a plan'), ': a routine saved for later. Nothing is logged here. To work out, start it from the Workout tab.'));
   nav.querySelector('.nav-left').append(h('button.link', {
     onclick: async () => {
       if (dirty && !(await confirmBox('Discard changes?', null, { ok: 'Discard', danger: true, cancel: 'Keep editing' }))) return;

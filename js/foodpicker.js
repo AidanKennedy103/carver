@@ -81,9 +81,9 @@ export function addFood({ date = ymd(), meal = null, cat: startCat = null, onPic
   function onlineRows() {
     if (q.length < 3) return null;
     const res = online.get(q);
-    if (!res) return h('button.ex-row.online-row', { onclick: () => searchOnline(q) }, h('span.ex-badge.food-badge', '🌐'), h('span.ex-text', h('span.ex-name', `Search online for “${q}”`), h('span.ex-sub', 'Brands and packaged foods from Open Food Facts')));
+    if (!res) return h('button.ex-row.online-row', { onclick: () => searchOnline(q) }, h('span.ex-badge.food-badge', icon('globe', 18)), h('span.ex-text', h('span.ex-name', `Search online for “${q}”`), h('span.ex-sub', 'Brands and packaged foods from Open Food Facts')));
     if (res === 'loading') return h('div.empty-small', 'Searching Open Food Facts…');
-    if (res === 'error') return h('button.ex-row.online-row', { onclick: () => searchOnline(q) }, h('span.ex-badge.food-badge', '⚠️'), h('span.ex-text', h('span.ex-name', 'Couldn’t search online'), h('span.ex-sub', 'Check your connection, then tap to try again')));
+    if (res === 'error') return h('button.ex-row.online-row', { onclick: () => searchOnline(q) }, h('span.ex-badge.food-badge', icon('alert', 18)), h('span.ex-text', h('span.ex-name', 'Couldn’t search online'), h('span.ex-sub', 'Check your connection, then tap to try again')));
     if (!res.length) return h('div.empty-small', 'Nothing online either. Try fewer words, scan the barcode, or create the food.');
     return [h('div.list-label', 'From Open Food Facts (ODbL)'), ...res.map((f) => {
       const sv = f.servings[0];
@@ -144,7 +144,7 @@ export function addFood({ date = ymd(), meal = null, cat: startCat = null, onPic
     h('div.search-wrap', icon('search', 18), search),
     chips,
     onPick ? null : h('div.add-row.small',
-      h('button.add-tile', { onclick: () => { s.close(); import('./quickadd.js').then((m) => m.quickAdd({ date, meal })); } }, h('span.add-ico', '⚡'), 'Quick add'),
+      h('button.add-tile', { onclick: () => { s.close(); import('./quickadd.js').then((m) => m.quickAdd({ date, meal })); } }, h('span.add-ico', icon('bolt', 20)), 'Quick add'),
       h('button.add-tile', { onclick: () => scanBarcode((f) => choose(f)) }, h('span.add-ico', '▦'), 'Scan barcode')),
     list,
   ), { full: true });

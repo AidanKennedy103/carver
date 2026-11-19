@@ -1,7 +1,7 @@
 // Trends: your numbers over time, and your estimated metabolism worked out
 // from what you eat and how your weight moves.
 
-import { h, fill, navBar, fmtNum, fmtDate, swipeSegment } from './ui.js';
+import { h, fill, icon, navBar, fmtNum, fmtDate, swipeSegment } from './ui.js';
 import { state, ymd, dayTotals, weekStart, workoutStats, toDisplay, unit, bodyDisplay, bodyUnit, daySkipped, setDayCheck } from './store.js';
 import { lineChart, barChart, COLORS } from './charts.js';
 import { trend, latestWeight } from './body.js';
@@ -81,7 +81,7 @@ function oddDaysCard(redraw) {
   const set = (k, v) => { setDayCheck(k, v); redraw(); };
   return h('section.card.odd-card',
     ask.length ? [
-      h('div.odd-title', `⚠️ ${ask.length === 1 ? 'This day looks' : 'These days look'} off`),
+      h('div.odd-title', icon('alert', 15), `${ask.length === 1 ? 'This day looks' : 'These days look'} off`),
       h('p.fine', 'A day you didn’t finish logging, or a typo, throws off your metabolism, so these are left out for now. Keep any that were real.'),
       ask.slice(0, 8).map((d) => h('div.odd-row',
         h('div.odd-text', h('b', day(d.k)), h('span', `${fmtNum(d.kcal)} kcal · ${d.odd}`)),
@@ -98,11 +98,11 @@ function confidenceBar(m) {
   const step = { Low: 1, Medium: 2, High: 3 }[m.confidence];
   const more = [m.toHigh.food ? `${m.toHigh.food} more day${m.toHigh.food === 1 ? '' : 's'} of food` : null, m.toHigh.weigh ? `${m.toHigh.weigh} more weigh-in${m.toHigh.weigh === 1 ? '' : 's'}` : null].filter(Boolean).join(' and ');
   return h('div.conf.' + m.confidence.toLowerCase(),
-    h('div.conf-top', h('b', m.confidence === 'Low' ? '⚠️ Low confidence: an early guess' : m.confidence === 'Medium' ? 'Medium confidence: getting closer' : '✓ High confidence'),
+    h('div.conf-top', h('b', m.confidence === 'Low' ? 'Low confidence: an early guess' : m.confidence === 'Medium' ? 'Medium confidence: getting closer' : 'High confidence'),
       h('span.conf-meter', [1, 2, 3].map((i) => h('i' + (i <= step ? '.on' : ''))))),
     m.confidence === 'High'
       ? h('span.conf-sub', 'Based on about a month of steady logging. Keep logging and it keeps up with you.')
-      : h('span.conf-sub', `${m.confidence === 'Low' ? 'Could be off by a few hundred calories.' : 'Close, but could still be off by a couple hundred calories.'} It becomes reliable with about ${SURE.high.food} days of food and ${SURE.high.weigh} weigh-ins in 4 weeks: ${more} to go.${m.confidence === 'Low' ? ' Don’t change your diet much on it yet.' : ''}`));
+      : h('span.conf-sub', `${m.confidence === 'Low' ? 'Could be off by a few hundred calories.' : 'Could still be off by a couple hundred calories.'} Reliable after about ${SURE.high.food} days of food and ${SURE.high.weigh} weigh-ins: ${more} to go.${m.confidence === 'Low' ? ' Don’t change your diet on it yet.' : ''}`));
 }
 
 /** Weight trend with a smaller line of calories eaten (7-day average) and your maintenance level under it. */
@@ -176,10 +176,10 @@ export function trendsPage() {
           h('p.fine', `You ate ${fmtNum(m.intake)} kcal a day on average and your weight trend moved ${m.dKg >= 0 ? '+' : '−'}${bodyDisplay(Math.abs(m.dKg))} ${bodyUnit()} over ${Math.round(m.span)} days. Your ${m.workouts} gym workout${m.workouts === 1 ? '' : 's'}${m.activities ? ` and ${m.activities} activit${m.activities === 1 ? 'y' : 'ies'}` : ''} burned about ${fmtNum(m.workoutKcal)} kcal a day on top of your resting burn.${m.activities ? '' : ' Import runs and rides on Fitness to sharpen this.'}`),
           metaChart(m, Math.max(28, Math.min(range, 56))),
           h('div.meta-foot', h('span', `${m.confidence} confidence`), h('span', `${m.logged} days of food · ${m.weighins} weigh-ins`)),
-          h('p.fine', 'An estimate that sharpens the more days you log. Eat about 300–500 kcal under maintenance to lose fat, or 200–300 over to build muscle.'))
+          h('p.fine', 'Sharpens as you log. Eat 300–500 below maintenance to lose fat, 200–300 above to build muscle.'))
         : h('section.card.meta-card',
           h('div.empty-title.left', 'Not enough data yet'),
-          h('p.fine', 'Carver works out your maintenance calories from what you eat and how your weight moves. Daily weight swings with water, so it waits until there’s enough to see through that.'),
+          h('p.fine', 'Worked out from what you eat and how your weight moves. It waits for enough data to see past daily water swings.'),
           [[`Days of food logged`, m.logged, NEED.food], [`Weigh-ins`, m.weighins, NEED.weigh], [`Days between first and last weigh-in`, m.spread, NEED.spread]].map(([l, v, n]) => h('div.need-row',
             h('div.need-line', h('span', l), h('b' + (v >= n ? '.done' : ''), v >= n ? '✓' : `${v} of ${n}`)),
             h('div.lb-bar', h('i', { style: { width: Math.min(100, (v / n) * 100) + '%' } })))),

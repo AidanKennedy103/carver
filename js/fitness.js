@@ -265,7 +265,7 @@ export function fitnessPage() {
         ? h('section.card.list-card', shown.map(activityRow))
         : h('button.card.empty-plan', { onclick: importActivitiesSheet },
           h('div.empty-title', 'Bring in your runs and rides'),
-          h('div.empty-text', 'Import from Apple Health (Apple Watch, Strava, Nike Run Club…) or add one by hand. Carver uses them in your metabolism estimate on Trends.')),
+          h('div.empty-text', 'Import from Apple Health or add one by hand. They feed your metabolism estimate.')),
       list.length > shown.length ? h('button.link', { onclick: () => { showAll = true; draw(); } }, `Show all ${list.length}`) : null,
       h('div.bottom-space'),
     );

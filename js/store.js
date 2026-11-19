@@ -139,14 +139,14 @@ export const distUnit = () => state.settings.distUnit || (unit() === 'kg' ? 'km'
 /** Tabs you can hide in Settings (Home always shows). */
 // The tabs you can show, in bar order. Home is always first. New ones start off.
 export const TAB_LIST = [
-  { id: 'workout', label: 'Workout', icon: 'dumbbell', emoji: '🏋️', sub: 'Gym workouts and plans' },
-  { id: 'nutrition', label: 'Nutrition', icon: 'apple', emoji: '🍽️', sub: 'Food, calories and macros' },
-  { id: 'fitness', label: 'Fitness', icon: 'activity', emoji: '🏃', sub: 'Runs, walks, rides and cardio' },
-  { id: 'social', label: 'Social', icon: 'users', emoji: '👥', sub: 'Groups, leaderboards and challenges' },
-  { id: 'habits', label: 'Habits', icon: 'check', emoji: '✅', sub: 'Daily goals, streaks and reminders' },
-  { id: 'coach', label: 'Coach', icon: 'trophy', emoji: '🧭', sub: 'Programs and training blocks that plan your weights' },
-  { id: 'recovery', label: 'Recovery', icon: 'moon', emoji: '😴', sub: 'Sleep, soreness and a daily readiness score' },
-  { id: 'body', label: 'Body', icon: 'user', emoji: '🧍', sub: 'Weight, body fat, photos and measurements' },
+  { id: 'workout', label: 'Workout', icon: 'dumbbell', sub: 'Gym workouts and plans' },
+  { id: 'nutrition', label: 'Nutrition', icon: 'apple', sub: 'Food, calories and macros' },
+  { id: 'fitness', label: 'Fitness', icon: 'activity', sub: 'Runs, walks, rides and cardio' },
+  { id: 'social', label: 'Social', icon: 'users', sub: 'Groups, leaderboards and challenges' },
+  { id: 'habits', label: 'Habits', icon: 'check', sub: 'Daily goals, streaks and reminders' },
+  { id: 'coach', label: 'Coach', icon: 'trophy', sub: 'Programs and training blocks that plan your weights' },
+  { id: 'recovery', label: 'Recovery', icon: 'moon', sub: 'Sleep, soreness and a daily readiness score' },
+  { id: 'body', label: 'Body', icon: 'user', sub: 'Weight, body fat, photos and measurements' },
 ];
 /** Tab ids you keep, in your order (not counting Home). */
 export function shownTabs() {
@@ -313,7 +313,7 @@ export function restNote(today = ymd()) {
   const sunday = addDays(ymd(weekStart()), 6);
   let left = 0;
   for (let k = addDays(today, 1); k <= sunday; k = addDays(k, 1)) if (dayPlan(k) === 'planned') left++;
-  if (n >= goal) return { tone: 'done', title: 'Rest day, goal already hit 🔥', sub: `${n} of ${goal} workouts this week. Recover well, or train anyway if you feel good.` };
+  if (n >= goal) return { tone: 'done', title: 'Rest day, weekly goal already hit', sub: `${n} of ${goal} workouts this week. Recover well, or train anyway if you feel good.` };
   if (n + left >= goal) return { tone: 'ok', title: 'Rest day, and you’re on track', sub: `${n} of ${goal} this week with ${left} workout day${left === 1 ? '' : 's'} left. Still want to train?` };
   const need = goal - n;
   return { tone: 'behind', title: 'Rest day, but you’re falling behind', sub: `${n} of ${goal} this week and only ${left} workout day${left === 1 ? '' : 's'} left. ${left + 1 >= need ? 'A workout today keeps you on pace.' : `To make ${goal}, you’d need to train on ${need - left} rest day${need - left === 1 ? '' : 's'}, today included.`}` };

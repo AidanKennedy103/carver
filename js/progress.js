@@ -49,7 +49,7 @@ export function progressPage({ tab = false } = {}) {
           h('div', h('div.energy-v', toDisplay(last.kg), h('span.orm-unit', unit())), h('div.energy-k', `Last weigh-in · ${fmtDate(last.ts, { month: 'short', day: 'numeric' })}`)),
           c30 != null ? h('div.energy-goal', h('div.weight-change', signed(c30)), h('div.energy-k', 'last 30 days')) : null)
           : h('div.empty-text.left', 'Log your weight to see your trend. Weighing in most mornings gives the clearest picture.'),
-        weightGoalText() ? h('div.weight-goal', '🎯 ', weightGoalText()) : null,
+        weightGoalText() ? h('div.weight-goal', icon('target', 15), weightGoalText()) : null,
         recent.length > 1 ? lineChart(recent.map((p) => ({ ...p, y: +toDisplay(p.y) })), {
           height: 140, dots: false, fmtY: (v) => Math.round(v), label: 'Weight trend, last 90 days',
           tip: (p) => `<b>${toDisplay(p.raw)} ${unit()}</b><span>Trend ${p.y} · ${fmtDate(p.x, { month: 'short', day: 'numeric' })}</span>`,

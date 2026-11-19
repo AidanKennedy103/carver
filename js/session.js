@@ -170,7 +170,7 @@ function workoutScreen() {
         h('div.empty-icon', icon('dumbbell', 40)),
         h('div.empty-title', w.past ? 'What did you do?' : 'Freestyle workout'),
         h('div.empty-text', w.past ? 'Add the exercises you did, then type in your sets.'
-          : 'Make it up as you go: add an exercise when you get to it, log your sets, then add the next. You can save it as a plan when you finish.')),
+          : 'Add exercises as you go. Save it as a plan when you finish.')),
       w.exercises.map((ex, i) => exerciseCard({
         ex, index: i, count: w.exercises.length, mode: 'live', current: i === w.exercises.findIndex((e) => e.sets.some((x) => !x.done)),
         prev: previousSets(ex.exId, w.id),
@@ -344,7 +344,7 @@ function showSummary(w, prs, changes = []) {
       h('div.stat', h('span.stat-k', 'Sets'), h('span.stat-v', st.sets))),
     changes.length ? h('div.pr-list',
       h('div.section-label', 'Next time (your program)'),
-      changes.map((c) => h('div.pr-row', h('span', c.kind === 'up' ? '📈' : '↘️'),
+      changes.map((c) => h('div.pr-row', h('span.chg.' + c.kind, icon(c.kind === 'down' ? 'down' : 'up', 16)),
         h('span.pr-name', exercise(c.exId).name),
         h('span.pr-val', `${toDisplay(c.from)} → ${toDisplay(c.to)} ${unit()}`)))) : null,
     prs.length ? h('div.pr-list',

@@ -6,16 +6,16 @@
 // A challenge is itself a group post (kind 'challenge'): someone sets a goal
 // like "12 workouts in 30 days" and everyone in the group is in it.
 
-import { h, fill, sheet, toast, confirmBox, fmtDate } from './ui.js';
+import { h, fill, sheet, toast, confirmBox, fmtDate, icon } from './ui.js';
 import { ymd, addDays, weekStart, uid } from './store.js';
 import { client, account } from './cloud.js';
 import { groupsScreen, avatar } from './groups.js';
 
 export const METRICS = [
-  { id: 'workouts', name: 'Workouts', unit: 'workout', ico: '🏋️' },
-  { id: 'active', name: 'Active days', unit: 'active day', ico: '🔥', sub: 'Days with a workout, run or ride' },
-  { id: 'habits', name: 'Daily goals', unit: 'daily goal', ico: '✅' },
-  { id: 'protein', name: 'Protein days', unit: 'protein day', ico: '💪' },
+  { id: 'workouts', name: 'Workouts', unit: 'workout' },
+  { id: 'active', name: 'Active days', unit: 'active day', sub: 'Days with a workout, run or ride' },
+  { id: 'habits', name: 'Daily goals', unit: 'daily goal' },
+  { id: 'protein', name: 'Protein days', unit: 'protein day' },
 ];
 const metric = (id) => METRICS.find((m) => m.id === id) || METRICS[0];
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
@@ -78,12 +78,12 @@ export function leaderboard(rows, people, period, board, set) {
     h('div.section-head', h('h2.section-title', 'Leaderboard'),
       h('div.segment.mini', [['week', 'Week'], ['month', 'Month']].map(([v, l]) => h('button' + (period === v ? '.on' : ''), { onclick: () => set(v, board) }, l)))),
     h('section.card.lb-card',
-      h('div.chips.tight.no-drag', METRICS.map((m) => h('button.chip' + (board === m.id ? '.on' : ''), { onclick: () => set(period, m.id) }, `${m.ico} ${m.name}`))),
+      h('div.chips.tight.no-drag', METRICS.map((m) => h('button.chip' + (board === m.id ? '.on' : ''), { onclick: () => set(period, m.id) }, m.name))),
       ranked.map((p, i) => {
         if (p.v !== last) { place = i + 1; last = p.v; }
         const me = p.user_id === account()?.id;
         return h('div.lb-row' + (me ? '.me' : ''),
-          h('span.lb-place', p.v && place <= 3 ? ['🥇', '🥈', '🥉'][place - 1] : String(place)),
+          h('span.lb-place' + (p.v && place <= 3 ? '.top' + place : ''), String(place)),
           avatar(p.name, p.user_id),
           h('div.lb-main', h('div.lb-name', me ? 'You' : p.name), h('div.lb-bar', h('i', { style: { width: (p.v / top) * 100 + '%' } }))),
           h('b.lb-val', p.v));
@@ -105,7 +105,7 @@ function challenges(g, rows, people, redraw) {
   return [
     h('div.section-head', h('h2.section-title', 'Challenges'), h('button.link', { onclick: () => newChallenge(g, redraw) }, '+ New')),
     list.length ? list.map((c) => challengeCard(c, rows, people, redraw))
-      : h('button.card.empty-plan-row', { onclick: () => newChallenge(g, redraw) }, '🏁', h('span', 'Start a challenge for the group')),
+      : h('button.card.empty-plan-row', { onclick: () => newChallenge(g, redraw) }, icon('flag', 18), h('span', 'Start a challenge for the group')),
   ];
 }
 
@@ -118,7 +118,7 @@ export function challengeCard(c, rows, people, redraw) {
   const mine = c.user_id === account()?.id;
   return h('section.card.ch-card' + (ended ? '.ended' : ''),
     h('div.ch-head',
-      h('div', h('div.ch-title', `🏁 ${d.title}`),
+      h('div', h('div.ch-title', d.title),
         h('div.ch-meta', [`${fmtDate(Date.parse(d.start + 'T12:00'), { month: 'short', day: 'numeric' })} – ${fmtDate(Date.parse(d.end + 'T12:00'), { month: 'short', day: 'numeric' })}`,
           ended ? 'Finished' : left === 1 ? 'Last day' : `${left} days left`, `${done} of ${ranked.length} done`].join(' · '))),
       mine ? h('button.link.small-link', {
@@ -134,7 +134,7 @@ export function challengeCard(c, rows, people, redraw) {
         h('div.lb-main', h('div.lb-name', me ? 'You' : p.name), h('div.lb-bar', h('i', { style: { width: Math.min(100, (p.v / d.target) * 100) + '%' } }))),
         h('b.lb-val', hit ? `${p.v} ✓` : `${p.v}/${d.target}`));
     }),
-    h('div.ch-goal', `${m.ico} ${plural(d.target, m.unit)}`));
+    h('div.ch-goal', `Goal: ${plural(d.target, m.unit)}`));
 }
 
 const PRESETS = [

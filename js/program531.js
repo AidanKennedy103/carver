@@ -143,12 +143,12 @@ export function setup531() {
 
   const s = sheet(h('div.form',
     h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', '5/3/1'), h('button.link.strong', { onclick: go }, p ? 'Save' : 'Start')),
-    h('p.fine', 'Four days: squat, bench, deadlift and press. Each lift works off a training max, about 90% of your one-rep max. Weeks go 5s, 3s, then 5/3/1, then an easy deload; after that your maxes go up and the next cycle starts.'),
+    h('p.fine', 'Squat, bench, deadlift and press, each off a training max (about 90% of your max). Weeks go 5s, 3s, 5/3/1, then a deload; then the maxes go up.'),
     h('label.form-label', 'Training maxes'),
     h('div.group', rows),
-    h('p.fine', p ? 'Changing these rewrites this week’s weights.' : 'Filled in from your lifts in the last 6 months (90% of your estimated max). Blank means Carver has none yet: enter about 90% of what you could lift once.'),
+    h('p.fine', p ? 'Changing these rewrites this week’s weights.' : 'From your last 6 months (90% of your estimated max). If blank, enter about 90% of what you could lift once.'),
     h('label.form-label', 'After the main lift'), extraBtn,
-    h('p.fine', '5 sets of 10 at half the training max builds size. Add any other exercises to the plans yourself; Carver keeps them when the weeks change.'),
+    h('p.fine', '5×10 at half the training max builds size. Exercises you add yourself are kept each week.'),
     p ? h('div.group', h('button.group-row.danger', {
       onclick: async () => {
         if (!(await confirmBox('Stop 5/3/1?', 'The plans stay as they are now; Carver just stops changing them each week.', { ok: 'Stop', danger: true }))) return;
