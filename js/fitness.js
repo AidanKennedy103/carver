@@ -2,10 +2,11 @@
 // Shortcut copies them, you paste) or added by hand. Gym workouts live in Workout.
 
 import { h, fill, icon, navBar, sheet, toast, confirmBox, fmtDate, fmtNum, fmtDurationWords } from './ui.js';
-import { state, commit, uid, distUnit, weekStart } from './store.js';
+import { state, commit, uid, distUnit, weekStart, ymd, addDays, workoutStats } from './store.js';
 import { barChart, COLORS } from './charts.js';
 import { latestWeight, findDate } from './body.js';
 import { goalsButton } from './goals.js';
+import { healthDay, hasHealth, importHealth } from './health.js';
 
 export const ACTIVITY_TYPES = [
   { id: 'run', name: 'Run', icon: '🏃', met: 9.8, words: ['run', 'running', 'jog'] },
@@ -211,15 +212,119 @@ export function importActivitiesSheet() {
   ));
 }
 
+// ---------- Metrics, heart-rate zones, activity points ----------
+
+/** The number that matters for each sport: pace for runs, speed for rides, per 100 m for swims. */
+export function sportMetric(a) {
+  if (!a.dist || !a.dur) return '';
+  const secs = a.dur / 1000;
+  if (a.type === 'cycle') return `${(a.dist / (metric() ? 1000 : MI) / (secs / 3600)).toFixed(1)} ${metric() ? 'km/h' : 'mph'}`;
+  if (a.type === 'swim') { const s100 = secs / (a.dist / 100); return `${Math.floor(s100 / 60)}:${String(Math.round(s100 % 60)).padStart(2, '0')} /100 m`; }
+  if (a.type === 'row') { const s500 = secs / (a.dist / 500); return `${Math.floor(s500 / 60)}:${String(Math.round(s500 % 60)).padStart(2, '0')} /500 m`; }
+  return paceText(a);
+}
+
+/** Your max heart rate: the highest seen in your workouts (if believable), else 190. */
+export function maxHR() {
+  const seen = Math.max(0, ...state.activities.map((a) => a.hrMax || 0));
+  return state.goals.maxHR || (seen >= 160 ? seen : 190);
+}
+export const ZONES = [
+  { n: 1, name: 'Easy', lo: 0.5, color: '#5b6b7a' },
+  { n: 2, name: 'Endurance', lo: 0.6, color: '#2e8bd8' },
+  { n: 3, name: 'Tempo', lo: 0.7, color: '#16917f' },
+  { n: 4, name: 'Threshold', lo: 0.8, color: '#e3b04b' },
+  { n: 5, name: 'Max', lo: 0.9, color: '#d9503c' },
+];
+export const zoneOf = (bpm) => { const p = bpm / maxHR(); return [...ZONES].reverse().find((z) => p >= z.lo) || ZONES[0]; };
+
+/**
+ * Activity points: one number for everything that moves you. Based on MET-minutes
+ * (how hard × how long, above resting) ÷ 10, so a 30-minute run, a 60-minute lift
+ * and 10,000 steps each land around 25. Steps taken during runs and walks aren't counted twice.
+ */
+export function dayPoints(key) {
+  const acts = state.activities.filter((a) => ymd(a.start) === key);
+  const cardio = acts.reduce((n, a) => n + (activityType(a.type).met - 1) * (a.dur / 6e4), 0);
+  const lifts = state.workouts.filter((w) => ymd(w.start) === key).reduce((n, w) => n + 4 * Math.min(120, workoutStats(w).duration / 6e4), 0);
+  const covered = acts.reduce((n, a) => n + (a.type === 'run' ? 160 : ['walk', 'hike'].includes(a.type) ? 110 : 0) * (a.dur / 6e4), 0);
+  const steps = Math.max(0, (healthDay(key)?.steps || 0) - covered);
+  const walk = (steps / 100) * 2.5;
+  return { total: Math.round((cardio + lifts + walk) / 10), cardio: Math.round(cardio / 10), lifts: Math.round(lifts / 10), steps: Math.round(walk / 10) };
+}
+export const pointsGoal = () => state.goals.movePts || 30;
+
 // ---------- The page ----------
 
 function activityRow(a) {
   const t = activityType(a.type);
-  const bits = [fmtDurationWords(a.dur), a.dist ? fmtDist(a.dist) : '', paceText(a)].filter(Boolean).join(' · ');
+  const bits = [fmtDurationWords(a.dur), a.dist ? fmtDist(a.dist) : '', sportMetric(a), a.hrAvg ? `${a.hrAvg} bpm · Z${zoneOf(a.hrAvg).n}` : ''].filter(Boolean).join(' · ');
   return h('button.food-line', { onclick: () => activitySheet(a) },
     h('span.food-ico', t.icon),
     h('span.food-text', h('span.food-name', a.name && t.id === 'other' ? a.name : t.name), h('span.food-sub', `${fmtDate(a.start, { month: 'short', day: 'numeric' })} · ${bits}`)),
     h('span.food-kcal', `${fmtNum(activityKcal(a))}`, h('span.food-sub', a.kcal ? ' kcal' : ' kcal est.')));
+}
+
+/** Today's activity points against the goal, with what they came from. */
+function pointsCard() {
+  const today = ymd(), p = dayPoints(today), goal = pointsGoal();
+  const week = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6)).map((k) => ({ k, v: dayPoints(k).total }));
+  const pct = Math.min(1, p.total / goal), R = 40, C = 2 * Math.PI * R;
+  const ring = h('div.pts-ring');
+  ring.innerHTML = `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke="#26262a" stroke-width="10"/><circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--gold)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(C * pct).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/></svg>`;
+  ring.append(h('div.pts-mid', h('b', p.total), h('span', `of ${goal}`)));
+  return h('section.card.pts-card',
+    h('div.pts-top', ring,
+      h('div.pts-text',
+        h('div.pts-title', 'Activity points'),
+        h('div.pts-sub', p.total >= goal ? 'Goal hit today.' : `${goal - p.total} to go today.`),
+        h('div.pts-parts', [p.steps ? `Steps ${p.steps}` : null, p.cardio ? `Cardio ${p.cardio}` : null, p.lifts ? `Lifting ${p.lifts}` : null].filter(Boolean).join(' · ') || 'Steps, cardio and lifting all count.'))),
+    h('div.pts-week', week.map((d) => h('div.pts-day' + (d.v >= goal ? '.hit' : ''), h('i', h('b', { style: { height: `${Math.min(100, (d.v / goal) * 100)}%` } })), h('span', 'MTWTFSS'[(new Date(d.k + 'T12:00').getDay() + 6) % 7])))));
+}
+
+/** Steps from Apple Health: today and the last 7 days. */
+function stepsCard() {
+  if (!hasHealth()) return null;
+  const today = ymd();
+  const days = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6)).map((k) => ({ x: new Date(k + 'T12:00').getTime(), y: healthDay(k)?.steps || 0 }));
+  const avg = Math.round(days.reduce((n, d) => n + d.y, 0) / 7);
+  const last = healthDay(today)?.steps ?? healthDay(addDays(today, -1))?.steps;
+  return [
+    h('div.section-head', h('h2.section-title', 'Steps'), h('span.section-count', `${fmtNum(avg)} a day`)),
+    h('section.card.chart-card',
+      h('div.metric-now', h('b', fmtNum(last || 0)), h('span', healthDay(today)?.steps != null ? ' today' : ' yesterday')),
+      barChart(days, { height: 110, color: COLORS.gold, goal: state.goals.steps || 8000, fmtX: (t) => fmtDate(t, { weekday: 'narrow' }), label: 'Steps, last 7 days', tip: (p) => `<b>${fmtNum(p.y)}</b><span>${fmtDate(p.x, { weekday: 'short', month: 'short', day: 'numeric' })}</span>` }),
+      h('p.fine', `As of your last Health import · ${fmtDate(state.health.last, { month: 'short', day: 'numeric' })}`)),
+  ];
+}
+
+/** Minutes in each heart-rate zone this week (each workout counted at its average heart rate). */
+function zonesCard(week) {
+  const withHR = week.filter((a) => a.hrAvg);
+  if (!withHR.length) return null;
+  const mins = ZONES.map((z) => withHR.filter((a) => zoneOf(a.hrAvg).n === z.n).reduce((n, a) => n + a.dur / 6e4, 0));
+  const total = mins.reduce((a, b) => a + b, 0);
+  return [
+    h('div.section-head', h('h2.section-title', 'Heart-rate zones'), h('span.section-count', 'this week')),
+    h('section.card.zones',
+      h('div.split-bar.big', ZONES.map((z, i) => mins[i] ? h('i', { style: { width: `${(mins[i] / total) * 100}%`, background: z.color } }) : null)),
+      ZONES.map((z, i) => !mins[i] ? null : h('div.zone-row', h('i.swatch', { style: { background: z.color } }), h('span', `Zone ${z.n} · ${z.name}`), h('span.row-val', `${Math.round(mins[i])} min`))),
+      h('p.fine', `Max heart rate ${maxHR()} bpm${state.goals.maxHR ? '' : ' (highest seen; set yours in Fitness goals)'}. Zones use each workout’s average.`)),
+  ];
+}
+
+/** Longest and fastest for each sport you've done. */
+function bestsCard(list) {
+  const rows = [];
+  for (const t of ['run', 'cycle', 'swim', 'walk', 'hike', 'row']) {
+    const of = list.filter((a) => a.type === t && a.dist);
+    if (!of.length) continue;
+    const longest = of.reduce((a, b) => (b.dist > a.dist ? b : a));
+    const fastest = of.filter((a) => a.dist >= (t === 'swim' ? 400 : 1000)).reduce((a, b) => (!a || b.dist / b.dur > a.dist / a.dur ? b : a), null);
+    rows.push(h('div.group-row', h('span', `${activityType(t).icon} ${activityType(t).name}`),
+      h('span.row-val', [`longest ${fmtDist(longest.dist)}`, fastest ? `best ${sportMetric(fastest)}` : null].filter(Boolean).join(' · '))));
+  }
+  return rows.length ? [h('div.section-head', h('h2.section-title', 'Your bests')), h('section.card.list-card', rows)] : null;
 }
 
 export function fitnessPage() {
@@ -244,6 +349,9 @@ export function fitnessPage() {
     fill(body,
       navBar({ title: 'Fitness', back: false, large: true, wip: true, right: [goalsButton('fitness'), h('button.icon-btn.gold-text', { onclick: () => activitySheet(), 'aria-label': 'Add activity' }, icon('plus', 24))] }),
 
+      pointsCard(),
+      stepsCard(),
+
       h('div.section-head', h('h2.section-title', 'This week')),
       h('div.tiles.three',
         h('div.tile' + (g.fitPerWeek && week.length >= g.fitPerWeek ? '.hit' : ''), h('div.tile-v', week.length, g.fitPerWeek ? h('span.tile-of', ` / ${g.fitPerWeek}`) : null), h('div.tile-k', 'Activities'),
@@ -252,14 +360,18 @@ export function fitnessPage() {
         h('div.tile', h('div.tile-v', fmtNum(sum(week, activityKcal))), h('div.tile-k', 'Burned'), h('div.tile-sub', 'active kcal'))),
 
       h('div.btn-pair',
-        h('button.btn.gold', { onclick: importActivitiesSheet }, icon('apple', 18), 'Import'),
+        h('button.btn.gold', { onclick: importHealth }, hasHealth() ? 'Update from Health' : 'Import from Health'),
         h('button.btn.dark', { onclick: () => activitySheet() }, icon('plus', 18), 'Add')),
+      h('button.link.small-link.center-link', { onclick: importActivitiesSheet }, 'Or paste activities'),
 
       h('div.section-head', h('h2.section-title', 'Minutes'), h('span.section-count', 'per week')),
       h('section.card.chart-card', barChart(weeks, {
         height: 140, color: COLORS.gold, fmtX: fmtDay, label: 'Activity minutes per week', empty: 'Import or add an activity to see it here',
         tip: (p) => `<b>${p.y} min</b><span>Week of ${fmtDay(p.x)}</span>`,
       })),
+
+      zonesCard(week),
+      bestsCard(list),
 
       h('div.section-head', h('h2.section-title', 'Activities'), list.length ? h('span.section-count', list.length) : null),
       list.length

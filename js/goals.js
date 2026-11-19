@@ -142,7 +142,12 @@ export function openGoals(section = 'all') {
         fitField('Activities', 'fitPerWeek', 'per week'),
         fitField('Active time', 'fitMins', 'min'),
         fitField('Distance', 'fitDist', distUnit(), (m) => Math.round((m / dKm) * 10) / 10, (v) => v * dKm)),
-      h('p.fine', 'Leave blank for no goal.')],
+      h('label.form-label', 'Each day'),
+      h('div.group',
+        fitField('Activity points', 'movePts', 'points'),
+        fitField('Steps', 'steps', 'steps'),
+        fitField('Max heart rate', 'maxHR', 'bpm')),
+      h('p.fine', 'Activity points add up steps, cardio and lifting (about 25 for a 30-minute run or 10,000 steps). 30 is a solid active day. Max heart rate sets your zones; blank uses the highest from your workouts.')],
     body: () => {
       const wIn = h('input.field.goal-input', { value: g.weight ? bodyDisplay(g.weight) : '', placeholder: 'none', inputmode: 'decimal', 'aria-label': 'Goal weight' });
       wIn.addEventListener('change', () => { const v = num(wIn.value); commit((st) => { st.goals.weight = v > 0 ? bodyFromDisplay(v) : 0; }); });

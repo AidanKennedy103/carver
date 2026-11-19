@@ -1458,3 +1458,60 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .scale-extra { font-size: 14px; color: var(--gold); min-height: 20px; margin-top: 4px; }
 .health-bar { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; margin: 18px 0 10px; }
 .health-bar i { display: block; height: 100%; background: var(--gold); transition: width .3s; }
+
+/* Recovery: heart and sleep signals */
+.signal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 14px 16px; }
+.signal { display: flex; flex-direction: column; }
+.signal-v { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.signal-k { font-size: 13px; }
+.signal-sub { font-size: 12px; color: var(--muted); }
+.signal.good .signal-v { color: var(--gold); }
+.signal.low .signal-v { color: var(--red); }
+.checkin-lead { margin-top: 0; }
+
+/* Fitness: activity points, zones */
+.pts-card { padding: 16px; }
+.pts-top { display: flex; align-items: center; gap: 16px; }
+.pts-ring { position: relative; width: 104px; height: 104px; flex: none; }
+.pts-ring svg { width: 100%; height: 100%; display: block; }
+.pts-mid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.pts-mid b { font-size: 28px; font-weight: 800; line-height: 1; }
+.pts-mid span { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.pts-title { font-size: 17px; font-weight: 700; }
+.pts-sub { font-size: 14px; color: var(--gold); margin: 2px 0 6px; }
+.pts-parts { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.pts-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 14px; }
+.pts-day { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
+.pts-day i { display: flex; align-items: flex-end; width: 100%; max-width: 22px; height: 36px; border-radius: 6px; background: #26262a; overflow: hidden; }
+.pts-day b { display: block; width: 100%; background: rgba(227, 176, 75, .5); }
+.pts-day.hit b { background: var(--gold); }
+.zones { padding: 14px 16px; }
+.zone-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 14px; }
+.zone-row .row-val { margin-left: auto; }
+.center-link { display: block; margin: 6px auto 0; }
+
+/* Habits: streak flames, habit strength toward 66 days, milestones */
+.streak-row { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; max-width: 64%; }
+.streak-pill { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 4px 9px; border-radius: 999px; background: var(--surface-2); font-size: 12px; color: var(--muted); }
+.streak-pill b { color: var(--text); font-size: 13px; }
+.streak-pill span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90px; }
+.streak-pill.hot { background: rgba(227, 176, 75, .16); color: var(--gold); }
+.streak-pill.hot b { color: var(--gold); }
+.streak-none { align-self: center; }
+.habit-top { align-items: center; gap: 12px; }
+.habit-mid { flex: 1; min-width: 0; }
+.flame { flex: none; width: 54px; display: flex; flex-direction: column; align-items: center; padding: 6px 0; border-radius: 12px; background: var(--surface-2); color: var(--muted); }
+.flame b { font-size: 20px; line-height: 1.1; color: var(--text); }
+.flame span { font-size: 10px; }
+.flame.on { color: var(--gold); }
+.flame.hot { background: radial-gradient(100% 100% at 50% 0%, rgba(227, 176, 75, .35), rgba(227, 176, 75, .08)); color: var(--gold); }
+.flame.hot b { color: var(--gold); }
+.form-track { margin: 12px 0 8px; }
+.form-head { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+.form-head b { color: var(--text); font-size: 13px; }
+.form-bar { position: relative; height: 8px; border-radius: 4px; background: var(--surface-2); }
+.form-bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #9c7024, var(--gold)); }
+.form-tick { position: absolute; top: -2px; width: 2px; height: 12px; background: var(--bg); }
+.miles { display: flex; gap: 6px; margin-bottom: 10px; }
+.mile { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: .5px solid var(--line); color: var(--muted); }
+.mile.on { border-color: rgba(227, 176, 75, .5); color: var(--gold); background: rgba(227, 176, 75, .1); }

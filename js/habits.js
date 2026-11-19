@@ -112,6 +112,21 @@ export function rate(g, n = 30) {
   return of ? done / of : 0;
 }
 
+// ---------- Becoming automatic ----------
+// A UCL study (Lally et al., 2010) found a new daily habit took 66 days on average to
+// feel automatic (anywhere from 18 to 254), and that missing a day now and then didn't
+// reset it. So progress counts days done, not an unbroken streak.
+export const FORM_DAYS = 66;
+export const doneDays = (g) => Object.keys(state.checks).filter((k) => k >= habitStart(g) && isDone(g, k)).length;
+export function stage(g) {
+  const n = doneDays(g);
+  if (n >= FORM_DAYS) return { n, word: 'Formed', sub: 'This one runs on autopilot now.' };
+  if (n >= 45) return { n, word: 'Almost automatic', sub: `${FORM_DAYS - n} more days` };
+  if (n >= 21) return { n, word: 'Building', sub: `${FORM_DAYS - n} days to automatic` };
+  return { n, word: 'Starting', sub: `${FORM_DAYS - n} days to automatic` };
+}
+const MILESTONES = [7, 21, 30, 66, 100];
+
 /** Twelve weeks of squares, Monday at the top. Tap a past day to mark it done or not. */
 function heatMap(g, redraw) {
   const today = ymd();
@@ -180,18 +195,24 @@ export function habitsPage() {
       list.length ? [
         h('section.card.habit-sum',
           h('div', h('div.energy-v', `${doneToday}/${list.length}`), h('div.energy-k', 'done today')),
-          h('div.habit-sum-best', h('div.energy-v', `${Math.max(0, ...list.map((g) => streak(g)))}`), h('div.energy-k', 'longest streak going'))),
+          h('div.streak-row', list.filter((g) => streak(g) > 0).sort((a, b) => streak(b) - streak(a)).slice(0, 4).map((g) =>
+            h('span.streak-pill' + (streak(g) >= 7 ? '.hot' : ''), icon('flame', 14), h('b', streak(g)), h('span', g.name)))),
+          list.some((g) => streak(g) > 0) ? null : h('div.energy-k.streak-none', 'Streaks show here')),
         h('section.card.habits', list.map((g) => habitSlider(g, today))),
         h('div.section-head', h('h2.section-title', 'Streaks')),
         list.map((g) => {
-          const cur = streak(g), best = bestStreak(g), pct = Math.round(rate(g) * 100);
+          const cur = streak(g), best = bestStreak(g), pct = Math.round(rate(g) * 100), st = stage(g);
           return h('section.card.habit-card',
             h('div.habit-top',
-              h('div', h('div.habit-name', g.name), h('div.habit-meta', [`${cur}-day streak`, `best ${best}`, `${pct}% last 30 days`, g.remind != null ? `reminder ${hourLabel(g.remind)}` : null].filter(Boolean).join(' · '))),
+              h('div.flame' + (cur >= 7 ? '.hot' : cur > 0 ? '.on' : ''), icon('flame', 22), h('b', cur), h('span', 'days')),
+              h('div.habit-mid', h('div.habit-name', g.name), h('div.habit-meta', [`best ${best}`, `${pct}% last 30 days`, g.remind != null ? `reminder ${hourLabel(g.remind)}` : null].filter(Boolean).join(' · '))),
               h('button.icon-btn', { onclick: () => editHabit(g, draw), 'aria-label': `${g.name} options` }, icon('more'))),
+            h('div.form-track', h('div.form-head', h('b', st.word), h('span', st.n >= FORM_DAYS ? st.sub : `${st.n} of ${FORM_DAYS} days · ${st.sub}`)),
+              h('div.form-bar', h('i', { style: { width: `${Math.min(100, (st.n / FORM_DAYS) * 100)}%` } }), [21, 45].map((m) => h('span.form-tick', { style: { left: `${(m / FORM_DAYS) * 100}%` } })))),
+            h('div.miles', MILESTONES.map((m) => h('span.mile' + (best >= m ? '.on' : ''), `${m}`))),
             heatMap(g, draw));
         }),
-        h('p.fine', 'Tap a square to fix a day.'),
+        h('p.fine', `Tap a square to fix a day. A habit takes about ${FORM_DAYS} days of doing it to feel automatic (anywhere from 18 to 254), and a missed day doesn’t reset that.`),
         list.length < MAX_HABITS ? h('button.btn.dark.wide', { onclick: () => addHabit(draw) }, icon('plus', 16), 'Add a daily goal') : null,
       ] : h('div.empty',
         h('div.empty-icon', icon('check', 40)),

@@ -12,9 +12,21 @@ import { barChart, COLORS } from './charts.js';
 import { tally, MUSCLE_ORDER } from './volume.js';
 import { findDate } from './body.js';
 import { goalsButton } from './goals.js';
+import { healthDay, hasHealth, importHealth } from './health.js';
+import { activityType } from './fitness.js';
 
 export const sleepGoal = () => state.goals.sleep || 8;
 export const recoveryOn = (k = ymd()) => state.recovery?.[k] || null;
+/** Hours slept: what you entered, else what Apple Health (Watch, Oura, Ultrahuman…) recorded. */
+export const sleepOn = (k = ymd()) => recoveryOn(k)?.sleep ?? healthDay(k)?.sleep ?? null;
+
+/** Resting heart rate and HRV today against your 30-day average. */
+export function bodySignals(k = ymd()) {
+  const d = healthDay(k);
+  if (!d || (d.rhr == null && d.hrv == null)) return null;
+  const base = (key) => { const v = Array.from({ length: 30 }, (_, i) => healthDay(addDays(k, -i - 1))?.[key]).filter((x) => x != null); return v.length >= 5 ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  return { rhr: d.rhr ?? null, rhrBase: base('rhr'), hrv: d.hrv ?? null, hrvBase: base('hrv'), deep: d.deep ?? null, rem: d.rem ?? null };
+}
 
 const SCALES = {
   quality: { label: 'How did you sleep?', words: ['Awful', 'Poor', 'OK', 'Good', 'Great'] },
@@ -26,9 +38,13 @@ const SCALES = {
 function load(ts = Date.now()) {
   const sets = (from, to) => state.workouts.filter((w) => w.start >= from && w.start < to)
     .reduce((n, w) => n + w.exercises.reduce((m, e) => m + e.sets.filter((x) => x.done && x.type !== 'w').length, 0), 0);
-  const recent = sets(ts - 2 * 864e5, ts);
-  const usual = sets(ts - 30 * 864e5, ts - 2 * 864e5) / 14;   // per 48 hours
-  return { recent, usual };
+  // Cardio as set-equivalents: 10 minutes of a run (about 10 METs) counts like 3 hard sets
+  const cardio = (from, to) => state.activities.filter((a) => a.start >= from && a.start < to)
+    .reduce((n, a) => n + (a.dur / 6e5) * (activityType(a.type).met / 10) * 3, 0);
+  const mins = (from, to) => state.activities.filter((a) => a.start >= from && a.start < to).reduce((n, a) => n + a.dur / 6e4, 0);
+  const recent = sets(ts - 2 * 864e5, ts) + cardio(ts - 2 * 864e5, ts);
+  const usual = (sets(ts - 30 * 864e5, ts - 2 * 864e5) + cardio(ts - 30 * 864e5, ts - 2 * 864e5)) / 14;   // per 48 hours
+  return { recent: Math.round(recent), usual, sets: sets(ts - 2 * 864e5, ts), cardioMins: Math.round(mins(ts - 2 * 864e5, ts)) };
 }
 
 /**
@@ -36,11 +52,15 @@ function load(ts = Date.now()) {
  * Returns null until you check in.
  */
 export function readiness(k = ymd()) {
-  const r = recoveryOn(k);
-  if (!r) return null;
-  const sleepPart = r.sleep != null ? Math.min(1, r.sleep / sleepGoal()) * 35 : 22;
+  const r = recoveryOn(k) || {};
+  const sleep = sleepOn(k), sig = bodySignals(k);
+  if (!recoveryOn(k) && sleep == null && !sig) return null;
+  const sleepPart = sleep != null ? Math.min(1, sleep / sleepGoal()) * 35 : 22;
   const q = ((r.quality || 3) - 1) / 4, e = ((r.energy || 3) - 1) / 4, sore = ((r.sore || 2) - 1) / 4;
   let score = sleepPart + q * 20 + e * 25 + (1 - sore) * 20;
+  // Heart data: HRV well under your normal, or resting heart rate up, means you're less recovered
+  if (sig?.hrv && sig.hrvBase) { const ratio = sig.hrv / sig.hrvBase; score += ratio < 0.8 ? -12 : ratio < 0.9 ? -6 : ratio > 1.1 ? 4 : 0; }
+  if (sig?.rhr && sig.rhrBase) { const up = sig.rhr - sig.rhrBase; score += up >= 5 ? -10 : up >= 3 ? -5 : up <= -2 ? 3 : 0; }
   const { recent, usual } = load(new Date(k + 'T12:00').getTime());
   if (usual > 3 && recent > usual * 1.6) score -= 8;   // a much bigger couple of days than usual
   score = Math.round(Math.max(0, Math.min(100, score)));
@@ -68,22 +88,28 @@ function recovering() {
 
 export function checkIn(k = ymd(), after) {
   const r = { sleep: null, quality: null, sore: null, energy: null, ...(recoveryOn(k) || {}) };
+  const fromHealth = healthDay(k)?.sleep ?? null;
+  const fresh = !recoveryOn(k);
   const body = h('div');
-  const sleepIn = h('input.field.goal-input', { value: r.sleep ?? '', inputmode: 'decimal', placeholder: String(sleepGoal()), 'aria-label': 'Hours slept' });
-  sleepIn.addEventListener('input', () => { const v = parseFloat(sleepIn.value.replace(',', '.')); r.sleep = v > 0 && v < 24 ? v : null; });
   const draw = () => fill(body,
-    h('div.group', h('label.goal-row', h('span', 'Hours slept'), h('span.goal-field', sleepIn, h('span.goal-unit', 'h')))),
-    h('div.chips.tight.no-drag', [5, 6, 6.5, 7, 7.5, 8, 8.5, 9].map((v) => h('button.chip' + (r.sleep === v ? '.on' : ''), { onclick: () => { r.sleep = v; sleepIn.value = v; draw(); } }, `${v} h`))),
+    h('p.fine.checkin-lead', fresh ? 'Three taps. It saves itself after the last one.' : 'Change any answer.'),
     Object.entries(SCALES).map(([key, sc]) => [
       h('label.form-label', sc.label),
-      h('div.face-row', sc.words.map((wd, i) => h('button.face' + (r[key] === i + 1 ? '.on' : ''), { onclick: () => { r[key] = i + 1; draw(); }, 'aria-label': wd }, h('span.face-num', i + 1), h('span.face-word', wd)))),
-    ]));
+      h('div.face-row', sc.words.map((wd, i) => h('button.face' + (r[key] === i + 1 ? '.on' : ''), {
+        onclick: () => { r[key] = i + 1; draw(); if (fresh && r.quality && r.sore && r.energy) setTimeout(save, 250); }, 'aria-label': wd,
+      }, h('span.face-num', i + 1), h('span.face-word', wd)))),
+    ]),
+    h('label.form-label', fromHealth != null ? `Hours slept · ${fromHealth} h from Apple Health` : 'Hours slept (optional)'),
+    h('div.chips.tight.no-drag', [5, 6, 6.5, 7, 7.5, 8, 8.5, 9].map((v) => h('button.chip' + (r.sleep === v ? '.on' : ''), { onclick: () => { r.sleep = r.sleep === v ? null : v; draw(); } }, `${v} h`))));
   draw();
   const s = sheet(h('div.form',
-    h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', k === ymd() ? 'Morning check-in' : fmtDate(new Date(k + 'T12:00').getTime())), h('button.link.strong', { onclick: save }, 'Save')),
+    h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', k === ymd() ? 'How are you today?' : fmtDate(new Date(k + 'T12:00').getTime())), h('button.link.strong', { onclick: save }, 'Save')),
     body));
+  let saved = false;
   function save() {
+    if (saved) return;
     if (r.sleep == null && !r.quality && !r.sore && !r.energy) { toast('Fill in at least one'); return; }
+    saved = true;
     commit((st) => { st.recovery = { ...(st.recovery || {}), [k]: { ...r } }; });
     s.close();
     const rd = readiness(k);
@@ -127,28 +153,30 @@ function importSheet(after) {
 
 // ---------- The tab ----------
 
+const signal = (label, value, sub, tone) => h('div.signal' + (tone ? '.' + tone : ''), h('span.signal-v', value), h('span.signal-k', label), sub ? h('span.signal-sub', sub) : null);
+
 export function recoveryPage() {
   const el = h('div.page');
   const body = h('div.scroll-body');
   function draw() {
     const today = ymd(), r = recoveryOn(today), rd = readiness(today);
-    const nights = Array.from({ length: 14 }, (_, i) => addDays(today, i - 13)).map((k) => ({ x: new Date(k + 'T12:00').getTime(), y: recoveryOn(k)?.sleep || 0 }));
-    const week = Array.from({ length: 7 }, (_, i) => recoveryOn(addDays(today, -i))).filter(Boolean);
-    const avg = (f) => { const v = week.map(f).filter((x) => x != null); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
-    const sleepAvg = avg((x) => x.sleep);
-    const { recent, usual } = load();
+    const nights = Array.from({ length: 14 }, (_, i) => addDays(today, i - 13)).map((k) => ({ x: new Date(k + 'T12:00').getTime(), y: sleepOn(k) || 0 }));
+    const wk = Array.from({ length: 7 }, (_, i) => sleepOn(addDays(today, -i))).filter((x) => x != null);
+    const sleepAvg = wk.length ? wk.reduce((a, b) => a + b, 0) / wk.length : null;
+    const { recent, usual, sets, cardioMins } = load();
+    const sig = bodySignals(today);
     const rec = recovering();
     fill(body,
       navBar({ title: 'Recovery', back: false, large: true, wip: true, right: [goalsButton('recovery')] }),
       rd ? h('section.card.ready-card.' + (rd.score >= 60 ? 'good' : rd.score >= 40 ? 'mid' : 'low'),
         h('div.ready-ring', { style: { '--p': rd.score } }, h('b', rd.score), h('span', 'ready')),
         h('div.ready-text', h('div.ready-word', rd.word), h('div.ready-sub', rd.sub),
-          h('div.ready-bits', [r.sleep != null ? `${r.sleep} h sleep` : null, r.quality ? `slept ${SCALES.quality.words[r.quality - 1].toLowerCase()}` : null, r.sore ? `sore ${SCALES.sore.words[r.sore - 1].toLowerCase()}` : null, r.energy ? `energy ${SCALES.energy.words[r.energy - 1].toLowerCase()}` : null].filter(Boolean).join(' · ')),
-          h('button.link.small-link', { onclick: () => checkIn(today, draw) }, 'Change')))
+          h('div.ready-bits', [sleepOn(today) != null ? `${sleepOn(today)} h sleep` : null, sig?.hrv ? `HRV ${sig.hrv}` : null, r?.quality ? `slept ${SCALES.quality.words[r.quality - 1].toLowerCase()}` : null, r?.sore ? `sore ${SCALES.sore.words[r.sore - 1].toLowerCase()}` : null, r?.energy ? `energy ${SCALES.energy.words[r.energy - 1].toLowerCase()}` : null].filter(Boolean).join(' · ')),
+          h('button.link.small-link', { onclick: () => checkIn(today, draw) }, r ? 'Change' : 'Add how you feel')))
         : h('button.card.hero.empty-hero', { onclick: () => checkIn(today, draw) },
           h('div.hero-label', 'Good morning'),
           h('div.hero-name', 'How did you sleep?'),
-          h('div.hero-meta', 'Four quick taps tell Carver whether to push, train as planned or take it easy.'),
+          h('div.hero-meta', 'Three taps tell Carver whether to push, train as planned or take it easy.'),
           h('span.btn.gold.wide.hero-go', 'Check in')),
 
       h('div.section-head', h('h2.section-title', 'Sleep'), h('span.section-count', sleepAvg != null ? `${sleepAvg.toFixed(1)} h avg · goal ${sleepGoal()} h` : `goal ${sleepGoal()} h`)),
@@ -158,12 +186,23 @@ export function recoveryPage() {
         tip: (p) => `<b>${p.y} h</b><span>${fmtDate(p.x, { weekday: 'short', month: 'short', day: 'numeric' })}</span>`,
       })),
       h('div.btn-pair',
-        h('button.btn.dark', { onclick: () => importSheet(draw) }, 'Bring in sleep'),
-        h('button.btn.dark', { onclick: () => checkIn(addDays(today, -1), draw) }, 'Log yesterday')),
+        h('button.btn.dark', { onclick: importHealth }, hasHealth() ? 'Update from Health' : 'Import from Health'),
+        h('button.btn.dark', { onclick: () => importSheet(draw) }, 'Paste sleep')),
+      h('p.fine', 'Apple Watch, Oura, Ultrahuman and Whoop all write sleep and heart data to Apple Health.'),
+
+      sig ? [
+        h('div.section-head', h('h2.section-title', 'Body signals')),
+        h('section.card.signal-grid',
+          sig.hrv != null ? signal('HRV', `${sig.hrv} ms`, sig.hrvBase ? `normal ${Math.round(sig.hrvBase)}` : null, sig.hrvBase ? (sig.hrv / sig.hrvBase < 0.9 ? 'low' : sig.hrv / sig.hrvBase > 1.05 ? 'good' : '') : '') : null,
+          sig.rhr != null ? signal('Resting HR', `${sig.rhr} bpm`, sig.rhrBase ? `normal ${Math.round(sig.rhrBase)}` : null, sig.rhrBase ? (sig.rhr - sig.rhrBase >= 3 ? 'low' : sig.rhr < sig.rhrBase - 1 ? 'good' : '') : '') : null,
+          sig.deep != null ? signal('Deep sleep', `${sig.deep} h`, null, '') : null,
+          sig.rem != null ? signal('REM', `${sig.rem} h`, null, '') : null),
+      ] : null,
 
       h('div.section-head', h('h2.section-title', 'Training load')),
       h('section.card.list-card',
-        h('div.group-row', h('span', 'Sets in the last 2 days'), h('span.row-val', `${recent}${usual ? ` · usual ${Math.round(usual)}` : ''}`)),
+        h('div.group-row', h('span', 'Last 2 days'), h('span.row-val', `${sets} sets${cardioMins ? ` + ${cardioMins} min cardio` : ''}`)),
+        h('div.group-row', h('span', 'Load'), h('span.row-val' + (usual > 3 && recent > usual * 1.6 ? '.red-text' : ''), `${recent}${usual ? ` · usual ${Math.round(usual)}` : ''}`)),
         rec.length ? rec.map((x) => h('div.group-row', h('span', `${x.m}`), h('span.row-val', x.hrs < 48 ? `recovering · ${x.hrs < 24 ? `${x.hrs} h` : `${Math.round(x.hrs / 24)} day`} ago` : `mostly fresh · ${Math.round(x.hrs / 24)} days ago`)))
           : h('div.group-row', h('span', 'No muscles trained in the last 3 days'), h('span.row-val', 'all fresh'))),
       h('p.fine', 'A guide, not a medical score.'),
