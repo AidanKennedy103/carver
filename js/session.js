@@ -346,7 +346,7 @@ function showSummary(w, prs, changes = []) {
       h('div.section-label', 'Next time (your program)'),
       changes.map((c) => h('div.pr-row', h('span.chg.' + c.kind, icon(c.kind === 'down' ? 'down' : 'up', 16)),
         h('span.pr-name', exercise(c.exId).name),
-        h('span.pr-val', `${toDisplay(c.from)} → ${toDisplay(c.to)} ${unit()}`)))) : null,
+        h('span.pr-val', c.reps ? `${c.from} → ${c.to} reps` : `${toDisplay(c.from)} → ${toDisplay(c.to)} ${unit()}`)))) : null,
     prs.length ? h('div.pr-list',
       h('div.section-label', `${prs.length} personal record${prs.length > 1 ? 's' : ''}`),
       prs.map((p) => h('div.pr-row', icon('trophy', 18),

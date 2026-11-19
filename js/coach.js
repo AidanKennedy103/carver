@@ -22,6 +22,7 @@ import { state, commit, uid, exercise, e1rm, e1rmHistory, toDisplay, fromDisplay
 import { program as program531, programCard, setup531 } from './program531.js';
 import { goalsButton } from './goals.js';
 import { startWorkout } from './session.js';
+import { planEditor, lastDone } from './workout.js';
 
 // [exId, sets, low reps, high reps]; M() marks a main lift (follows the block's plan)
 const E = (exId, sets, lo, hi = lo) => ({ exId, sets, lo, hi });
@@ -62,6 +63,17 @@ export const PROGRAMS = [
       { name: 'Push', ex: [M('bench', 3, 6, 8), E('db-incline', 3, 8, 12), E('db-shoulder', 3, 8, 12), E('lat-raise', 3, 12, 15), E('tri-pushdown', 3, 10, 12), E('oh-tri-ext', 2, 10, 12)] },
       { name: 'Pull', ex: [M('bb-row', 3, 6, 8), E('lat-pulldown', 3, 8, 12), E('seated-row', 3, 10, 12), E('face-pull', 3, 12, 15), E('db-curl', 3, 10, 12), E('hammer-curl', 2, 10, 12)] },
       { name: 'Legs', ex: [M('squat', 3, 6, 8), E('rdl', 3, 8, 10), E('leg-press', 3, 10, 12), E('lying-curl', 3, 10, 12), E('hip-adduction', 2, 12, 15), E('calf-raise', 4, 10, 15)] },
+    ],
+  },
+  {
+    id: 'bw3', name: 'Bodyweight', days: 3, minutes: '30–45', level: 'Any level', schedule: 'Mon, Wed, Fri', ongoingOnly: true,
+    summary: 'Three full-body days at home with no equipment. A pull-up bar or a sturdy table helps for pulling.',
+    pros: ['Train anywhere, no gym or weights', 'Short sessions that fit a busy day', 'Builds control, endurance and a solid base'],
+    cons: ['Legs are hard to keep progressing without weight', 'Pulling needs a bar or a sturdy table', 'Strength builds slower than with weights'],
+    bestFor: 'Home training, travel, or getting started.',
+    plans: [
+      { name: 'Bodyweight A', ex: [E('pushup', 3, 8, 15), E('inverted-row', 3, 6, 12), E('bw-squat', 3, 15, 25), E('glute-bridge', 3, 12, 20), E('plank', 3, 0)] },
+      { name: 'Bodyweight B', ex: [E('pike-pushup', 3, 6, 12), E('chinup', 3, 3, 8), E('bw-lunge', 3, 10, 15), E('sl-glute-bridge', 3, 8, 12), E('hollow-hold', 3, 0)] },
     ],
   },
   {
@@ -342,6 +354,16 @@ export function progressAfter(w) {
     if (!plan) return;
     p.miss = p.miss || {}; p.result = p.result || {};
     for (const pe of plan.exercises) {
+      if (exercise(pe.exId).type === 'bw' && pe.rng) {
+        const sets = w.exercises.find((e) => e.exId === pe.exId)?.sets.filter((x) => x.done && x.type !== 'w') || [];
+        const target = pe.sets.find((x) => x.type !== 'w')?.tReps ?? pe.rng[0];
+        if (sets.length >= pe.sets.filter((x) => x.type !== 'w').length && sets.every((x) => (x.reps || 0) >= target)) {
+          const next = Math.min(pe.rng[1], target + 1);
+          if (next > target) { for (const x of pe.sets) if (x.type !== 'w') x.tReps = next; changes.push({ exId: pe.exId, from: target, to: next, kind: 'up', reps: true, ts: Date.now() }); }
+          else if (!pe.maxed) { pe.maxed = true; pe.note = `Top of the range: try a harder version (slower reps, a pause, or one leg / one arm).`; }
+        }
+        continue;
+      }
       if (exercise(pe.exId).type !== 'wr') continue;
       const done = w.exercises.find((e) => e.exId === pe.exId)?.sets.filter((x) => x.done && x.type !== 'w') || [];
       if (!done.length) continue;
@@ -404,6 +426,7 @@ const GRAPHICS = {
   fb3: { ring: [[0, 360, 0]], center: '3', sub: 'Full body', week: [1, 0, 1, 0, 1, 0, 0] },
   ul4: { ring: [[270, 90, 0], [90, 270, 1]], center: '4', sub: 'Upper · Lower', week: [1, 1, 0, 1, 1, 0, 0] },
   ppl: { ring: [[0, 120, 0], [120, 240, 1], [240, 360, 2]], center: '6', sub: 'Push · Pull · Legs', week: [1, 1, 1, 1, 1, 1, 0] },
+  bw3: { ring: [[0, 360, 1]], center: 'home', sub: 'No equipment', week: [1, 0, 1, 0, 1, 0, 0] },
   db3: { ring: [[180, 360, 0], [0, 180, 1]], center: 'db', sub: 'Dumbbells A · B', week: [1, 0, 1, 0, 1, 0, 0] },
   531: { bars: true, sub: '5s · 3s · 1s', week: [1, 1, 0, 1, 1, 0, 0] },
   custom: { sliders: true, sub: 'Linear · DUP · Wave · RPE', week: null },
@@ -423,7 +446,9 @@ function graphicSvg(g) {
   if (g.ring) {
     out += `<circle cx="50" cy="50" r="36" fill="none" stroke="#232326" stroke-width="13"/>`;
     for (const [a0, a1, tone] of g.ring) out += `<g fill="none" stroke="${SHADES[tone]}" stroke-width="13" stroke-linecap="round">${arc(a0, a1)}</g>`;
-    out += g.center === 'db'
+    out += g.center === 'home'
+      ? '<path d="M37 51 50 40l13 11v12H37z" fill="#e3b04b"/><rect x="46.5" y="55" width="7" height="8" rx="1.5" fill="#141312"/>'
+      : g.center === 'db'
       ? `<g transform="translate(36 43)" fill="#e3b04b"><rect x="0" y="2" width="4" height="10" rx="1.5"/><rect x="4.5" y="3.5" width="2.5" height="7" rx="1"/><rect x="7" y="6" width="14" height="2" rx="1"/><rect x="21" y="3.5" width="2.5" height="7" rx="1"/><rect x="24" y="2" width="4" height="10" rx="1.5"/></g>`
       : `<text x="50" y="52" text-anchor="middle" font-size="24" font-weight="800" fill="#f2e3bd">${g.center}</text><text x="50" y="64" text-anchor="middle" font-size="8" font-weight="600" fill="#8e8e93" letter-spacing=".5">DAYS</text>`;
   } else if (g.bars) {
@@ -456,8 +481,8 @@ export function programFigure(id, { wide = false } = {}) {
 }
 
 /** A square program tile for the grid. */
-function tile({ id, name, line, tag, onclick, wide = false }) {
-  return h('button.ptile' + (wide ? '.wide' : ''), { onclick },
+function tile({ id, name, line, tag, onclick, wide = false, span = false }) {
+  return h('button.ptile' + (wide ? '.wide' : '') + (span ? '.span2' : ''), { onclick },
     programFigure(id, { wide }),
     h('span.ptile-text',
       h('span.ptile-name', name),
@@ -503,7 +528,7 @@ function maxInputs(lifts, current = {}) {
 // ---------- Program detail ----------
 
 function programScreen(t) {
-  let length = 12;
+  let length = t.ongoingOnly ? 'ongoing' : 12;
   const lifts = mainLifts(t);
   const maxes = maxInputs(lifts);
   const el = h('div.page');
@@ -528,7 +553,7 @@ function programScreen(t) {
       h('div.coach-best', h('b', 'Best for '), t.bestFor),
 
       h('div.section-head', h('h2.section-title', 'Length')),
-      h('div.segment.coach-len', LENGTHS.map(([v, l]) => h('button' + (length === v ? '.on' : ''), { onclick: () => { length = v; draw(); } }, l))),
+      t.ongoingOnly ? null : h('div.segment.coach-len', LENGTHS.map(([v, l]) => h('button' + (length === v ? '.on' : ''), { onclick: () => { length = v; draw(); } }, l))),
       length !== 'ongoing' ? timeline({ weeks: length }) : null,
       h('p.fine', lengthText(length)),
 
@@ -589,12 +614,42 @@ function targetText(pe) {
 export function coachPage() {
   const el = h('div.page');
   const body = h('div.scroll-body');
-  let viewWeek = null;
+  let viewWeek = null, view = 'programs';
   function draw() {
     syncCoach();
     const cp = coachProgram(), t = cp && (cp.custom ? customTemplate(cp) : template(cp.id)), p531 = program531();
     fill(body,
       navBar({ title: 'Program builder', back: false, large: true, right: [goalsButton('workout')] }),
+      h('div.segment.pb-switch', [['programs', 'Programs'], ['mine', 'My workouts']].map(([v, l]) => h('button' + (view === v ? '.on' : ''), { onclick: () => { view = v; draw(); } }, l))),
+      view === 'mine' ? myWorkouts() : programsView(cp, t, p531),
+      h('div.bottom-space'),
+    );
+  }
+
+  /** Your own plans: no block, no automatic progression. */
+  function myWorkouts() {
+    const plans = state.plans;
+    const full = plans.length >= MAX_PLANS;
+    return [
+      h('p.coach-intro', 'Simple workouts you build yourself: pick exercises, sets, reps and weights. No block or automatic progression.'),
+      h('div.btn-pair.pb-new',
+        h('button.btn.gold', { onclick: () => (full ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor())) }, icon('plus', 16), 'New workout'),
+        h('button.btn.dark', { onclick: () => startWorkout() }, icon('bolt', 16), 'Freestyle')),
+      h('div.section-head', h('h2.section-title', 'Your workouts', h('span.section-count', `${plans.length} of ${MAX_PLANS}`))),
+      plans.length ? h('section.card.list-card', plans.map((p) => {
+        const last = lastDone(p);
+        const inProgram = coachProgram()?.plans.includes(p.id) || program531()?.plans && Object.values(program531().plans).includes(p.id);
+        return h('div.pb-row',
+          h('button.pb-main', { onclick: () => push(() => planEditor(p)), 'aria-label': `Edit ${p.name}` },
+            h('span.pb-name', p.name, inProgram ? h('span.coach-tag', 'Program') : null),
+            h('span.pb-meta', [`${p.exercises.length} exercise${p.exercises.length === 1 ? '' : 's'}`, last ? `last ${fmtDate(last.start, { month: 'short', day: 'numeric' })}` : 'not done yet'].join(' · '))),
+          h('button.play-btn', { 'aria-label': `Start ${p.name}`, onclick: () => startWorkout(p), disabled: !p.exercises.length }, icon('play', 16)));
+      })) : h('div.feed-empty.card', 'No workouts yet. Tap New workout to build one, or Freestyle to make it up as you go.'),
+    ];
+  }
+
+  function programsView(cp, t, p531) {
+    return [
       cp && t ? running(cp, t) : p531 ? [h('div.section-head', h('h2.section-title', 'Your program')), programCard()]
         : h('p.coach-intro', 'Pick a program and Carver writes the plans and the weights. Run it ongoing or as an 8, 12 or 16-week block.'),
 
@@ -602,9 +657,8 @@ export function coachPage() {
       h('div.pgrid',
         PROGRAMS.filter((x) => x.id !== cp?.id).map((x) => tile({ id: x.id, name: x.name, line: `${x.days} days · ${x.minutes} min`, tag: x.level, onclick: () => push(() => programScreen(x)) })),
         p531 ? null : tile({ id: '531', name: '5/3/1', line: '4 days · 60 min', tag: 'Strength', onclick: setup531 }),
-        tile({ id: 'custom', name: 'Custom block', line: 'Your plans, your rules', tag: 'Advanced', onclick: () => push(() => customScreen(cp?.custom || null)) })),
-      h('div.bottom-space'),
-    );
+        tile({ id: 'custom', name: 'Custom block', line: 'Your plans, your rules', tag: 'Advanced', span: (PROGRAMS.filter((x) => x.id !== cp?.id).length + (p531 ? 0 : 1)) % 2 === 0, onclick: () => push(() => customScreen(cp?.custom || null)) })),
+    ];
   }
 
   function running(p, t) {
@@ -651,7 +705,7 @@ export function coachPage() {
         h('div.section-head', h('h2.section-title', 'Recent changes')),
         h('section.card.list-card', p.log.slice(0, 6).map((c) => h('div.group-row.coach-log',
           h('span', exercise(c.exId).name),
-          h('span.row-val', c.kind === 'max' ? `new max ≈ ${fmtW(plate(c.to))}` : `${fmtW(c.from)} → ${fmtW(c.to)}`)))),
+          h('span.row-val', c.kind === 'max' ? `new max ≈ ${fmtW(plate(c.to))}` : c.reps ? `${c.from} → ${c.to} reps` : `${fmtW(c.from)} → ${fmtW(c.to)}`)))),
       ] : null,
 
       h('section.card.list-card.coach-actions',

@@ -1251,3 +1251,13 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .pgfx.wide .pgfx-art { width: 120px; height: 120px; }
 .pgfx.wide .pgfx-sub { font-size: 13px; }
 .pgfx.wide .pbadge-week { margin-top: 4px; }
+
+/* Program builder: Programs | My workouts */
+.pb-switch { margin: 2px 0 14px; }
+.pb-new { margin-top: 12px; }
+.pb-row { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+.pb-row + .pb-row { border-top: .5px solid var(--surface-3); }
+.pb-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; }
+.pb-name { font-weight: 600; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.pb-meta { font-size: 13px; color: var(--muted); }
+.ptile.span2 { grid-column: span 2; }

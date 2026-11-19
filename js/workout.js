@@ -160,7 +160,7 @@ export function workoutPage() {
 }
 
 /** The last finished workout from a plan. */
-const lastDone = (p) => state.workouts.find((w) => w.planId === p.id || (!w.planId && w.name === p.name));
+export const lastDone = (p) => state.workouts.find((w) => w.planId === p.id || (!w.planId && w.name === p.name));
 
 /** The plan after the one you did most recently (plans rotate in order). */
 function nextPlan() {
@@ -274,7 +274,7 @@ export function workoutDetail(w) {
 
 // ---------- Plan editor ----------
 
-function planEditor(existing = null) {
+export function planEditor(existing = null) {
   const plan = existing ? structuredClone(existing) : { id: uid(), name: '', created: Date.now(), exercises: [] };
   const el = h('div.page');
   const body = h('div.scroll-body');

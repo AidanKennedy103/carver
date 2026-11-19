@@ -41,6 +41,7 @@ export const LIBRARY = [
   L('db-pullover', 'Dumbbell Pullover', 'Chest', 'Dumbbell', 'Back,Triceps'),
   L('pushup', 'Push-up', 'Chest', 'Bodyweight', 'Triceps,Shoulders,Core', 'bw'),
   L('decline-pushup', 'Decline Push-up', 'Chest', 'Bodyweight', 'Triceps,Shoulders,Core', 'bw'),
+  L('pike-pushup', 'Pike Push-up', 'Shoulders', 'Bodyweight', 'Triceps,Chest', 'bw'),
   L('dips', 'Dips', 'Chest', 'Bodyweight', PRESS, 'bw'),
   L('weighted-dips', 'Weighted Dips', 'Chest', 'Bodyweight', PRESS),
 
@@ -153,6 +154,9 @@ export const LIBRARY = [
   L('leg-ext', 'Leg Extension', 'Quads', 'Machine'),
   U('sl-leg-ext', 'Single-Leg Extension', 'Quads', 'Machine'),
   L('sissy-squat', 'Sissy Squat', 'Quads', 'Bodyweight', '', 'bw'),
+  L('bw-squat', 'Bodyweight Squat', 'Quads', 'Bodyweight', 'Glutes,Adductors', 'bw'),
+  L('jump-squat', 'Jump Squat', 'Quads', 'Bodyweight', 'Glutes,Calves', 'bw'),
+  U('bw-lunge', 'Bodyweight Reverse Lunge', 'Quads', 'Bodyweight', 'Glutes,Hamstrings', 'bw'),
   U('bss', 'Bulgarian Split Squat', 'Quads', 'Dumbbell', 'Glutes,Adductors'),
   U('split-squat', 'Split Squat', 'Quads', 'Dumbbell', 'Glutes,Adductors'),
   U('lunge', 'Walking Lunge', 'Quads', 'Dumbbell', 'Glutes,Adductors,Hamstrings'),
