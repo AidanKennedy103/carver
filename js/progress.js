@@ -1,6 +1,6 @@
 // Progress: body weight, progress photos, and your monthly goals and recaps.
 
-import { h, fill, icon, push, pop, navBar, toast, actionSheet, confirmBox, fmtDate, swipe, swipeSegment } from './ui.js';
+import { h, fill, icon, push, pop, navBar, wipBanner, toast, actionSheet, confirmBox, fmtDate, swipe, swipeSegment } from './ui.js';
 import { bodyDisplay as toDisplay, bodyUnit as unit } from './store.js';
 import { lineChart } from './charts.js';
 import { weights, latestWeight, trend, change, logWeightSheet, importSheet, weightRow } from './body.js';
@@ -40,7 +40,8 @@ export function progressPage({ tab = false } = {}) {
     const pics = photos();
 
     fill(body,
-      navBar({ title: tab ? 'Body' : 'Progress', back: !tab, backLabel: 'Home', large: true, right: [goalsButton('body')] }),
+      navBar({ title: 'Physical Metrics', back: !tab, backLabel: 'Home', large: true, right: [goalsButton('body')] }),
+      wipBanner('Physical Metrics'),
 
       // Weight
       h('div.section-head', h('h2.section-title', 'Weight'), weights().length ? h('button.link', { onclick: () => push(weightScreen) }, 'History') : null),

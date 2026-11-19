@@ -36,7 +36,7 @@ export function openSettings() {
       const on = shown.includes(t.id), i = shown.indexOf(t.id);
       return h('div.group-row.tab-pick',
         h('button.tab-pick-main', { role: 'switch', 'aria-checked': String(on), onclick: () => setTabs(on ? shown.filter((x) => x !== t.id) : [...shown, t.id]) },
-          h('span.tab-pick-ico', icon(t.icon, 18)), h('span.tab-pick-text', h('span', t.label), h('span.tab-pick-sub', t.sub)), h('span.switch' + (on ? '.on' : ''), h('i'))),
+          h('span.tab-pick-ico', icon(t.icon, 18)), h('span.tab-pick-text', h('span', t.label, t.wip ? h('span.wip-tag', 'Under construction') : null), h('span.tab-pick-sub', t.sub)), h('span.switch' + (on ? '.on' : ''), h('i'))),
         on && i > 0 ? h('button.icon-btn.tab-up', { 'aria-label': `Move ${t.label} left`, onclick: () => { const l = shown.slice(); [l[i - 1], l[i]] = [l[i], l[i - 1]]; setTabs(l); } }, icon('back', 16)) : h('span.tab-up-gap'));
     }));
   };

@@ -146,7 +146,7 @@ export function openGoals(section = 'all') {
       const wIn = h('input.field.goal-input', { value: g.weight ? bodyDisplay(g.weight) : '', placeholder: 'none', inputmode: 'decimal', 'aria-label': 'Goal weight' });
       wIn.addEventListener('change', () => { const v = num(wIn.value); commit((st) => { st.goals.weight = v > 0 ? bodyFromDisplay(v) : 0; }); });
       return [
-        h('div.goal-section', 'Body'),
+        h('div.goal-section', 'Physical Metrics'),
         h('div.group',
           h('label.goal-row', h('span', 'Goal weight'), h('span.goal-field', wIn, h('span.goal-unit', bodyUnit()))),
           field('Goal body fat', 'bodyFat', '%', 0.5)),
@@ -163,7 +163,7 @@ export function openGoals(section = 'all') {
   };
   const shown = ['workout', 'nutrition', 'fitness', 'recovery', 'body', 'daily'].includes(section)
     ? [section] : ['workout', 'nutrition', 'fitness', 'recovery', 'body', 'daily'].filter((k) => k === 'daily' || k === 'body' || tabOn(k));
-  const titles = { workout: 'Workout goals', nutrition: 'Nutrition goals', fitness: 'Fitness goals', recovery: 'Recovery goals', body: 'Body goals', daily: 'Daily goals' };
+  const titles = { workout: 'Workout goals', nutrition: 'Nutrition goals', fitness: 'Fitness goals', recovery: 'Recovery goals', body: 'Physical Metrics goals', daily: 'Daily goals' };
   const others = ['workout', 'nutrition', 'fitness', 'recovery', 'body'].filter((k) => k !== section && (k === 'body' || tabOn(k)));
 
   const s = sheet(h('div.form.goals-form' + (shown.length === 1 ? '.one' : ''),

@@ -9,14 +9,14 @@ import { nutritionPage } from './nutrition.js';
 import { fitnessPage } from './fitness.js';
 import { socialPage } from './social.js';
 import { habitsPage } from './habits.js';
-import { coachPage, syncCoach } from './coach.js';
+import { syncCoach } from './coach.js';
 import { recoveryPage } from './recovery.js';
 import { progressPage } from './progress.js';
 import { openWorkout } from './session.js';
 import { initCloud } from './cloud.js';
 
 initScreens(document.getElementById('app'));
-initTabs({ home: homePage, workout: workoutPage, nutrition: nutritionPage, fitness: fitnessPage, social: socialPage, habits: habitsPage, coach: coachPage, recovery: recoveryPage, body: () => progressPage({ tab: true }) });
+initTabs({ home: homePage, workout: workoutPage, nutrition: nutritionPage, fitness: fitnessPage, social: socialPage, habits: habitsPage, recovery: recoveryPage, body: () => progressPage({ tab: true }) });
 
 // Redraw the main page when data changes (only if it's showing)
 onChange(() => top()?.refresh?.());

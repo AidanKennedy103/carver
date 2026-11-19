@@ -10,6 +10,7 @@ import { pickExercises } from './picker.js';
 import { openSettings } from './settings.js';
 import { volumeCard, tally, MUSCLE_ORDER, ALL_MUSCLES } from './volume.js';
 import { programCard, setup531, program } from './program531.js';
+import { coachPage, coachProgram, currentWeek, blockWeek, PROGRAMS } from './coach.js';
 import { goalsButton } from './goals.js';
 
 export function workoutPage() {
@@ -32,12 +33,12 @@ export function workoutPage() {
         next ? upNext(next) : freestyleHero()],
       weekStrip(),
       programCard(),
+      builderCard(),
 
       // 2. Plans: routines you save for later. Making one doesn't log anything.
       h('div.section-head',
         h('h2.section-title', 'Your plans', h('span.section-count', `${state.plans.length} of ${MAX_PLANS}`)),
         h('span.head-links',
-          program() ? null : h('button.link', { onclick: setup531 }, '5/3/1'),
           h('button.link' + (plansFull ? '.off' : ''), {
             onclick: () => plansFull ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor()),
           }, icon('plus', 16), 'Make a plan'))),
@@ -108,6 +109,24 @@ export function workoutPage() {
       others.length ? opt('▶', 'Start a different plan', others.map((p) => p.name).slice(0, 3).join(', ') + (others.length > 3 ? '…' : ''),
         () => actionSheet('Start which plan?', others.map((p) => ({ label: p.name, onClick: () => startWorkout(p) })))) : null,
       opt(icon('calendar', 18), 'Log a past workout', 'One you did but didn’t track', () => logPastWorkout()));
+  }
+
+  /** Program builder: the program you're running, or the way in. */
+  function builderCard() {
+    const cp = coachProgram();
+    if (cp) {
+      const name = cp.custom ? (cp.custom.name || 'Custom block') : PROGRAMS.find((x) => x.id === cp.id)?.name || 'Program';
+      const w = currentWeek(cp);
+      const sub = cp.mode === 'block' ? (w > cp.weeks ? 'Block complete' : `Week ${Math.max(1, w)} of ${cp.weeks} · ${blockWeek(cp, Math.max(1, w)).label}`) : 'Ongoing';
+      return h('button.card.pb-entry', { onclick: () => push(coachPage) },
+        h('span.pb-entry-ico', icon('trophy', 20)),
+        h('span.pb-entry-text', h('span.pb-entry-name', name), h('span.pb-entry-sub', sub)),
+        h('span.card-go', '›'));
+    }
+    return h('button.card.pb-entry', { onclick: () => push(coachPage) },
+      h('span.pb-entry-ico', icon('trophy', 20)),
+      h('span.pb-entry-text', h('span.pb-entry-name', 'Program builder'), h('span.pb-entry-sub', 'Ready-made programs and training blocks')),
+      h('span.card-go', '›'));
   }
 
   /** Monday to Sunday: workouts done, days you planned, today. */

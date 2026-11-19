@@ -6,7 +6,7 @@
 // Stored in state.recovery = { 'YYYY-MM-DD': { sleep (hours), quality, sore, energy (1–5) } }.
 // Sleep belongs to the morning you woke up.
 
-import { h, fill, sheet, toast, navBar, fmtDate } from './ui.js';
+import { h, fill, sheet, toast, navBar, fmtDate, wipBanner } from './ui.js';
 import { state, commit, ymd, addDays } from './store.js';
 import { barChart, COLORS } from './charts.js';
 import { tally, MUSCLE_ORDER } from './volume.js';
@@ -140,6 +140,7 @@ export function recoveryPage() {
     const rec = recovering();
     fill(body,
       navBar({ title: 'Recovery', back: false, large: true, right: [goalsButton('recovery')] }),
+      wipBanner('Recovery'),
       rd ? h('section.card.ready-card.' + (rd.score >= 60 ? 'good' : rd.score >= 40 ? 'mid' : 'low'),
         h('div.ready-ring', { style: { '--p': rd.score } }, h('b', rd.score), h('span', 'ready')),
         h('div.ready-text', h('div.ready-word', rd.word), h('div.ready-sub', rd.sub),

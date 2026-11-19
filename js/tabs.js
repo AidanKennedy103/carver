@@ -45,7 +45,7 @@ let shownKey = '';
 const barKey = () => shownTabs().join();
 function drawBar() {
   shownKey = barKey();
-  bar.replaceChildren(...layout()[0].map((t) => h('button.tab', { 'data-tab': t.id, onclick: () => goTab(t.id) }, icon(t.icon, 24), h('span', t.label))));
+  bar.replaceChildren(...layout()[0].map((t) => h('button.tab', { 'data-tab': t.id, onclick: () => goTab(t.id) }, icon(t.icon, 24), h('span', t.short || t.label))));
   markBar();
 }
 /** Light up the tab you're on (More, for tabs that live under it). */
@@ -86,7 +86,7 @@ function morePage() {
   const el = h('div.page', h('div.scroll-body',
     navBar({ title: 'More', back: false, large: true }),
     h('section.card.list-card', layout()[1].map((t) => h('button.group-row.more-row', { onclick: () => goTab(t.id) },
-      h('span.more-ico', icon(t.icon, 22)), h('span.tab-pick-text', h('span', t.label), h('span.tab-pick-sub', t.sub)), h('span.card-go', '›')))),
+      h('span.more-ico', icon(t.icon, 22)), h('span.tab-pick-text', h('span', t.label, t.wip ? h('span.wip-tag', 'Under construction') : null), h('span.tab-pick-sub', t.sub)), h('span.card-go', '›')))),
     h('p.fine', 'Choose which tabs show, and their order, in Settings → Tabs.')));
   return { el };
 }

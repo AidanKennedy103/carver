@@ -1293,3 +1293,17 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .eh-down { transform: rotate(-90deg); display: grid; }
 .home-solo { margin-top: 20px; }
 .home-week-day.today:not(.did) i { box-shadow: inset 0 0 0 1.5px var(--text); }
+
+/* Program builder entry on the Workout tab */
+.pb-entry { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; margin-top: 10px; }
+.pb-entry-ico { flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--gold-bg); color: var(--gold); display: grid; place-items: center; }
+.pb-entry-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pb-entry-name { font-weight: 700; font-size: 16px; }
+.pb-entry-sub { font-size: 13px; color: var(--muted); }
+
+/* Under construction */
+.wip-banner { display: flex; align-items: stretch; gap: 12px; margin: 2px 0 14px; border-radius: 12px; overflow: hidden; background: #1d1912; border: .5px solid rgba(227, 176, 75, .3); }
+.wip-stripes { flex: none; width: 10px; background: repeating-linear-gradient(-45deg, #e3b04b 0 6px, #17110a 6px 12px); }
+.wip-text { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px 10px 0; font-size: 13px; color: var(--muted); line-height: 1.35; }
+.wip-text b { color: var(--gold); font-size: 14px; }
+.wip-tag { margin-left: 8px; font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--gold); border: 1px solid rgba(227, 176, 75, .45); border-radius: 6px; padding: 1px 6px; vertical-align: 2px; }

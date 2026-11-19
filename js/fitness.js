@@ -1,7 +1,7 @@
 // Fitness: runs, walks, rides and other cardio. Imported from Apple Health (a
 // Shortcut copies them, you paste) or added by hand. Gym workouts live in Workout.
 
-import { h, fill, icon, navBar, sheet, toast, confirmBox, fmtDate, fmtNum, fmtDurationWords } from './ui.js';
+import { h, fill, icon, navBar, wipBanner, sheet, toast, confirmBox, fmtDate, fmtNum, fmtDurationWords } from './ui.js';
 import { state, commit, uid, distUnit, weekStart } from './store.js';
 import { barChart, COLORS } from './charts.js';
 import { latestWeight, findDate } from './body.js';
@@ -242,6 +242,7 @@ export function fitnessPage() {
 
     fill(body,
       navBar({ title: 'Fitness', back: false, large: true, right: [goalsButton('fitness'), h('button.icon-btn.gold-text', { onclick: () => activitySheet(), 'aria-label': 'Add activity' }, icon('plus', 24))] }),
+      wipBanner('Fitness'),
 
       h('div.section-head', h('h2.section-title', 'This week')),
       h('div.tiles.three',

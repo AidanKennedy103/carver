@@ -611,6 +611,7 @@ function targetText(pe) {
   return `${isTest ? '1 × max reps' : `${work.length} × ${reps}`}${kg ? ` · ${fmtW(kg)}` : info.type === 'wr' ? ' · pick a weight' : ''}`;
 }
 
+/** Program builder. Opened from the Workout tab (it's a back-button page, not a tab). */
 export function coachPage() {
   const el = h('div.page');
   const body = h('div.scroll-body');
@@ -619,7 +620,7 @@ export function coachPage() {
     syncCoach();
     const cp = coachProgram(), t = cp && (cp.custom ? customTemplate(cp) : template(cp.id)), p531 = program531();
     fill(body,
-      navBar({ title: 'Program builder', back: false, large: true, right: [goalsButton('workout')] }),
+      navBar({ title: 'Program builder', backLabel: 'Workout', large: true, right: [goalsButton('workout')] }),
       h('div.segment.pb-switch', [['programs', 'Programs'], ['mine', 'My workouts']].map(([v, l]) => h('button' + (view === v ? '.on' : ''), { onclick: () => { view = v; draw(); } }, l))),
       view === 'mine' ? myWorkouts() : programsView(cp, t, p531),
       h('div.bottom-space'),

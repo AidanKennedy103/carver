@@ -166,12 +166,11 @@ export function homeSections() {
 export const TAB_LIST = [
   { id: 'workout', label: 'Workout', icon: 'dumbbell', sub: 'Gym workouts and plans' },
   { id: 'nutrition', label: 'Nutrition', icon: 'apple', sub: 'Food, calories and macros' },
-  { id: 'fitness', label: 'Fitness', icon: 'activity', sub: 'Runs, walks, rides and cardio' },
+  { id: 'fitness', label: 'Fitness', icon: 'activity', sub: 'Runs, walks, rides and cardio', wip: true },
   { id: 'social', label: 'Social', icon: 'users', sub: 'Groups, leaderboards and challenges' },
   { id: 'habits', label: 'Habits', icon: 'check', sub: 'Daily goals, streaks and reminders' },
-  { id: 'coach', label: 'Programs', icon: 'trophy', sub: 'Program builder: ready-made programs and training blocks' },
-  { id: 'recovery', label: 'Recovery', icon: 'moon', sub: 'Sleep, soreness and a daily readiness score' },
-  { id: 'body', label: 'Body', icon: 'user', sub: 'Weight, body fat, photos and measurements' },
+  { id: 'recovery', label: 'Recovery', icon: 'moon', sub: 'Sleep, soreness and a daily readiness score', wip: true },
+  { id: 'body', label: 'Physical Metrics', short: 'Metrics', icon: 'user', sub: 'Weight, body fat, photos and measurements', wip: true },
 ];
 /** Tab ids you keep, in your order (not counting Home). */
 export function shownTabs() {
