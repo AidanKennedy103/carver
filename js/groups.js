@@ -65,10 +65,23 @@ export async function loadFeed(groupIds = myGroups().map((g) => g.id)) {
   ]);
   if (ev.error) throw ev.error;
   const names = new Map((mem.data || []).map((m) => [m.group_id + m.user_id, m.name]));
+  const ids = (ev.data || []).map((e) => e.id);
+  let kudos = [], comments = [];
+  if (ids.length) {
+    const [r, c] = await Promise.all([
+      db.from('carver_reactions').select('event_id, user_id').in('event_id', ids),
+      db.from('carver_comments').select('id, event_id, user_id, body, created_at').in('event_id', ids).order('created_at'),
+    ]);
+    kudos = r.data || []; comments = c.data || [];
+  }
   const members = new Map();
   for (const m of mem.data || []) members.set(m.group_id, [...(members.get(m.group_id) || []), m]);
   cache('carver.members', Object.fromEntries(members));
-  const feed = (ev.data || []).map((e) => ({ ...e, who: names.get(e.group_id + e.user_id) || 'Someone', me: e.user_id === account().id }));
+  const feed = (ev.data || []).map((e) => ({
+    ...e, who: names.get(e.group_id + e.user_id) || 'Someone', me: e.user_id === account().id,
+    kudos: kudos.filter((k) => k.event_id === e.id).map((k) => k.user_id),
+    comments: comments.filter((c) => c.event_id === e.id).map((c) => ({ ...c, who: names.get(e.group_id + c.user_id) || 'Someone', me: c.user_id === account().id })),
+  }));
   if (groupIds.length === myGroups().length) cache('carver.feed', feed.slice(0, 40));
   return feed;
 }
@@ -222,6 +235,7 @@ function describe(e) {
     case 'photo': return { ico: 'camera', text: 'shared a progress photo', photo: d.path };
     case 'challenge': return { ico: 'flag', text: `started a challenge: ${d.title}`, sub: d.end ? `Until ${fmtDate(Date.parse(d.end + 'T12:00'), { month: 'short', day: 'numeric' })}` : '' };
     case 'started': return { ico: 'pin', text: 'is at the gym', sub: d.name && d.name !== 'Workout' ? `Started ${d.name}` : '' };
+    case 'gym': return { ico: 'pin', text: `is heading to the gym ${d.when || 'now'}`, sub: d.note || 'Join them?' };
     case 'workout': return {
       ico: 'dumbbell', text: `finished ${d.name}`,
       sub: [d.mins ? fmtDurationWords(d.mins * 6e4) : '', d.sets ? `${d.sets} sets` : '', d.kg ? `${fmtNum(+toDisplay(d.kg))} ${unit()}` : ''].filter(Boolean).join(' · '),
@@ -278,9 +292,70 @@ export function tidyFeed(feed) {
 
 const clock = (iso) => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
-export function eventRow(e, { showGroup = false, time = 'ago' } = {}) {
+const CAN_REACT = new Set(['workout', 'cardio', 'week', 'photo', 'habit', 'challenge', 'gym', 'protein', 'kcal', 'weekly']);
+
+/** Give or take back kudos on a post. */
+async function toggleKudos(e, redraw) {
+  const mine = e.kudos?.includes(account().id);
+  e.kudos = mine ? e.kudos.filter((u) => u !== account().id) : [...(e.kudos || []), account().id];
+  redraw();
+  try {
+    const db = await client();
+    const q = mine ? db.from('carver_reactions').delete().eq('event_id', e.id).eq('user_id', account().id) : db.from('carver_reactions').insert({ event_id: e.id, kind: 'kudos' });
+    const { error } = await q;
+    if (error) throw error;
+  } catch { toast('Kudos need the latest server update (see README).'); }
+}
+
+/** Comments on a post, and a box to add one. */
+function commentsSheet(e, redraw) {
+  const list = h('div.cm-list');
+  const input = h('input.field.cm-in', { placeholder: 'Add a comment', maxlength: 280, enterkeyhint: 'send', onkeydown: (ev) => { if (ev.key === 'Enter') send(); } });
+  const draw = () => fill(list, (e.comments || []).length ? e.comments.map((c) => h('div.cm',
+    avatar(c.who, c.user_id),
+    h('div.cm-text', h('b', c.me ? 'You' : c.who), h('span', c.body)),
+    c.me ? h('button.link.small-link', { onclick: () => remove(c) }, 'Delete') : null)) : h('p.fine.center', 'No comments yet.'));
+  async function send() {
+    const body = input.value.trim();
+    if (!body) return;
+    input.value = '';
+    const c = { id: 'tmp', event_id: e.id, user_id: account().id, body, who: 'You', me: true };
+    e.comments = [...(e.comments || []), c];
+    draw(); redraw();
+    try {
+      const db = await client();
+      const { data, error } = await db.from('carver_comments').insert({ event_id: e.id, body }).select('id').single();
+      if (error) throw error;
+      c.id = data.id;
+    } catch { toast('Comments need the latest server update (see README).'); e.comments = e.comments.filter((x) => x !== c); draw(); redraw(); }
+  }
+  async function remove(c) {
+    e.comments = e.comments.filter((x) => x !== c); draw(); redraw();
+    try { const db = await client(); await db.from('carver_comments').delete().eq('id', c.id); } catch { /* offline */ }
+  }
+  draw();
+  const s = sheet(h('div.form.cm-sheet',
+    h('div.sheet-head', h('span'), h('div.sheet-title', 'Comments'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
+    h('div.cm-post', eventRow(e, { time: 'ago' })),
+    list,
+    h('div.cm-bar', input, h('button.btn.gold.small', { onclick: send }, 'Send'))));
+  setTimeout(() => input.focus(), 300);
+}
+
+/** Kudos, comments (and Remove on your own posts) under a post. */
+function postActions(e, redraw, onRemove) {
+  if (!CAN_REACT.has(e.kind)) return e.me && onRemove ? h('div.post-acts', h('button.post-act.right', { onclick: onRemove }, 'Remove')) : null;
+  const n = e.kudos?.length || 0, mine = e.kudos?.includes(account()?.id), c = e.comments?.length || 0;
+  return h('div.post-acts',
+    e.me ? h('span.post-act.static' + (n ? '.on' : ''), icon('flame', 15), n ? `${n} kudos` : 'Kudos') : h('button.post-act' + (mine ? '.on' : ''), { onclick: () => toggleKudos(e, redraw), 'aria-pressed': String(!!mine) }, icon('flame', 15), n ? `${n}` : 'Kudos'),
+    h('button.post-act', { onclick: () => commentsSheet(e, redraw) }, icon('chat', 15), c ? `${c}` : 'Comment'),
+    e.me && onRemove ? h('button.post-act.right', { onclick: onRemove }, 'Remove') : null);
+}
+
+export function eventRow(e, { showGroup = false, time = 'ago', actions = null } = {}) {
   const x = describe(e);
   const grp = showGroup ? myGroups().find((g) => g.id === e.group_id)?.name : null;
+  const last = actions && e.comments?.length ? e.comments[e.comments.length - 1] : null;
   return h('div.feed-row' + (x.bad ? '.bad' : '') + (e.kind === 'weekly' ? '.weekly' : ''),
     avatar(e.who, e.user_id, x.ico),
     h('div.feed-text',
@@ -290,8 +365,29 @@ export function eventRow(e, { showGroup = false, time = 'ago' } = {}) {
       x.sub || grp ? h('div.feed-sub', [x.sub, grp].filter(Boolean).join(' · ')) : null,
       (x.extra || []).map((t) => h('div.feed-pr', t)),
       x.lines ? h('div.week-lines', x.lines.map(([ico, label, val, good]) => h('div.week-line' + (good ? '.good' : ''), h('span.wl-dot'), h('span.wl-name', label), h('b', val)))) : null,
-      x.photo ? groupPhoto(x.photo) : null),
+      x.photo ? groupPhoto(x.photo) : null,
+      last ? h('div.cm-last', h('b', last.me ? 'You' : last.who), ' ', last.body) : null,
+      actions ? postActions(e, actions.redraw, actions.remove) : null),
     h('span.feed-when', time === 'clock' ? clock(e.created_at) : ago(e.created_at)));
+}
+
+/** "Heading to the gym": tell this group when you're going. */
+async function gymPing(g, after) {
+  const at = (mins) => new Date(Date.now() + mins * 6e4).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const post = async (when) => {
+    try {
+      const db = await client();
+      const { error } = await db.from('carver_events').insert({ group_id: g.id, kind: 'gym', ref: 'gym:' + Date.now(), data: { when } });
+      if (error) throw error;
+      toast(`Told ${g.name}`); after?.();
+    } catch { toast('Gym pings need the latest server update (see README).'); }
+  };
+  actionSheet('Heading to the gym', [
+    { label: 'Now', onClick: () => post('now') },
+    { label: `In 30 minutes (${at(30)})`, onClick: () => post(`at ${at(30)}`) },
+    { label: `In an hour (${at(60)})`, onClick: () => post(`at ${at(60)}`) },
+    { label: 'Pick a time…', onClick: async () => { const t = (await promptBox('When are you going?', '', { placeholder: 'e.g. 6 pm, tomorrow 7 am' }))?.trim(); if (t) post(/^(at|tomorrow|tonight|in )/i.test(t) ? t : `at ${t}`); } },
+  ]);
 }
 
 /** "Today", "Yesterday", "Monday, Nov 10" */
@@ -412,10 +508,11 @@ export function groupsCard() {
 let selected = null;
 
 /** The groups screen. tab: shown as the Social tab (no back button). sections(g, members, redraw): extra cards after This week. */
-export function groupsScreen({ tab = false, sections = null } = {}) {
+export function groupsScreen({ tab = false, sections = null, only = null } = {}) {
   const el = h('div.page');
   const body = h('div.scroll-body');
   let feed = cachedFeed(), loading = true;
+  if (only) selected = only;
 
   async function refresh() {
     loading = true;
@@ -424,8 +521,37 @@ export function groupsScreen({ tab = false, sections = null } = {}) {
     draw();
   }
 
+  /** Your groups as cards: tap one to open it. */
+  function listView(groups) {
+    const mon = ymd(weekStart());
+    return [
+      h('div.section-head', h('h2.section-title', 'Your groups'), h('span.section-count', groups.length)),
+      groups.map((g) => {
+        const posts = tidyFeed(feed.filter((e) => e.group_id === g.id));
+        const members = groupMembers(g.id);
+        const week = feed.filter((e) => e.group_id === g.id && (e.kind === 'workout' || e.kind === 'cardio') && ymd(Date.parse(e.created_at)) >= mon).length;
+        const latest = posts[0];
+        return h('button.card.group-card', { onclick: () => push(() => groupsScreen({ sections, only: g.id })) },
+          h('div.group-card-top',
+            h('div', h('div.group-title', g.name), h('div.group-meta', `${members.length || 1} member${(members.length || 1) === 1 ? '' : 's'} · ${week} workout${week === 1 ? '' : 's'} this week`)),
+            h('span.card-go', '›')),
+          h('div.av-stack', (members.length ? members : [{ user_id: account().id, name: g.myName }]).slice(0, 8).map((m) => avatar(m.name, m.user_id))),
+          latest ? h('div.group-card-last', h('b', latest.me ? 'You' : latest.who), ' ', describe(latest).text, h('span.muted', ` · ${ago(latest.created_at)}`)) : null);
+      }),
+      h('div.section-head', h('h2.section-title', 'Latest')),
+      feed.length ? h('section.card.list-card.feed-list', tidyFeed(feed).slice(0, 6).map((e) => eventRow(e, { showGroup: true, actions: { redraw: draw } }))) : h('div.feed-empty.card', loading ? 'Loading…' : 'Nothing yet.'),
+      h('div.btn-pair.groups-more', h('button.btn.dark', { onclick: () => createGroup().then((x) => x && refresh()) }, 'Make a group'), h('button.btn.dark', { onclick: () => joinGroup().then((x) => x && refresh()) }, 'Join with code')),
+    ];
+  }
+
   function draw() {
     const groups = myGroups();
+    if (!only && account() && groups.length > 1) {
+      fill(body,
+        navBar({ title: tab ? 'Social' : 'Groups', back: !tab, backLabel: 'Home', large: true, wip: true, right: [tab ? goalsButton() : null, h('button.icon-btn.gold-text', { onclick: addMenu, 'aria-label': 'Make or join a group' }, icon('plus', 24))] }),
+        pushNudge(), listView(groups), h('div.bottom-space'));
+      return;
+    }
     if (!groups.some((g) => g.id === selected)) selected = groups[0]?.id || null;
     const g = groups.find((x) => x.id === selected);
     const raw = feed.filter((e) => e.group_id === selected);
@@ -438,12 +564,11 @@ export function groupsScreen({ tab = false, sections = null } = {}) {
       if (days[days.length - 1]?.label !== label) days.push({ label, items: [] });
       days[days.length - 1].items.push(e);
     }
-    const row = (e) => (e.me && !e.merged
-      ? h('button.own-post', { onclick: () => deletePost(e).then((ok) => ok && refresh()), 'aria-label': 'Your post. Tap to remove it.' }, eventRow(e, { time: 'clock' }))
-      : eventRow(e, { time: 'clock' }));
+    const row = (e) => eventRow(e, { time: 'clock', actions: { redraw: draw, remove: e.me && !e.merged ? () => deletePost(e).then((ok) => ok && refresh()) : null } });
 
     fill(body,
-      navBar({ title: tab ? 'Social' : 'Groups', back: !tab, backLabel: 'Home', large: true, wip: true, right: [tab ? goalsButton() : null, h('button.icon-btn.gold-text', { onclick: addMenu, 'aria-label': 'Make or join a group' }, icon('plus', 24))] }),
+      only ? navBar({ title: myGroups().find((x) => x.id === only)?.name || 'Group', backLabel: tab ? 'Social' : 'Groups' })
+        : navBar({ title: tab ? 'Social' : 'Groups', back: !tab, backLabel: 'Home', large: true, wip: true, right: [tab ? goalsButton() : null, h('button.icon-btn.gold-text', { onclick: addMenu, 'aria-label': 'Make or join a group' }, icon('plus', 24))] }),
       !account()
         ? h('button.card.empty-plan', { onclick: signInSheet }, h('div.empty-title', 'Sign in first'), h('div.empty-text', 'Groups need an account so friends can see your posts.'))
         : !groups.length
@@ -452,7 +577,6 @@ export function groupsScreen({ tab = false, sections = null } = {}) {
             h('div.empty-text', 'Make a group and share the invite code, or join a friend’s. They see your finished workouts and daily goals, plus a Monday summary. You choose what each group sees.'),
             h('div.btn-pair', h('button.btn.gold', { onclick: () => createGroup().then((x) => { if (x) { selected = x.id; refresh(); } }) }, 'Make a group'), h('button.btn.dark', { onclick: () => joinGroup().then((x) => { if (x) { selected = x.id; refresh(); } }) }, 'Join with code')))
           : [
-            groups.length > 1 ? h('div.chips.tight', groups.map((x) => h('button.chip' + (x.id === selected ? '.on' : ''), { onclick: () => { selected = x.id; draw(); } }, x.name))) : null,
             h('section.card.group-hero',
               h('div.group-hero-top',
                 h('div',
@@ -460,7 +584,9 @@ export function groupsScreen({ tab = false, sections = null } = {}) {
                   h('div.group-meta', `${members.length || 1} member${(members.length || 1) === 1 ? '' : 's'}`)),
                 h('button.icon-btn', { onclick: () => groupSettings(g, refresh), 'aria-label': 'Group settings' }, icon('gear'))),
               h('div.av-stack', (members.length ? members : [{ user_id: account().id, name: g.myName }]).slice(0, 8).map((m) => avatar(m.name, m.user_id))),
-              h('button.btn.gold-soft.wide', { onclick: () => invite(g) }, icon('plus', 16), 'Invite friends')),
+              h('div.btn-pair',
+                h('button.btn.gold', { onclick: () => gymPing(g, refresh) }, icon('pin', 16), 'Heading to the gym'),
+                h('button.btn.gold-soft', { onclick: () => invite(g) }, icon('plus', 16), 'Invite'))),
             pushNudge(),
 
             h('div.section-head', h('h2.section-title', 'This week'), loading ? h('span.section-count', 'Updating…') : null),
@@ -471,7 +597,7 @@ export function groupsScreen({ tab = false, sections = null } = {}) {
             days.length
               ? days.map((d) => h('div.feed-day', h('div.feed-day-head', d.label), h('section.card.list-card.feed-list', d.items.map(row))))
               : h('div.feed-empty.card', loading ? 'Loading…' : 'Nothing yet. Posts show up as people train and finish their daily goals.'),
-            raw.some((e) => e.me) ? h('p.fine', 'Tap one of your own posts to remove it.') : null,
+            only ? null : h('button.link.small-link.center-link', { onclick: addMenu }, 'Make or join another group'),
           ],
       h('div.bottom-space'),
     );

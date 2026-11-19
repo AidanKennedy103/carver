@@ -195,6 +195,8 @@ When `supabase/functions/carver-push/index.ts` changes: **Edge Functions → car
 
 For Social challenges, run `supabase/social.sql` once in the **SQL Editor** (safe to run again).
 
+For kudos, comments and "Heading to the gym" pings, run `supabase/social2.sql` in the **SQL Editor**, then redeploy `carver-push` as above (it now notifies a post's owner about kudos and comments).
+
 ## Put it online (free)
 
 It's on GitHub (`AidanKennedy103/carver`, private) and Cloudflare Workers. Every push to `main` updates the live app in about a minute. `wrangler.jsonc` serves the folder as it is (no build step), and `.assetsignore` keeps scripts and dev files off the site.

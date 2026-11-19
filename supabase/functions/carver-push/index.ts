@@ -8,6 +8,7 @@
 //                     summary. Posts are unique per day/week, so running it again
 //                     does nothing new; each new post then notifies through the trigger.
 //   { test: <endpoint> }  send one test notification to that phone.
+//   { reply: { table, event, user, text } }  a kudos or comment: tell the post's owner.
 //
 // Secrets (Edge Functions → Secrets): VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT.
 // Turn OFF "Enforce JWT verification" for this function: the database calls it without a login.
@@ -33,6 +34,7 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}));
   try {
     if (body.event) await notify(String(body.event));
+    else if (body.reply) await reply(body.reply);
     else if (body.cron) { await sweep(); await remind(); }
     else if (body.test) return Response.json(await test(String(body.test)), { headers: CORS });
     return new Response('ok', { headers: CORS });
@@ -150,6 +152,7 @@ function text(kind: string, who: string, d: any): string | null {
     case 'week': return `${who} closed their weekly gym goal 🔥`;
     case 'photo': return `${who} shared a progress photo`;
     case 'challenge': return `${who} started a challenge: ${d.title} 🏁`;
+    case 'gym': return `${who} is heading to the gym ${d.when || 'now'}. Join them?`;
     case 'weekly': {
       const bits = [];
       if (d.workouts) bits.push(`${d.workouts.n}/${d.workouts.goal} workouts`);
@@ -180,6 +183,18 @@ async function notify(id: string) {
   if (!body || !others.length) return;
   const { data: subs } = await db.from('carver_push').select('endpoint, p256dh, auth').in('user_id', others);
   if (subs?.length) await send(subs, { title: group?.name || 'Carver', body, tag: `${ev.kind}-${id}` });
+}
+
+/** Someone gave kudos or commented: tell the post's owner (not themselves). */
+async function reply(r: { table: string; event: string; user: string; text?: string | null }) {
+  const { data: ev } = await db.from('carver_events').select('group_id, user_id, kind, data').eq('id', r.event).maybeSingle();
+  if (!ev || ev.user_id === r.user) return;
+  const { data: m } = await db.from('carver_members').select('name').eq('group_id', ev.group_id).eq('user_id', r.user).maybeSingle();
+  const who = m?.name || 'Someone';
+  const what = ev.kind === 'workout' ? (ev.data?.name || 'your workout') : ev.kind === 'cardio' ? `your ${CARDIO[ev.data?.type] || 'workout'}` : 'your post';
+  const body = r.table === 'carver_comments' ? `${who} on ${what}: ${String(r.text || '').slice(0, 120)}` : `${who} gave you kudos for ${what}`;
+  const { data: subs } = await db.from('carver_push').select('endpoint, p256dh, auth').eq('user_id', ev.user_id);
+  if (subs?.length) await send(subs, { title: 'Carver', body, tag: `reply-${r.event}` });
 }
 
 // ---------- The hourly check ----------
