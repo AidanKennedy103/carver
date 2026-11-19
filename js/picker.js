@@ -1,7 +1,7 @@
 // "Add exercises" picker: search, filter by muscle, pick several, or create your own.
 
 import { h, fill, icon, sheet, toast } from './ui.js';
-import { MUSCLES, EQUIPMENT, musclesText } from './exercises.js';
+import { MUSCLES, EQUIPMENT, musclesText, searchExercises } from './exercises.js';
 import { allExercises, addCustomExercise, state } from './store.js';
 
 const TYPE_LABEL = { wr: 'Weight & reps', bw: 'Reps only', time: 'Duration' };
@@ -37,8 +37,8 @@ export function pickExercises(onPick, { single = false, title = 'Add exercises',
 
   function draw() {
     let items = allExercises().filter((e) => (!filter || filter(e)) &&
-      (muscle === 'All' || (muscle === 'One side' ? e.uni : e.muscle === muscle)) &&
-      (!query || [e.name, e.equipment, e.muscle, ...(e.helps || []), e.uni ? 'single one side unilateral' : ''].join(' ').toLowerCase().includes(query)));
+      (muscle === 'All' || (muscle === 'One side' ? e.uni : e.muscle === muscle)));
+    if (query) items = searchExercises(query, items);
     if (!query) items = items.slice().sort((a, b) => (recent.get(a.id) ?? 999) - (recent.get(b.id) ?? 999));
     fill(list, 
       ...items.map((e) => {

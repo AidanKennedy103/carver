@@ -129,6 +129,17 @@ export const LIBRARY = [
   U('sa-oh-ext', 'Single-Arm Overhead Triceps Extension', 'Triceps', 'Dumbbell'),
   U('kickback', 'Triceps Kickback', 'Triceps', 'Dumbbell'),
   L('skullcrusher', 'Skull Crusher', 'Triceps', 'Barbell'),
+  L('ez-skullcrusher', 'EZ-Bar Skull Crusher', 'Triceps', 'Barbell'),
+  L('db-skullcrusher', 'Dumbbell Skull Crusher', 'Triceps', 'Dumbbell'),
+  L('lying-tri-ext', 'Lying Triceps Extension', 'Triceps', 'Barbell'),
+  L('db-lying-tri-ext', 'Dumbbell Lying Triceps Extension', 'Triceps', 'Dumbbell'),
+  L('ez-oh-ext', 'EZ-Bar Overhead Triceps Extension', 'Triceps', 'Barbell'),
+  L('machine-tri-ext', 'Triceps Extension Machine', 'Triceps', 'Machine'),
+  U('cross-body-ext', 'Cross-Body Cable Triceps Extension', 'Triceps', 'Cable'),
+  L('reverse-pushdown', 'Reverse-Grip Pushdown', 'Triceps', 'Cable', 'Forearms'),
+  L('band-pushdown', 'Band Triceps Pushdown', 'Triceps', 'Band'),
+  L('kb-oh-ext', 'Kettlebell Overhead Triceps Extension', 'Triceps', 'Kettlebell'),
+  L('tate-press', 'Tate Press', 'Triceps', 'Dumbbell', 'Chest'),
   L('jm-press', 'JM Press', 'Triceps', 'Barbell', 'Chest'),
   L('cgbp', 'Close-Grip Bench Press', 'Triceps', 'Barbell', 'Chest,Shoulders'),
   L('tri-dip-machine', 'Triceps Dip Machine', 'Triceps', 'Machine', 'Chest,Shoulders'),
@@ -259,3 +270,60 @@ export const LIBRARY = [
 
 /** "Chest + Triceps, Shoulders" */
 export const musclesText = (e, max = 3) => e.muscle + (e.helps?.length ? ' + ' + e.helps.slice(0, max).join(', ') + (e.helps.length > max ? '…' : '') : '');
+
+// ---------- Search ----------
+// Every word you type has to match the start of a word in the exercise (name, muscles,
+// equipment), so "tricep ext" finds "Overhead Triceps Extension". Gym shorthand and
+// small typos are understood. Best matches come first.
+
+const ALIAS = {
+  tricep: 'triceps', tri: 'triceps', bicep: 'biceps', bi: 'biceps', db: 'dumbbell', dbs: 'dumbbell', bb: 'barbell', kb: 'kettlebell',
+  ext: 'extension', extensions: 'extension', oh: 'overhead', ohp: 'overhead press', rdl: 'romanian deadlift', sldl: 'stiff leg deadlift',
+  pec: 'chest', pecs: 'chest', lat: 'back', lats: 'back', delt: 'shoulders', delts: 'shoulders', shoulder: 'shoulders', abs: 'core', ab: 'core',
+  quad: 'quads', ham: 'hamstrings', hammy: 'hamstrings', hamstring: 'hamstrings', glute: 'glutes', calf: 'calves', trap: 'traps', oblique: 'obliques',
+  skullcrusher: 'skull crusher', skullcrushers: 'skull crusher', pullup: 'pull-up', pullups: 'pull-up', chinup: 'chin-up', pushup: 'push-up', pushups: 'push-up',
+  situp: 'sit-up', pulldown: 'pulldown', rows: 'row', curls: 'curl', presses: 'press', raises: 'raise', flys: 'fly', flyes: 'fly', flye: 'fly',
+  cgbp: 'close-grip bench press', ez: 'ez-bar', smith: 'smith', single: 'single', unilateral: 'single', 'one-arm': 'single', 'one-leg': 'single',
+};
+const words = (s) => s.toLowerCase().replace(/[()]/g, ' ').split(/[\s,/]+/).filter(Boolean)
+  .flatMap((w) => [w, ...(w.includes('-') ? w.split('-') : [])]);
+function close1(a, b) {   // one letter off or two swapped (typo), for longer words
+  if (a.length === b.length) { const d = [...a].map((c, i) => c !== b[i] ? i : -1).filter((i) => i >= 0); if (d.length === 2 && d[1] === d[0] + 1 && a[d[0]] === b[d[1]] && a[d[1]] === b[d[0]]) return true; }
+  if (a.length < 5 || Math.abs(a.length - b.length) > 1) return false;
+  let i = 0, j = 0, diff = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue; }
+    if (++diff > 1) return false;
+    if (a.length > b.length) i++; else if (b.length > a.length) j++; else { i++; j++; }
+  }
+  return diff + (a.length - i) + (b.length - j) <= 1;
+}
+/** Score one query word against a list of words: 3 exact, 2 starts with, 1 typo, 0 no match. */
+function wordScore(q, list) {
+  let best = 0;
+  for (const w of list) {
+    if (w === q) return 3;
+    if (w.startsWith(q)) best = Math.max(best, 2);
+    else if (best < 1 && (close1(q, w) || close1(q, w.slice(0, q.length + 1)))) best = 1;
+  }
+  return best;
+}
+/** The exercises that match a search, best first. */
+export function searchExercises(query, list) {
+  const q = words(query).flatMap((w) => words(ALIAS[w] || w));
+  if (!q.length) return list;
+  const out = [];
+  for (const e of list) {
+    const name = words(e.name), main = words(`${e.muscle} ${e.equipment}`), extra = words(`${(e.helps || []).join(' ')} ${e.uni ? 'single one side unilateral' : ''}`);
+    let score = 0, ok = true;
+    for (const w of q) {
+      const s = wordScore(w, name) * 3 || wordScore(w, main) * 2 || wordScore(w, extra);
+      if (!s) { ok = false; break; }
+      score += s;
+    }
+    if (!ok) continue;
+    if (e.name.toLowerCase().startsWith(query.toLowerCase().trim())) score += 5;
+    out.push([score - e.name.length / 100, e]);
+  }
+  return out.sort((a, b) => b[0] - a[0]).map((x) => x[1]);
+}
