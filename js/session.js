@@ -217,7 +217,7 @@ function workoutScreen() {
         prev: previousSets(ex.exId, w.id),
         redraw: () => { save(); draw(); },
         save: () => { save(); updateStats(); },
-        onSetDone: (e) => { updateStats(); if (e.rest && !w.past) startRest(e.rest, exercise(e.exId).name); },
+        onSetDone: (e) => { updateStats(); if (e.rest && !w.past && state.settings.restOn !== false) startRest(e.rest, exercise(e.exId).name); },
         onMove: (d) => { const [m] = w.exercises.splice(i, 1); w.exercises.splice(i + d, 0, m); save(); draw(); },
         onRemove: async () => {
           if (ex.sets.some((s) => s.done) && !(await confirmBox('Remove ' + exercise(ex.exId).name + '?', 'Its logged sets will be removed too.', { ok: 'Remove', danger: true }))) return;
@@ -347,13 +347,7 @@ function workoutScreen() {
   function restTick() {
     if (!w.rest) return;
     const left = Math.ceil((w.rest.until - Date.now()) / 1000);
-    if (left <= 0) {
-      const name = w.rest.name;
-      stopRest();
-      beep();
-      toast(`Rest's over${name ? ' · ' + name : ''}`);
-      return;
-    }
+    if (left <= 0) { restOver(); drawRest(); return; }
     restBar.querySelector('.rest-time').textContent = fmtSecs(left);
     restBar.querySelector('.rest-label').textContent = w.rest.name ? `Rest · ${w.rest.name}` : 'Rest';
     restBar.querySelector('.rest-fill').style.width = `${Math.min(100, (left / w.rest.total) * 100)}%`;
@@ -367,6 +361,16 @@ function workoutScreen() {
     onShow() { clearInterval(tick); tick = setInterval(() => { updateStats(); restTick(); timerTick(); }, 250); restTick(); drawTimer(); },
     onHide() { clearInterval(tick); },
   };
+}
+
+/** Rest has run out: chime (if on), say so, clear it. Runs from the workout screen or any tab. */
+export function restOver() {
+  const w = state.active;
+  if (!w?.rest) return;
+  const name = w.rest.name;
+  commit((s) => { s.active.rest = null; });
+  beep();
+  toast(`Rest's over${name ? ' · ' + name : ''}`);
 }
 
 export async function saveAsPlan(w) {

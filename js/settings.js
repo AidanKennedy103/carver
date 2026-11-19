@@ -3,6 +3,14 @@
 import { h, fill, icon, sheet, toast, confirmBox, promptBox, fmtSecs, actionSheet, refreshAll, push } from './ui.js';
 import { state, commit, exportJSON, importJSON, resetAll, MAX_PLANS, savePlan, unit, bodyUnit, distUnit, shownTabs, TAB_LIST } from './store.js';
 import { REST_CHOICES } from './block.js';
+import { canMix } from './sound.js';
+
+/** An on/off row for a setting that's on unless switched off. */
+function toggleRow(label, key, sub) {
+  const sw = h('span.switch' + (state.settings[key] !== false ? '.on' : ''), h('i'));
+  return h('button.group-row', { onclick: () => { commit((st) => { st.settings[key] = st.settings[key] === false; }); sw.classList.toggle('on', state.settings[key] !== false); } },
+    h('span.tab-pick-text', h('span', label), sub ? h('span.tab-pick-sub', sub) : null), sw);
+}
 import { accountSection } from './account.js';
 import { aboutScreen } from './about.js';
 import { clearPhotos } from './photos.js';
@@ -131,7 +139,10 @@ export function openSettings() {
           label: sec ? fmtSecs(sec) : 'Off',
           onClick: () => { commit((st) => { st.settings.restDefault = sec; }); restVal.textContent = fmtSecs(sec); },
         }))),
-      }, h('span', 'Default rest timer'), restVal)),
+      }, h('span', 'Default rest timer'), restVal),
+      toggleRow('Rest timer', 'restOn', 'Starts after each set you tick'),
+      canMix ? toggleRow('Rest timer sound', 'restSound', 'A short chime that plays over your music') : null),
+    canMix ? null : h('p.fine', 'Rest is silent on this iPhone so it never pauses your music. Update iOS for a chime that plays over it.'),
     h('label.form-label', 'Your data'),
     h('div.group',
       h('button.group-row', { onclick: exportData }, h('span', 'Export all data'), h('span.row-val', 'JSON')),

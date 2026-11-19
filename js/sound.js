@@ -1,17 +1,31 @@
-// A short chime when rest is over. iPhones only allow sound after a tap,
-// so unlockAudio() is called from a tap (starting a workout, ticking a set).
+// A short chime when rest is over. It must never pause the music you're listening to:
+// the page's audio is set to "ambient", which iPhones mix with other apps' audio.
+// Where a browser can't promise that (older iPhones), Carver stays silent.
+// iPhones only allow sound after a tap, so unlockAudio() is called from a tap.
+
+import { state } from './store.js';
+
+const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch { /* not supported */ }
+/** Sound that mixes with music is possible here. */
+export const canMix = !!navigator.audioSession || !IOS;
 
 let ctx;
+const soundOn = () => canMix && state.settings.restSound !== false;
 export function unlockAudio() {
+  if (!soundOn()) return;
   try {
     ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
     if (ctx.state === 'suspended') ctx.resume();
   } catch { /* no audio */ }
 }
-document.addEventListener('touchend', unlockAudio, { once: true, passive: true });
-document.addEventListener('click', unlockAudio, { once: true });
+document.addEventListener('touchend', unlockAudio, { passive: true });
+document.addEventListener('click', unlockAudio);
 
 export function beep() {
+  navigator.vibrate?.(200);
+  if (!soundOn()) return;
+  unlockAudio();
   if (!ctx) return;
   if (ctx.state !== 'running') ctx.resume().catch(() => {});   // iOS pauses audio while the app is in the background
   const t = ctx.currentTime;
@@ -26,5 +40,4 @@ export function beep() {
     o.start(t + d);
     o.stop(t + d + 0.3);
   });
-  navigator.vibrate?.(200);
 }

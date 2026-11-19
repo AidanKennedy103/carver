@@ -3,7 +3,7 @@
 
 import { h, icon, push, depth, fmtDuration, navBar } from './ui.js';
 import { state, onChange, tabOn, shownTabs, TAB_LIST } from './store.js';
-import { openWorkout } from './session.js';
+import { openWorkout, restOver } from './session.js';
 
 const HOME = { id: 'home', label: 'Home', icon: 'home' };
 const MORE = { id: 'more', label: 'More', icon: 'more' };
@@ -27,7 +27,7 @@ const live = h('button.live-bar', { onclick: () => openWorkout() });
 export function initTabs(pageBuilders) {
   pages = pageBuilders;
   drawBar();
-  live.append(h('span.pulse'), h('span.live-text', h('b.live-name', ''), h('span.live-time', '')), h('span.live-go', 'Resume'));
+  live.append(h('span.pulse'), h('span.live-text', h('b.live-name', ''), h('span.live-time', '')), h('span.live-go', 'Resume'), h('span.live-track', h('span.live-fill')));
   document.body.append(live, bar);
 
   let saved = 'home';
@@ -37,7 +37,12 @@ export function initTabs(pageBuilders) {
   drawLive();
   onChange(drawLive);
   onChange(() => { if (barKey() !== shownKey) { drawBar(); if (current === 'more' || !tabOn(current)) { current = null; goTab('home'); } } });
-  setInterval(() => { if (state.active) live.querySelector('.live-time').textContent = liveTime(state.active); syncVisibility(); }, 500);
+  setInterval(() => {
+    const a = state.active;
+    if (a?.rest && a.rest.until <= Date.now()) restOver();
+    if (a) liveTick(a);
+    syncVisibility();
+  }, 500);
 }
 
 // Only the tabs you keep (Settings → Tabs)
@@ -70,8 +75,16 @@ function drawLive() {
   document.body.classList.toggle('has-live', !!a);
   if (a) {
     live.querySelector('.live-name').textContent = a.name || 'Workout';
-    live.querySelector('.live-time').textContent = liveTime(a);
+    liveTick(a);
   }
+}
+/** Workout time, or the rest countdown while you rest. */
+function liveTick(a) {
+  const left = a.rest ? Math.ceil((a.rest.until - Date.now()) / 1000) : 0;
+  live.classList.toggle('resting', left > 0);
+  live.querySelector('.live-time').textContent = left > 0 ? `Rest ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}` : liveTime(a);
+  const fill = live.querySelector('.live-fill');
+  fill.style.width = left > 0 ? `${Math.min(100, (left / a.rest.total) * 100)}%` : '0%';
 }
 
 // The bars belong to the main pages only; pushed screens cover them

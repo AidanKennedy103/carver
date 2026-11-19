@@ -1387,3 +1387,9 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .wt-rounds b { font-size: 22px; color: var(--gold); }
 .wt .btn { margin-top: 6px; }
 .chal-mins { margin-bottom: 4px; }
+
+/* Rest countdown in the bar above the tabs */
+.live-bar { overflow: hidden; }
+.live-track { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; }
+.live-fill { display: block; height: 100%; width: 0; background: var(--gold); transition: width .5s linear; }
+.live-bar.resting .live-time { font-weight: 700; }
