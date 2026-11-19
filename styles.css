@@ -1342,3 +1342,10 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .add-card-plus { position: absolute; top: 14px; right: 14px; width: 24px; height: 24px; border-radius: 50%; background: var(--gold); color: #17110a; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0, 0, 0, .5); }
 .build-btn { margin-top: 22px; height: 54px; font-size: 17px; border-radius: 14px; gap: 8px; }
 .build-btn + .start-opts { margin-top: 12px; }
+
+/* Workout tab: the start card, centred */
+.start-hero { text-align: center; }
+.start-hero .hero-label { justify-content: center; }
+.start-hero .hero-name { margin-left: auto; margin-right: auto; text-align: center; }
+.start-hero .hero-chips { justify-content: center; }
+.start-hero .hero-meta, .start-hero .hero-rest { text-align: center; align-items: center; }

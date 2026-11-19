@@ -61,7 +61,7 @@ export function workoutPage() {
   function activeCard(a) {
     const total = a.exercises.reduce((n, e) => n + e.sets.length, 0);
     const done = a.exercises.reduce((n, e) => n + e.sets.filter((x) => x.done).length, 0);
-    return h('section.card.hero.live',
+    return h('section.card.hero.start-hero.live',
       h('div.hero-label', a.past ? null : h('span.pulse'), a.past?.editOf ? 'Editing a workout' : a.past ? 'Logging a past workout' : 'In progress'),
       h('div.hero-name', a.name || 'Workout'),
       h('div.hero-meta', a.past ? `${fmtDate(a.start)} · ${total} sets` : `Started ${fmtDurationWords(Date.now() - a.start)} ago · ${done} of ${total} sets`),
@@ -72,7 +72,7 @@ export function workoutPage() {
   /** The plan that's up next (the one after the plan you did last), ready to start. */
   function upNext(p) {
     const muscles = topMuscles(p);
-    return h('section.card.hero',
+    return h('section.card.hero.start-hero',
       h('div.hero-label', 'Next workout'),
       h('button.hero-name', { onclick: () => push(() => planEditor(p)) }, p.name),
       muscles.length ? h('div.hero-chips', muscles.map((m) => h('span.chip.small', m))) : null,
@@ -87,7 +87,7 @@ export function workoutPage() {
   }
 
   function freestyleHero() {
-    return h('section.card.hero',
+    return h('section.card.hero.start-hero',
       h('div.hero-label', 'Start a workout'),
       h('div.hero-name', 'Freestyle'),
       h('div.hero-meta', 'Add exercises as you go. The timer starts when you tap Start.'),
