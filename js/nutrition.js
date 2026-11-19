@@ -114,15 +114,21 @@ function calRing(eaten, goal, left, over, soft) {
   return el;
 }
 
-/** Water in one line: amount, goal and a +250 ml button. */
+/** Water: a glass that fills, the amount, a drop per 250 ml (tap one to set it), and +250. */
 function waterRow(date) {
   const ml = waterOn(date), goal = state.goals.water || 2500;
-  return h('div.water-row',
-    h('span.water-title', icon('drop', 16), 'Water'),
-    h('span.water-val', `${+(ml / 1000).toFixed(2)} `, h('span.muted', `/ ${+(goal / 1000).toFixed(2)} L`)),
-    h('div.water-mini', h('i', { style: { width: `${Math.min(100, (ml / goal) * 100)}%` } })),
-    ml ? h('button.icon-btn.water-minus', { onclick: () => addWater(date, -250), 'aria-label': 'Remove 250 ml of water' }, '−') : null,
-    h('button.chip.water-add', { onclick: () => addWater(date, 250) }, '+250 ml'));
+  const pct = Math.min(1, ml / goal), n = Math.min(12, Math.max(4, Math.round(goal / 250))), full = Math.floor(ml / 250);
+  const L = (v) => +(v / 1000).toFixed(2);
+  return h('section.card.wtr' + (ml >= goal ? '.done' : ''),
+    h('div.wtr-glass', { 'aria-hidden': 'true' }, h('i', { style: { height: `${pct * 100}%` } })),
+    h('div.wtr-mid',
+      h('div.wtr-top', h('b', `${L(ml)} L`), h('span', ml >= goal ? ' · goal hit' : ` of ${L(goal)} L`)),
+      h('div.wtr-drops', Array.from({ length: n }, (_, i) => h('button.wtr-drop' + (i < full ? '.on' : ''), {
+        onclick: () => addWater(date, (i + 1) * 250 === ml ? -250 : (i + 1) * 250 - ml), 'aria-label': `Set water to ${L((i + 1) * 250)} L`,
+      })))),
+    h('div.wtr-btns',
+      h('button.wtr-add', { onclick: () => addWater(date, 250), 'aria-label': 'Add 250 ml of water' }, icon('plus', 16), '250'),
+      ml ? h('button.wtr-minus', { onclick: () => addWater(date, -250), 'aria-label': 'Remove 250 ml of water' }, icon('minus', 14)) : null));
 }
 
 // ---------- Fuel score ----------

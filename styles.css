@@ -1603,3 +1603,18 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .pts-goal { display: inline-flex; align-items: center; gap: 2px; margin-top: 10px; font-size: 14px; }
 .pts-goal svg { transform: scaleX(-1); }
 .level-row.on .row-val { color: var(--gold); font-weight: 700; }
+
+/* Nutrition: water */
+.wtr { display: flex; align-items: center; gap: 14px; margin: 12px 0 4px; padding: 12px 14px; }
+.wtr-glass { flex: none; position: relative; width: 26px; height: 38px; border: 2px solid rgba(46, 139, 216, .55); border-top-width: 0; border-radius: 3px 3px 8px 8px; overflow: hidden; }
+.wtr-glass i { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(#5fb0f0, #2e8bd8); transition: height .3s; }
+.wtr-mid { flex: 1; min-width: 0; }
+.wtr-top { font-size: 13px; color: var(--muted); margin-bottom: 7px; }
+.wtr-top b { font-size: 18px; color: var(--text); font-variant-numeric: tabular-nums; }
+.wtr.done .wtr-top span { color: #5fb0f0; font-weight: 600; }
+.wtr-drops { display: flex; flex-wrap: wrap; gap: 5px; }
+.wtr-drop { width: 12px; height: 12px; padding: 0; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--surface-2); }
+.wtr-drop.on { background: #2e8bd8; }
+.wtr-btns { flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.wtr-add { display: inline-flex; align-items: center; gap: 3px; height: 32px; padding: 0 12px; border-radius: 16px; background: rgba(46, 139, 216, .18); color: #5fb0f0; font-size: 14px; font-weight: 700; }
+.wtr-minus { width: 28px; height: 22px; display: grid; place-items: center; border-radius: 11px; color: var(--muted); }
