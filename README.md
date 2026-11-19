@@ -11,7 +11,7 @@ Black and gold. The logo is a gold blackletter **C**, drawn stroke by stroke wit
 Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** open from two cards on Home. A gold bar above the tabs shows a workout in progress, with Resume.
 
 ### Home: today first
-- **Customizable Home:** Settings → **Edit Home page** (or the link at the bottom of Home) picks which sections show and their order: goal rings, rest-day check, daily goals, next workout, this week, calories & macros, water, readiness, progress & trends, strength progression, workout calendar, today, monthly reminders, groups, profile & stats.
+- **Customizable Home:** Settings → **Edit Home page** (or the link at the bottom of Home) puts Home in edit mode: each section gets an outline with a remove button and a grip to drag it into place, and **+ Add to Home** opens a gallery with a live preview of each section. Sections: goal rings, rest-day check, daily goals, next workout, this week, calories & macros, water, readiness, progress & trends, strength progression, workout calendar, today, monthly reminders, groups, profile & stats.
 - **Rings**, like closing your rings on Apple Watch. Pick up to 4 (pencil button): **Workout, Calories, Protein, Water, Weigh-in**, or up to 2 goals of your own (water, steps…).
   - **Today / Week** switch. Today shows each goal for today; tap one of your own goals to add 1. Week counts the days you've hit each goal since Monday, against the days a week you set for it (the Workout ring counts workouts against your workouts-per-week goal).
   - Calories count as hit within ±10% of your goal.

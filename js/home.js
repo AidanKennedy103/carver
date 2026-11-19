@@ -311,41 +311,94 @@ function readinessCard() {
       : h('button.card.home-next', { onclick: () => checkIn() }, h('span.home-next-text', h('span.home-next-label', 'Morning check-in'), h('span.home-next-name', 'How did you sleep?')), h('span.btn.gold-soft.small', 'Check in'))];
 }
 
-// ---------- Edit Home page ----------
+// ---------- Editing Home in place ----------
+// Each section gets an outline with its name, a remove button and a drag
+// grip; a "+ Add to Home" tile at the end adds the rest.
 
-/** Pick which sections Home shows, and their order. */
-export function editHomeScreen() {
-  const el = h('div.page');
-  const body = h('div.scroll-body');
-  const save = (list) => { commit((s) => { s.settings.home = list; }); draw(); };
-  function draw() {
-    const on = homeSections();
-    const off = HOME_SECTIONS.filter((x) => !on.includes(x.id));
-    const info = (id) => HOME_SECTIONS.find((x) => x.id === id);
-    const move = (i, d) => { const l = on.slice(); [l[i], l[i + d]] = [l[i + d], l[i]]; save(l); };
-    fill(body,
-      h('p.coach-intro', 'Choose what shows on Home and in what order.'),
-      h('div.section-head', h('h2.section-title', 'On Home'), h('span.section-count', on.length)),
-      on.length ? h('section.card.list-card.eh-list', on.map((id, i) => h('div.eh-row',
-        h('button.eh-btn.remove', { onclick: () => save(on.filter((x) => x !== id)), 'aria-label': `Remove ${info(id).name}` }, icon('minus', 14)),
-        h('span.eh-text', h('span.eh-name', info(id).name), h('span.eh-sub', info(id).sub)),
-        h('button.eh-btn', { onclick: () => move(i, -1), disabled: i === 0, 'aria-label': `Move ${info(id).name} up` }, h('span.eh-up', icon('back', 16))),
-        h('button.eh-btn', { onclick: () => move(i, 1), disabled: i === on.length - 1, 'aria-label': `Move ${info(id).name} down` }, h('span.eh-down', icon('back', 16))))))
-        : h('div.feed-empty.card', 'Home is empty. Add something below.'),
-      off.length ? [
-        h('div.section-head', h('h2.section-title', 'Add to Home')),
-        h('section.card.list-card.eh-list', off.map((x) => h('button.eh-row.add', { onclick: () => save([...on, x.id]) },
-          h('span.eh-btn.plus', icon('plus', 14)),
-          h('span.eh-text', h('span.eh-name', x.name), h('span.eh-sub', x.sub))))),
-      ] : null,
-      h('button.link.home-edit', { onclick: async () => { if (await confirmBox('Reset Home?', 'Back to the standard sections and order.', { ok: 'Reset' })) save(HOME_DEFAULT.slice()); } }, 'Reset to default'),
-      h('div.bottom-space'),
-    );
-  }
-  draw();
-  el.append(navBar({ title: 'Edit Home page', backLabel: 'Back' }), body);
-  return { el, refresh: draw };
+let editingHome = false;
+let redrawHome = null;
+let liveSections = {};   // the latest section builders, so the Add sheet can preview them
+/** Open Home in edit mode (from Settings → Edit Home page). */
+export function startHomeEdit() { editingHome = true; redrawHome?.(); }
+
+const saveHome = (list) => commit((s) => { s.settings.home = list; });
+
+/** Wrap one section for editing. */
+function editWrap(id, content, onDragStart) {
+  const info = HOME_SECTIONS.find((x) => x.id === id);
+  const flat = [content].flat(Infinity).filter(Boolean);
+  const el = h('div.hs', { 'data-id': id },
+    h('div.hs-top',
+      h('button.hs-remove', { onclick: () => saveHome(homeSections().filter((x) => x !== id)), 'aria-label': `Remove ${info.name}` }, icon('minus', 14)),
+      h('span.hs-name', info.name),
+      h('span.hs-grip', { onpointerdown: (e) => onDragStart(e, el), 'aria-label': `Drag to move ${info.name}`, role: 'button' }, icon('grip', 18))),
+    h('div.hs-body', flat.length ? flat : h('div.hs-empty', `${info.sub}. Nothing to show right now.`)));
+  return el;
 }
+
+/** Drag a section by its grip; the list reorders as you pass the middle of the next one. */
+function dragSection(e, el, scroller) {
+  e.preventDefault();
+  const list = el.parentElement;
+  const pointer = e.pointerId;
+  try { e.currentTarget.setPointerCapture(pointer); } catch { /* fine */ }
+  const startY = e.clientY, startTop = el.offsetTop;
+  let lastY = startY, raf = 0;
+  el.classList.add('dragging');
+  const place = () => {
+    el.style.transform = `translateY(${lastY - startY - (el.offsetTop - startTop) + (scroller.scrollTop - scroll0)}px)`;
+  };
+  const scroll0 = scroller.scrollTop;
+  const move = (ev) => {
+    if (ev.pointerId !== pointer) return;
+    lastY = ev.clientY;
+    for (const sib of [...list.querySelectorAll(':scope > .hs')]) {
+      if (sib === el) continue;
+      const r = sib.getBoundingClientRect(), mid = r.top + r.height / 2;
+      const after = el.compareDocumentPosition(sib) & Node.DOCUMENT_POSITION_FOLLOWING;
+      if (after && lastY > mid) list.insertBefore(el, sib.nextSibling);
+      else if (!after && lastY < mid) { list.insertBefore(el, sib); break; }
+    }
+    place();
+  };
+  // keep scrolling while held near the top or bottom of the screen
+  const tick = () => {
+    const vh = window.innerHeight;
+    if (lastY < 120) scroller.scrollTop -= 14; else if (lastY > vh - 150) scroller.scrollTop += 14;
+    place();
+    raf = requestAnimationFrame(tick);
+  };
+  raf = requestAnimationFrame(tick);
+  const end = (ev) => {
+    if (ev.pointerId !== pointer) return;
+    cancelAnimationFrame(raf);
+    window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', end); window.removeEventListener('pointercancel', end);
+    el.classList.remove('dragging'); el.style.transform = '';
+    saveHome([...list.querySelectorAll(':scope > .hs')].map((x) => x.dataset.id));
+  };
+  window.addEventListener('pointermove', move); window.addEventListener('pointerup', end); window.addEventListener('pointercancel', end);
+}
+
+/** Pick sections to add. */
+function addSheet() {
+  const on = homeSections();
+  const off = HOME_SECTIONS.filter((x) => !on.includes(x.id));
+  const s0 = sheet(h('div.form',
+    h('div.sheet-head', h('button.link', { onclick: () => s0.close() }, 'Cancel'), h('div.sheet-title', 'Add to Home'), h('span')),
+    off.length ? h('div.add-grid', off.map((x) => {
+      let content = null;
+      try { content = [liveSections[x.id]?.()].flat(Infinity).filter(Boolean); } catch { content = null; }
+      return h('button.add-card', { onclick: () => { s0.close(); saveHome([...homeSections(), x.id]); toast(`Added ${x.name}`); } },
+        h('div.add-preview', content?.length ? h('div.add-preview-in', content) : h('div.add-preview-none', `${x.sub}. Shows when there’s something to show.`)),
+        h('div.add-card-text', h('span.add-card-name', x.name), h('span.add-card-sub', x.sub)),
+        h('span.add-card-plus', icon('plus', 14)));
+    }))
+      : h('p.fine', 'Everything is already on Home.'),
+    h('button.link.home-edit', { onclick: async () => { s0.close(); if (await confirmBox('Reset Home?', 'Back to the standard sections and order.', { ok: 'Reset' })) saveHome(HOME_DEFAULT.slice()); } }, 'Reset to default')));
+  // Scale each preview so a full-width section fits its card
+  requestAnimationFrame(() => document.querySelectorAll('.add-preview-in').forEach((el) => { el.style.zoom = String(el.parentElement.clientWidth / PREVIEW_W); }));
+}
+const PREVIEW_W = 360;   // the width sections are laid out at in a preview
 
 // ---------- The page ----------
 
@@ -372,7 +425,7 @@ export function homePage() {
 
 
     // Every piece Home can show; homeSections() picks which, in order
-    const SECTIONS = {
+    const SECTIONS = liveSections = {
       rings: () => [
       swipe(h('section.card.rings-card',
         h('div.rings-top',
@@ -467,13 +520,19 @@ export function homePage() {
           goalsButton(),
           h('button.icon-btn', { onclick: openSettings, 'aria-label': 'Settings' }, icon('gear')))),
 
-      homeSections().map((id) => SECTIONS[id]?.()),
-      h('button.link.home-edit', { onclick: () => push(editHomeScreen) }, 'Edit Home page'),
+      editingHome ? h('div.hs-bar', h('div', h('b', 'Edit Home'), h('span', 'Drag the grips to reorder')), h('button.btn.gold.small', { onclick: () => { editingHome = false; draw(); } }, 'Done')) : null,
+      editingHome
+        ? h('div.hs-list', homeSections().map((id) => editWrap(id, SECTIONS[id]?.(), (e, el) => dragSection(e, el, body))))
+        : homeSections().map((id) => SECTIONS[id]?.()),
+      editingHome
+        ? h('button.hs-add', { onclick: addSheet }, icon('plus', 18), 'Add to Home')
+        : h('button.link.home-edit', { onclick: () => { editingHome = true; draw(); body.scrollTop = 0; } }, 'Edit Home page'),
       h('div.bottom-space'),
     );
     setTimeout(celebrate, 0);   // it may save, which redraws: do that after this draw
   }
 
+  redrawHome = draw;
   draw();
   el.append(body);
   return { el, refresh: draw };

@@ -119,7 +119,7 @@ export function openSettings() {
         },
       }, h('span', 'Your name'), nameVal)),
     h('label.form-label', 'Home'),
-    h('div.group', h('button.group-row', { onclick: () => { s.close(); import('./home.js').then((m) => push(m.editHomeScreen)); } }, h('span', 'Edit Home page'), h('span.card-go', '›'))),
+    h('div.group', h('button.group-row', { onclick: () => { s.close(); Promise.all([import('./home.js'), import('./tabs.js')]).then(([m, tb]) => { tb.goTab('home'); m.startHomeEdit(); }); } }, h('span', 'Edit Home page'), h('span.card-go', '›'))),
     h('label.form-label', 'Tabs'), tabRows,
     h('p.fine', 'Up to 5 tabs fit in the bar; the rest go under More. The arrow moves a tab left. Turning one off keeps its data.'),
     h('label.form-label', 'Weights you lift'), liftSeg,
