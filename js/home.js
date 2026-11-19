@@ -24,6 +24,7 @@ import { waterCard } from './nutrition.js';
 import { readiness, checkIn, recoveryOn } from './recovery.js';
 import { MACROS } from './foods.js';
 import { MACRO_COLOR } from './food-util.js';
+import { widgetCard, widgetInfo, widgetBuilder } from './widgets.js';
 
 function greeting() {
   const hr = new Date().getHours();
@@ -327,7 +328,7 @@ const saveHome = (list) => commit((s) => { s.settings.home = list; });
 
 /** Wrap one section for editing. */
 function editWrap(id, content, onDragStart) {
-  const info = HOME_SECTIONS.find((x) => x.id === id);
+  const info = HOME_SECTIONS.find((x) => x.id === id) || widgetInfo(id) || { name: 'Widget', sub: 'Your widget' };
   const flat = [content].flat(Infinity).filter(Boolean);
   const el = h('div.hs', { 'data-id': id },
     h('div.hs-top',
@@ -387,6 +388,10 @@ function addSheet() {
   const off = HOME_SECTIONS.filter((x) => !on.includes(x.id));
   const s0 = sheet(h('div.form',
     h('div.sheet-head', h('button.link', { onclick: () => s0.close() }, 'Cancel'), h('div.sheet-title', 'Add to Home'), h('span')),
+    h('button.add-own', { onclick: () => { s0.close(); widgetBuilder(); } },
+      h('span.add-own-ico', icon('sliders', 20)),
+      h('span.add-card-text', h('span.add-card-name', 'Build your own widget'), h('span.add-card-sub', 'Any number Carver tracks: a lift, steps, sleep, protein, a streak…')),
+      h('span.add-card-plus', icon('plus', 14))),
     off.length ? h('div.add-grid', off.map((x) => {
       let content = null;
       try { content = [liveSections[x.id]?.()].flat(Infinity).filter(Boolean); } catch { content = null; }
@@ -513,6 +518,8 @@ export function homePage() {
     ],
     };
 
+    const section = (id) => (id.startsWith('w:') ? widgetCard(id, { onOpen: (tab) => goTab(tabOn(tab) ? tab : 'home') }) : SECTIONS[id]?.());
+
     fill(body,
       h('header.home-head',
         h('div.home-hello',
@@ -524,8 +531,8 @@ export function homePage() {
 
       editingHome ? h('div.hs-bar', h('div', h('b', 'Edit Home'), h('span', 'Drag the grips to reorder')), h('button.btn.gold.small', { onclick: () => { editingHome = false; draw(); } }, 'Done')) : null,
       editingHome
-        ? h('div.hs-list', homeSections().map((id) => editWrap(id, SECTIONS[id]?.(), (e, el) => dragSection(e, el, body))))
-        : homeSections().map((id) => SECTIONS[id]?.()),
+        ? h('div.hs-list', homeSections().map((id) => editWrap(id, section(id), (e, el) => dragSection(e, el, body))))
+        : homeSections().map((id) => section(id)),
       editingHome
         ? h('button.hs-add', { onclick: addSheet }, icon('plus', 18), 'Add to Home')
         : h('button.link.home-edit', { onclick: () => { editingHome = true; draw(); body.scrollTop = 0; } }, 'Edit Home page'),

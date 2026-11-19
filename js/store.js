@@ -159,7 +159,8 @@ export const HOME_DEFAULT = ['rings', 'restday', 'daily', 'progress', 'strength'
 /** The Home sections you've picked, in order. */
 export function homeSections() {
   const known = new Set(HOME_SECTIONS.map((x) => x.id));
-  return (state.settings.home || HOME_DEFAULT).filter((id) => known.has(id));
+  const mine = new Set((state.settings.widgets || []).map((w) => 'w:' + w.id));   // your own widgets
+  return (state.settings.home || HOME_DEFAULT).filter((id) => known.has(id) || mine.has(id));
 }
 
 /** Tabs you can hide in Settings (Home always shows). */
