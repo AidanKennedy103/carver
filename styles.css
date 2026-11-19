@@ -1659,3 +1659,10 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .wtr-add { justify-content: center; min-width: 84px; }
 .wtr-add.minus { background: var(--surface-2); color: var(--muted); }
 .wtr-add:disabled { opacity: .4; }
+
+/* Diet coach: goal and details */
+.dc-warn { color: var(--gold) !important; }
+.date-in { width: auto; min-width: 140px; color-scheme: dark; }
+.goal-input.short { width: 44px; }
+.dc-you { margin-top: 10px; }
+.dc-act button { font-size: 12px; padding: 0 4px; }
