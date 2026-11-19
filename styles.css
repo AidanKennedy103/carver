@@ -1340,3 +1340,5 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .add-card-name { font-weight: 700; font-size: 14px; }
 .add-card-sub { font-size: 11px; color: var(--muted); line-height: 1.3; }
 .add-card-plus { position: absolute; top: 14px; right: 14px; width: 24px; height: 24px; border-radius: 50%; background: var(--gold); color: #17110a; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0, 0, 0, .5); }
+.build-btn { margin-top: 22px; height: 54px; font-size: 17px; border-radius: 14px; gap: 8px; }
+.build-btn + .start-opts { margin-top: 12px; }

@@ -42,20 +42,17 @@ export function workoutPage() {
           h('button.link' + (plansFull ? '.off' : ''), {
             onclick: () => plansFull ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor()),
           }, icon('plus', 16), 'Make a plan'))),
-      h('p.section-sub', 'Routines you save and repeat, like Push, Pull and Legs. Making or editing a plan doesn’t log a workout: tap ▶ to start one.'),
       state.plans.length ? h('section.card.list-card.plan-list', state.plans.map((p) => planRow(p, p === next)))
         : h('button.card.empty-plan-row', { onclick: () => push(() => planEditor()) }, icon('plus', 18), h('span', 'Make your first plan')),
-      // 3. Other ways to work out
-      state.active ? null : [h('div.section-head', h('h2.section-title', 'Other ways to work out')), startOptions(next)],
-            state.plans.length || state.workouts.length ? volumeCard() : null,
+      state.plans.length || state.workouts.length ? volumeCard() : null,
+
+      // 3. Build a program, then the other ways to work out
+      h('button.btn.gold.wide.build-btn', { onclick: () => push(coachPage) }, icon('trophy', 18), 'Build a program'),
+      state.active ? null : startOptions(next),
 
       h('div.section-head', h('h2.section-title', 'History'), state.workouts.length ? h('span.section-count', `${state.workouts.length} workout${state.workouts.length === 1 ? '' : 's'}`) : null),
       state.workouts.length ? historyByWeek(showAll ? state.workouts : state.workouts.slice(0, 12)) : h('div.empty-small', 'Finished workouts show up here.'),
       !showAll && state.workouts.length > 12 ? h('button.btn.dark.wide', { onclick: () => { showAll = true; draw(); } }, `Show all ${state.workouts.length}`) : null,
-
-      // Program builder lives at the bottom: you set a program up once, then just train
-      h('div.section-head', h('h2.section-title', 'Programs')),
-      builderCard(true),
       h('div.bottom-space'),
     );
   }
@@ -98,7 +95,7 @@ export function workoutPage() {
     return h('section.card.hero',
       h('div.hero-label', 'Start a workout'),
       h('div.hero-name', 'Freestyle'),
-      h('div.hero-meta', 'Make it up as you go: add each exercise when you get to it and log your sets. The timer starts now.'),
+      h('div.hero-meta', 'Add exercises as you go. The timer starts when you tap Start.'),
       restLine(),
       h('button.btn.gold.wide.hero-go', { onclick: () => startWorkout() }, icon('play', 16), 'Start freestyle workout'));
   }
@@ -115,21 +112,15 @@ export function workoutPage() {
       opt(icon('calendar', 18), 'Log a past workout', 'One you did but didn’t track', () => logPastWorkout()));
   }
 
-  /** Program builder: the program you're running, or the way in. */
-  function builderCard(entry = false) {
+  /** The program you're running (opens Program builder). */
+  function builderCard() {
     const cp = coachProgram();
-    if (cp && !entry) {
-      const name = cp.custom ? (cp.custom.name || 'Custom block') : PROGRAMS.find((x) => x.id === cp.id)?.name || 'Program';
-      const w = currentWeek(cp);
-      const sub = cp.mode === 'block' ? (w > cp.weeks ? 'Block complete' : `Week ${Math.max(1, w)} of ${cp.weeks} · ${blockWeek(cp, Math.max(1, w)).label}`) : 'Ongoing';
-      return h('button.card.pb-entry', { onclick: () => push(coachPage) },
-        h('span.pb-entry-ico', icon('trophy', 20)),
-        h('span.pb-entry-text', h('span.pb-entry-name', name), h('span.pb-entry-sub', sub)),
-        h('span.card-go', '›'));
-    }
+    const name = cp.custom ? (cp.custom.name || 'Custom block') : PROGRAMS.find((x) => x.id === cp.id)?.name || 'Program';
+    const w = currentWeek(cp);
+    const sub = cp.mode === 'block' ? (w > cp.weeks ? 'Block complete' : `Week ${Math.max(1, w)} of ${cp.weeks} · ${blockWeek(cp, Math.max(1, w)).label}`) : 'Ongoing';
     return h('button.card.pb-entry', { onclick: () => push(coachPage) },
       h('span.pb-entry-ico', icon('trophy', 20)),
-      h('span.pb-entry-text', h('span.pb-entry-name', 'Program builder'), h('span.pb-entry-sub', cp ? 'Your program, or pick another' : 'Ready-made programs, training blocks and your own workouts')),
+      h('span.pb-entry-text', h('span.pb-entry-name', name), h('span.pb-entry-sub', sub)),
       h('span.card-go', '›'));
   }
 
