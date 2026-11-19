@@ -129,8 +129,8 @@ function waterRow(date) {
         onclick: () => addWater(date, (i + 1) * 250 === ml ? -250 : (i + 1) * 250 - ml), 'aria-label': `Set water to ${L((i + 1) * 250)} L`,
       })))),
     h('div.wtr-btns',
-      h('button.wtr-add', { onclick: () => addWater(date, 250), 'aria-label': 'Add 250 ml of water' }, icon('plus', 16), '250'),
-      ml ? h('button.wtr-minus', { onclick: () => addWater(date, -250), 'aria-label': 'Remove 250 ml of water' }, icon('minus', 14)) : null));
+      h('button.wtr-add', { onclick: () => addWater(date, 250), 'aria-label': 'Add 250 ml of water' }, '+250 ml'),
+      h('button.wtr-add.minus', { onclick: () => addWater(date, -250), disabled: !ml, 'aria-label': 'Remove 250 ml of water' }, '−250 ml')));
 }
 
 // ---------- Fuel score ----------
