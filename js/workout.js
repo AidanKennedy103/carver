@@ -33,7 +33,7 @@ export function workoutPage() {
         next ? upNext(next) : freestyleHero()],
       weekStrip(),
       programCard(),
-      builderCard(),
+      coachProgram() ? builderCard() : null,
 
       // 2. Plans: routines you save for later. Making one doesn't log anything.
       h('div.section-head',
@@ -52,6 +52,10 @@ export function workoutPage() {
       h('div.section-head', h('h2.section-title', 'History'), state.workouts.length ? h('span.section-count', `${state.workouts.length} workout${state.workouts.length === 1 ? '' : 's'}`) : null),
       state.workouts.length ? historyByWeek(showAll ? state.workouts : state.workouts.slice(0, 12)) : h('div.empty-small', 'Finished workouts show up here.'),
       !showAll && state.workouts.length > 12 ? h('button.btn.dark.wide', { onclick: () => { showAll = true; draw(); } }, `Show all ${state.workouts.length}`) : null,
+
+      // Program builder lives at the bottom: you set a program up once, then just train
+      h('div.section-head', h('h2.section-title', 'Programs')),
+      builderCard(true),
       h('div.bottom-space'),
     );
   }
@@ -112,9 +116,9 @@ export function workoutPage() {
   }
 
   /** Program builder: the program you're running, or the way in. */
-  function builderCard() {
+  function builderCard(entry = false) {
     const cp = coachProgram();
-    if (cp) {
+    if (cp && !entry) {
       const name = cp.custom ? (cp.custom.name || 'Custom block') : PROGRAMS.find((x) => x.id === cp.id)?.name || 'Program';
       const w = currentWeek(cp);
       const sub = cp.mode === 'block' ? (w > cp.weeks ? 'Block complete' : `Week ${Math.max(1, w)} of ${cp.weeks} · ${blockWeek(cp, Math.max(1, w)).label}`) : 'Ongoing';
@@ -125,7 +129,7 @@ export function workoutPage() {
     }
     return h('button.card.pb-entry', { onclick: () => push(coachPage) },
       h('span.pb-entry-ico', icon('trophy', 20)),
-      h('span.pb-entry-text', h('span.pb-entry-name', 'Program builder'), h('span.pb-entry-sub', 'Ready-made programs and training blocks')),
+      h('span.pb-entry-text', h('span.pb-entry-name', 'Program builder'), h('span.pb-entry-sub', cp ? 'Your program, or pick another' : 'Ready-made programs, training blocks and your own workouts')),
       h('span.card-go', '›'));
   }
 
