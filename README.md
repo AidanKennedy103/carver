@@ -58,7 +58,9 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 - **Units:** lifting weights, body weight and distance each have their own setting (lb or kg, mi or km).
 - **A workout in progress survives closing the app.**
 
-### Nutrition (like Cronometer)
+### Nutrition
+
+- **The plate:** a calorie ring with the protein/carb/fat split inside, each macro as eaten and left, a daily **Fuel score** (calories, protein, fiber, micronutrients), a strip of key nutrients (fiber, sodium, sugar, micros covered), a training-aware tip with protein per kg, and meals as cards. Optional extra calories (as carbs) on training days.
 - **Quick add**: type "dinner 1000 calories" (or "chipotle bowl 850", "1200 cal lunch"). It picks the meal and fills in the calories. Three linked sliders split the calories into protein, carbs and fat and always add up to 100%. **Lock a macro** by typing its grams (or tapping its lock): it stays fixed when the calories change, and the other two share what's left. Presets: **Fits my day** (splits the calories like the macros you still have left today), Balanced, High protein, Low carb.
 - **Diary** for any day, by meal (breakfast, lunch, dinner, snacks). Macros come first, each with a bar toward its goal.
 - **Micronutrients page:** your energy split, plus vitamins and minerals against adult targets. Things to stay under (sodium, saturated fat, cholesterol) turn red when you go over.
@@ -93,6 +95,13 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 - **Food icons:** emoji, plus small drawings for foods no emoji fits (protein bars, shakes, powder, tofu…).
 
 ### Fitness: runs, rides and other cardio
+
+- **Activity points:** steps, cardio and lifting on one scale (MET-minutes ÷ 10) with a daily goal. Steps, heart-rate zones, pace/speed/per-100 m by sport and your bests. **Apple Health import** (the full export zip) brings in steps, sleep, resting heart rate, HRV, weigh-ins, body fat and cardio with heart rate.
+- **Recovery** uses that sleep and heart data against your 30-day normal, counts cardio in training load, and has a 3-tap check-in. **Habits** show streak flames and progress toward 66 days to automatic.
+- **Social:** each group opens from a list; kudos and comments on posts; "Heading to the gym" pings.
+- **Share workouts:** a link with the workout inside it, opened in the app or on the web; sending needs the installed app.
+- **Home widgets:** build your own from 18 metrics. **Rest timer** shows above the tabs everywhere, can be turned off, and never pauses music.
+- **Carver Scale:** ESP32 firmware and build guide in `hardware/carver-scale`.
 - **Import from Apple Health:** a Shortcut copies your workouts (Apple Watch, Strava, Nike Run Club, anything that saves to Health) and you tap **Paste from Health**. It reads the Shortcut's lines, CSV, or JSON from export apps, skips ones already imported, and leaves out strength workouts (log those in Workout).
 - **Add by hand:** run, walk, ride, hike, swim, row, elliptical, HIIT, sport, yoga. Leave calories blank to get an estimate.
 - **This week** (activities, distance, active calories), minutes per week for 12 weeks, and every activity with distance and pace.
