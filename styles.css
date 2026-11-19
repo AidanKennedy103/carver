@@ -1618,3 +1618,40 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .wtr-btns { flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .wtr-add { display: inline-flex; align-items: center; gap: 3px; height: 32px; padding: 0 12px; border-radius: 16px; background: rgba(46, 139, 216, .18); color: #5fb0f0; font-size: 14px; font-weight: 700; }
 .wtr-minus { width: 28px; height: 22px; display: grid; place-items: center; border-radius: 11px; color: var(--muted); }
+
+/* Exercise how-to */
+.ex-title-btn { display: inline-flex; align-items: center; gap: 6px; text-align: left; padding: 0; }
+.ex-howto { flex: none; width: 16px; height: 16px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 11px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); }
+.howto-meta { font-size: 13px; color: var(--muted); text-align: center; margin: -4px 0 12px; }
+.howto-cues { margin: 0 0 16px; padding-left: 22px; display: grid; gap: 10px; font-size: 15px; line-height: 1.4; }
+.howto-cues li::marker { color: var(--gold); font-weight: 700; }
+.howto-demo { text-decoration: none; display: flex; justify-content: center; }
+
+/* How a workout felt */
+.feel { margin: 4px 0 14px; text-align: left; }
+.feel-q { font-size: 13px; color: var(--muted); margin: 10px 0 6px; }
+.feel-seg button { font-size: 14px; }
+.feel-card { padding: 14px 16px; }
+.feel-latest { font-size: 14px; }
+.feel-latest span { color: var(--muted); }
+.feel-tally { display: flex; gap: 8px; flex-wrap: wrap; }
+.feel-chip { font-size: 13px; color: var(--muted); background: var(--surface-2); padding: 4px 10px; border-radius: 999px; }
+.feel-chip b { color: var(--text); }
+.feel-chip.hot b { color: var(--red); }
+.feel-advice { margin: 10px 0 0; font-size: 14px; line-height: 1.4; }
+
+/* Diet coach */
+.dc-line { display: block; width: 100%; text-align: left; margin: 8px 0 0; padding: 11px 14px; border-radius: 14px; background: var(--surface); font-size: 14px; font-weight: 600; }
+.dc-line.due { background: radial-gradient(120% 140% at 0% 0%, rgba(227, 176, 75, .2), rgba(0, 0, 0, 0) 70%), var(--surface); border: .5px solid rgba(227, 176, 75, .4); color: var(--gold); }
+.dc-line .muted { font-weight: 400; }
+.dc-card { padding: 16px; margin-top: 14px; }
+.dc-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.dc-big b { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.dc-big span { color: var(--muted); }
+.dc-sub { font-size: 14px; margin: 4px 0 8px; }
+.dc-why { font-size: 13px; color: var(--muted); line-height: 1.4; margin: 0 0 12px; }
+.dc-hold { font-size: 15px; line-height: 1.45; }
+.dc-now { font-size: 13px; color: var(--muted); margin-top: 8px; }
+.dc-notes { padding: 14px 16px; font-size: 14px; line-height: 1.45; }
+.dc-notes p { margin: 0 0 10px; }
+.dc-rules { margin: 0 0 10px; padding-left: 18px; display: grid; gap: 4px; color: var(--muted); }

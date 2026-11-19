@@ -387,6 +387,25 @@ export async function saveAsPlan(w) {
   toast('Saved to My plans');
 }
 
+/** Save how a finished workout felt: effort 1 easy, 2 just right, 3 too much; joints 0 fine, 1 achy. */
+export function setFeel(id, feel) {
+  commit((s) => { const x = s.workouts.find((y) => y.id === id); if (x) x.feel = { ...(x.feel || {}), ...feel }; });
+}
+export const EFFORT = ['Easy', 'Just right', 'Too much'];
+
+/** Two quick taps: how hard it was, and how your joints feel. */
+export function feelPicker(w, after) {
+  const box = h('div.feel');
+  const f = { ...(w.feel || {}) };
+  const draw = () => fill(box,
+    h('div.feel-q', 'How did that feel?'),
+    h('div.segment.feel-seg', EFFORT.map((l, i) => h('button' + (f.effort === i + 1 ? '.on' : ''), { onclick: () => { f.effort = i + 1; setFeel(w.id, { effort: f.effort }); draw(); after?.(); } }, l))),
+    h('div.feel-q', 'Joints'),
+    h('div.segment.feel-seg', [['Fine', 0], ['Achy', 1], ['Painful', 2]].map(([l, v]) => h('button' + (f.joints === v ? '.on' : ''), { onclick: () => { f.joints = v; setFeel(w.id, { joints: v }); draw(); after?.(); } }, l))));
+  draw();
+  return box;
+}
+
 function showSummary(w, prs, changes = []) {
   const st = workoutStats(w);
   const s = sheet(h('div.summary',
@@ -407,6 +426,7 @@ function showSummary(w, prs, changes = []) {
       prs.map((p) => h('div.pr-row', icon('trophy', 18),
         h('span.pr-name', exercise(p.exId).name),
         h('span.pr-val', p.kind + ': ' + (p.kg != null ? `${toDisplay(p.kg)} ${unit()}` : `${p.reps} reps`))))) : null,
+    w.past ? null : feelPicker(w),
     h('button.btn.gold.wide', { onclick: () => s.close() }, 'Done'),
     w.planId ? null : h('button.btn.dark.wide.summary-plan', { onclick: () => { s.close(); saveAsPlan(w); } }, 'Save as a plan to repeat it'),
   ));

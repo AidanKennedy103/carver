@@ -13,6 +13,7 @@ import { quickAdd } from './quickadd.js';
 import { addFood, amountSheet } from './foodpicker.js';
 import { microsScreen, reportScreen } from './nutrition-report.js';
 import { foodIcon } from './food-icons.js';
+import { coachLine } from './dietcoach.js';
 import { copyEntry, copySheet } from './copyfood.js';
 
 let viewDate = ymd();
@@ -58,6 +59,7 @@ export function nutritionPage() {
         h('button.log-side', { onclick: () => quickAdd({ date: viewDate }), 'aria-label': 'Quick add' }, icon('bolt', 20))),
 
       waterRow(viewDate),
+      viewDate === ymd() ? coachLine() : null,
 
       MEALS.map((meal) => {
         const list = entries.filter((e) => e.meal === meal.id);
@@ -83,7 +85,7 @@ export function nutritionPage() {
 
   draw();
   el.append(body);
-  return { el, refresh: draw };
+  return { el, refresh: draw, onShow: draw };
 }
 
 // ---------- The week ----------

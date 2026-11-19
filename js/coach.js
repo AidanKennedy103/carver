@@ -77,6 +77,17 @@ export const PROGRAMS = [
     ],
   },
   {
+    id: 'min3', name: 'Time-Efficient', days: 3, minutes: '30', level: 'Any level', schedule: 'Mon, Wed, Fri', ongoingOnly: true,
+    summary: 'Four big moves, two hard sets each, done in pairs with short rests. Research on minimal training (Iversen et al., 2021) shows this keeps most of the gains in a fraction of the time.',
+    pros: ['About 30 minutes, start to finish', 'Two sets taken close to failure build nearly as much as many easy ones', 'Easy to keep up through busy weeks'],
+    cons: ['Every set has to be hard to work', 'Little room for arm and shoulder isolation', 'Less total volume than a longer program for advanced lifters'],
+    bestFor: 'Busy schedules, or anyone who’d rather train short and often.',
+    plans: [
+      { name: 'Quick A', ex: [E('leg-press', 2, 8, 12), E('db-bench', 2, 8, 12), E('lat-pulldown', 2, 8, 12), E('lying-curl', 2, 10, 15)] },
+      { name: 'Quick B', ex: [E('rdl', 2, 8, 10), E('db-incline', 2, 8, 12), E('seated-row', 2, 8, 12), E('lat-raise', 2, 12, 15)] },
+    ],
+  },
+  {
     id: 'db3', name: 'Dumbbells Only', days: 3, minutes: '45', level: 'Any level', schedule: 'Mon, Wed, Fri',
     summary: 'Three full-body days that only need a pair of dumbbells and a bench.',
     pros: ['Train at home, in a hotel, or in a busy gym', 'Easy on the joints, and each side works on its own', 'Short, simple sessions'],
@@ -105,7 +116,7 @@ export const T531 = {
   ],
 };
 /** Ready-made programs, easiest to most demanding. */
-const ORDER = ['fb3', 'db3', 'bw3', 'ul4', '531', 'ppl'];
+const ORDER = ['fb3', 'min3', 'db3', 'bw3', 'ul4', '531', 'ppl'];
 
 // ---------- Block phases ----------
 
@@ -446,6 +457,7 @@ const GRAPHICS = {
   ppl: { ring: [[0, 120, 0], [120, 240, 1], [240, 360, 2]], center: '6', sub: 'Push · Pull · Legs', week: [1, 1, 1, 1, 1, 1, 0] },
   bw3: { ring: [[0, 360, 1]], center: 'home', sub: 'No equipment', week: [1, 0, 1, 0, 1, 0, 0] },
   db3: { ring: [[180, 360, 0], [0, 180, 1]], center: 'db', sub: 'Dumbbells A · B', week: [1, 0, 1, 0, 1, 0, 0] },
+  min3: { ring: [[0, 180, 0]], center: '30', centerLabel: 'MIN', sub: '2 hard sets each', week: [1, 0, 1, 0, 1, 0, 0] },
   531: { bars: true, sub: '5s · 3s · 1s', week: [1, 1, 0, 1, 1, 0, 0] },
   custom: { sliders: true, sub: 'Linear · DUP · Wave · RPE', week: null },
   plan: { list: true, sub: 'Your exercises', week: null },
@@ -469,7 +481,7 @@ function graphicSvg(g) {
       ? '<path d="M37 51 50 40l13 11v12H37z" fill="#e3b04b"/><rect x="46.5" y="55" width="7" height="8" rx="1.5" fill="#141312"/>'
       : g.center === 'db'
       ? `<g transform="translate(36 43)" fill="#e3b04b"><rect x="0" y="2" width="4" height="10" rx="1.5"/><rect x="4.5" y="3.5" width="2.5" height="7" rx="1"/><rect x="7" y="6" width="14" height="2" rx="1"/><rect x="21" y="3.5" width="2.5" height="7" rx="1"/><rect x="24" y="2" width="4" height="10" rx="1.5"/></g>`
-      : `<text x="50" y="52" text-anchor="middle" font-size="24" font-weight="800" fill="#f2e3bd">${g.center}</text><text x="50" y="64" text-anchor="middle" font-size="8" font-weight="600" fill="#8e8e93" letter-spacing=".5">DAYS</text>`;
+      : `<text x="50" y="52" text-anchor="middle" font-size="24" font-weight="800" fill="#f2e3bd">${g.center}</text><text x="50" y="64" text-anchor="middle" font-size="8" font-weight="600" fill="#8e8e93" letter-spacing=".5">${g.centerLabel || 'DAYS'}</text>`;
   } else if (g.bars) {
     [[22, 0.42, 2], [44, 0.66, 1], [66, 0.9, 0]].forEach(([x, v, tone]) => {
       const hgt = 70 * v;

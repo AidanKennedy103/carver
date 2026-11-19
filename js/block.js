@@ -35,12 +35,13 @@ export function exerciseCard(opts) {
   const complete = live && ex.sets.length > 0 && doneN === ex.sets.length;
   const head = h('div.card-head',
     h('div.card-title-wrap',
-      h('div.ex-title', info.name),
+      h('button.ex-title.ex-title-btn', { onclick: () => import('./howto.js').then((m) => m.howTo(ex.exId)), 'aria-label': `How to do ${info.name}` }, info.name, h('span.ex-howto', '?')),
       h('div.ex-meta', h('span.ex-helps', musclesText(info, 2) + (info.uni ? ' · each side' : '')), restBtn)),
     live && ex.sets.length ? h('span.ex-count' + (complete ? '.all' : ''), complete ? icon('check', 14) : null, `${doneN}/${ex.sets.length}`) : null,
     h('button.icon-btn', {
       'aria-label': 'Exercise options',
       onclick: () => actionSheet(info.name, [
+        { label: 'How to do it', onClick: () => import('./howto.js').then((m) => m.howTo(ex.exId)) },
         opts.index > 0 && { label: 'Move up', onClick: () => opts.onMove(-1) },
         opts.index < opts.count - 1 && { label: 'Move down', onClick: () => opts.onMove(1) },
         { label: 'Replace exercise', onClick: () => pickExercises(([id]) => opts.onReplace(id), { single: true, title: 'Replace with' }) },

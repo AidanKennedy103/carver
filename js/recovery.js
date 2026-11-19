@@ -14,9 +14,15 @@ import { findDate } from './body.js';
 import { goalsButton } from './goals.js';
 import { healthDay, hasHealth, importHealth } from './health.js';
 import { activityType } from './fitness.js';
+import { feelPicker, EFFORT } from './session.js';
 
 export const sleepGoal = () => state.goals.sleep || 8;
 export const recoveryOn = (k = ymd()) => state.recovery?.[k] || null;
+/** The last workout in the 36 hours before the morning of `k` (for "still tired from it?"). */
+export function lastWorkoutBefore(k) {
+  const morning = new Date(k + 'T09:00').getTime();
+  return state.workouts.find((w) => w.start < morning && w.start > morning - 36 * 36e5) || null;
+}
 /** Hours slept: what you entered, else what Apple Health (Watch, Oura, Ultrahuman…) recorded. */
 export const sleepOn = (k = ymd()) => recoveryOn(k)?.sleep ?? healthDay(k)?.sleep ?? null;
 
@@ -61,6 +67,11 @@ export function readiness(k = ymd()) {
   // Heart data: HRV well under your normal, or resting heart rate up, means you're less recovered
   if (sig?.hrv && sig.hrvBase) { const ratio = sig.hrv / sig.hrvBase; score += ratio < 0.8 ? -12 : ratio < 0.9 ? -6 : ratio > 1.1 ? 4 : 0; }
   if (sig?.rhr && sig.rhrBase) { const up = sig.rhr - sig.rhrBase; score += up >= 5 ? -10 : up >= 3 ? -5 : up <= -2 ? 3 : 0; }
+  // Still tired from the last workout, or it felt like too much
+  if (r.fatigue) score += r.fatigue === 3 ? -10 : r.fatigue === 2 ? -4 : 2;
+  const lw = lastWorkoutBefore(k);
+  if (lw?.feel?.effort === 3) score -= 4;
+  if (lw?.feel?.joints === 2) score -= 6;
   const { recent, usual } = load(new Date(k + 'T12:00').getTime());
   if (usual > 3 && recent > usual * 1.6) score -= 8;   // a much bigger couple of days than usual
   score = Math.round(Math.max(0, Math.min(100, score)));
@@ -90,15 +101,20 @@ export function checkIn(k = ymd(), after) {
   const r = { sleep: null, quality: null, sore: null, energy: null, ...(recoveryOn(k) || {}) };
   const fromHealth = healthDay(k)?.sleep ?? null;
   const fresh = !recoveryOn(k);
+  const lw = lastWorkoutBefore(k);
   const body = h('div');
   const draw = () => fill(body,
-    h('p.fine.checkin-lead', fresh ? 'Three taps. It saves itself after the last one.' : 'Change any answer.'),
+    h('p.fine.checkin-lead', fresh ? 'A few taps. It saves itself after the last one.' : 'Change any answer.'),
     Object.entries(SCALES).map(([key, sc]) => [
       h('label.form-label', sc.label),
       h('div.face-row', sc.words.map((wd, i) => h('button.face' + (r[key] === i + 1 ? '.on' : ''), {
-        onclick: () => { r[key] = i + 1; draw(); if (fresh && r.quality && r.sore && r.energy) setTimeout(save, 250); }, 'aria-label': wd,
+        onclick: () => { r[key] = i + 1; draw(); if (fresh && r.quality && r.sore && r.energy && (!lw || r.fatigue)) setTimeout(save, 250); }, 'aria-label': wd,
       }, h('span.face-num', i + 1), h('span.face-word', wd)))),
     ]),
+    lw ? [h('label.form-label', `Still tired from ${lw.name || 'your last workout'}?`),
+      h('div.segment.feel-seg', ['Fresh', 'A little', 'Very'].map((l, i) => h('button' + (r.fatigue === i + 1 ? '.on' : ''), {
+        onclick: () => { r.fatigue = i + 1; draw(); if (fresh && r.quality && r.sore && r.energy) setTimeout(save, 250); },
+      }, l)))] : null,
     h('label.form-label', fromHealth != null ? `Hours slept · ${fromHealth} h from Apple Health` : 'Hours slept (optional)'),
     h('div.chips.tight.no-drag', [5, 6, 6.5, 7, 7.5, 8, 8.5, 9].map((v) => h('button.chip' + (r.sleep === v ? '.on' : ''), { onclick: () => { r.sleep = r.sleep === v ? null : v; draw(); } }, `${v} h`))));
   draw();
@@ -153,6 +169,27 @@ function importSheet(after) {
 
 // ---------- The tab ----------
 
+/** How your workouts have felt: rate the latest if you haven't, and what the last two weeks say. */
+function feelSection(redraw) {
+  const recent = state.workouts.filter((w) => w.start > Date.now() - 14 * 864e5 && !w.past);
+  if (!recent.length) return null;
+  const latest = recent[0];
+  const rated = recent.filter((w) => w.feel?.effort);
+  const n = (v) => rated.filter((w) => w.feel.effort === v).length;
+  const sore = recent.filter((w) => w.feel?.joints >= 1).length;
+  const advice = n(3) >= 2 && n(3) >= n(1) + n(2) / 2 ? 'Several sessions felt like too much. Drop a set per exercise or take a lighter week.'
+    : n(1) >= 3 && n(3) === 0 ? 'Workouts have felt easy. Add a set or a little weight where you can.'
+      : sore >= 2 ? 'Your joints have been achy. Swap the moves that bother you or lighten them for a week.'
+        : rated.length ? 'Training feels about right. Keep going.' : null;
+  return [
+    h('div.section-head', h('h2.section-title', 'How workouts felt'), rated.length ? h('span.section-count', `last 2 weeks`) : null),
+    h('section.card.feel-card',
+      latest.feel?.effort == null || (latest.feel?.joints == null && Date.now() - latest.start < 36 * 36e5) ? [h('div.feel-latest', h('b', latest.name || 'Your last workout'), h('span', ` · ${fmtDate(latest.start, { weekday: 'short' })}`)), feelPicker(latest, redraw)] : null,
+      rated.length ? h('div.feel-tally', EFFORT.map((l, i) => h('span.feel-chip' + (i === 2 && n(3) ? '.hot' : ''), h('b', n(i + 1)), ` ${l.toLowerCase()}`))) : null,
+      advice ? h('p.feel-advice', advice) : null),
+  ];
+}
+
 const signal = (label, value, sub, tone) => h('div.signal' + (tone ? '.' + tone : ''), h('span.signal-v', value), h('span.signal-k', label), sub ? h('span.signal-sub', sub) : null);
 
 export function recoveryPage() {
@@ -198,6 +235,8 @@ export function recoveryPage() {
           sig.deep != null ? signal('Deep sleep', `${sig.deep} h`, null, '') : null,
           sig.rem != null ? signal('REM', `${sig.rem} h`, null, '') : null),
       ] : null,
+
+      feelSection(draw),
 
       h('div.section-head', h('h2.section-title', 'Training load')),
       h('section.card.list-card',

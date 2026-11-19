@@ -102,6 +102,9 @@ Four tabs: **Home, Workout, Nutrition, Fitness**. **Progress** and **Trends** op
 - **Share workouts:** a link with the workout inside it, opened in the app or on the web; sending needs the installed app.
 - **Home widgets:** build your own from 18 metrics. **Rest timer** shows above the tabs everywhere, can be turned off, and never pauses music.
 - **Carver Scale:** ESP32 firmware and build guide in `hardware/carver-scale`.
+- **Diet coach** (Nutrition): loose weekly calorie and protein ranges from your log and your scale, built for under-logging: small weekly steps, a floor, capped loss, and no change in weeks with fewer than 4 full days logged.
+- **How workouts felt:** effort and joints after each workout, "still tired?" in the morning check-in, both feeding readiness and advice in Recovery.
+- **Exercise how-to:** tap an exercise's name for form cues and a link to demo videos. **Time-Efficient** program: 30 minutes, two hard sets per move.
 - **Import from Apple Health:** a Shortcut copies your workouts (Apple Watch, Strava, Nike Run Club, anything that saves to Health) and you tap **Paste from Health**. It reads the Shortcut's lines, CSV, or JSON from export apps, skips ones already imported, and leaves out strength workouts (log those in Workout).
 - **Add by hand:** run, walk, ride, hike, swim, row, elliptical, HIIT, sport, yoga. Leave calories blank to get an estimate.
 - **This week** (activities, distance, active calories), minutes per week for 12 weeks, and every activity with distance and pace.
