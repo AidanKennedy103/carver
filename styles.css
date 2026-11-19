@@ -1550,3 +1550,29 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .wb-preview { margin-bottom: 4px; pointer-events: none; }
 .wb-group { margin-bottom: 6px; }
 .wb-group-name { display: block; font-size: 12px; color: var(--muted); margin: 6px 0 4px; }
+
+/* Nutrition, simplified */
+.fuel .fuel-top { gap: 16px; }
+.fuel .plate { width: 124px; height: 124px; }
+.plate-mid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; }
+.plate-mid b { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.plate-mid b.over { color: var(--red); }
+.plate-mid span { font-size: 11px; color: var(--muted); }
+.plate-mid small { font-size: 10px; color: var(--muted); margin-top: 3px; }
+.fuel .fuel-macros { flex: 1; min-width: 0; display: grid; grid-template-columns: 1fr; gap: 12px; margin: 0; }
+.fm-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; margin-bottom: 5px; font-size: 13px; }
+.fm-head .fm-name { color: var(--muted); }
+.fm-val { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fm-val b { color: var(--text); font-size: 15px; }
+.fm-val.over b { color: var(--red); }
+.fuel-foot { display: flex; justify-content: space-between; margin-top: 14px; padding-top: 10px; border-top: .5px solid var(--line); }
+.fuel-link { display: inline-flex; align-items: center; gap: 2px; font-size: 14px; }
+.fuel-link svg { transform: scaleX(-1); }
+.water-row { display: flex; align-items: center; gap: 10px; margin: 12px 0 4px; padding: 10px 12px; border-radius: 14px; background: var(--surface); }
+.water-row .water-title { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; }
+.water-row .water-val { font-size: 14px; white-space: nowrap; }
+.water-mini { flex: 1; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; min-width: 20px; }
+.water-mini i { display: block; height: 100%; background: #2e8bd8; }
+.water-add { flex: none; }
+.meal-empty { display: flex; align-items: center; gap: 4px; padding: 8px 2px 0; margin-top: 8px; }
+.meal-empty .meal-name { flex: 1; font-size: 17px; font-weight: 700; color: var(--muted); }
