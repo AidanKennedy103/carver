@@ -29,6 +29,7 @@ export async function startWorkout(plan = null) {
       exId: pe.exId, note: pe.note || '', rest: pe.rest ?? defaultRest(),
       sets: (pe.sets.length ? pe.sets : [{}]).map((ps) => newSet(ps)),
     })) : [],
+    ...(plan?.timer ? { timer: { ...plan.timer, started: null, result: null } } : {}),
   };
   commit((s) => { s.active = w; });
   openWorkout();
@@ -147,6 +148,45 @@ function workoutScreen() {
     onkeydown: (e) => { if (e.key === 'Enter') e.target.blur(); },
   });
 
+  // ----- Challenge timer: a countdown with rounds (AMRAP), or a stopwatch (for time) -----
+  const timerEl = h('section.wt');
+  const roundsDone = () => Math.min(...w.exercises.filter((e) => e.sets.length).map((e) => e.sets.filter((x) => x.done).length), 999) || 0;
+  const tLeft = () => w.timer.secs - Math.floor((Date.now() - w.timer.started) / 1000);
+  function drawTimer() {
+    const t = w.timer;
+    if (!t) return;
+    if (!t.started) {
+      fill(timerEl,
+        h('div.wt-big', t.kind === 'fortime' ? '0:00' : fmtSecs(t.secs)),
+        h('div.wt-label', t.kind === 'fortime' ? 'For time' : t.kind === 'amrap' ? `As many rounds as you can in ${Math.round(t.secs / 60)} min` : `${Math.round(t.secs / 60)} minutes`),
+        h('button.btn.gold.wide', { onclick: () => { t.started = Date.now(); save(); drawTimer(); } }, icon('play', 16), 'Start timer'));
+      return;
+    }
+    const over = t.kind !== 'fortime' && tLeft() <= 0;
+    const big = t.kind === 'fortime' ? fmtSecs(t.result ?? Math.floor((Date.now() - t.started) / 1000)) : over ? '0:00' : fmtSecs(tLeft());
+    fill(timerEl,
+      h('div.wt-big' + (over || t.result != null ? '.done' : ''), big),
+      h('div.wt-label', t.kind === 'fortime' ? (t.result != null ? 'Your time' : 'Running') : over ? 'Time’s up' : 'Left'),
+      t.kind === 'amrap' ? h('div.wt-rounds', h('b', roundsDone()), ` round${roundsDone() === 1 ? '' : 's'}`) : null,
+      t.kind === 'fortime' && t.result == null ? h('button.btn.gold.wide', { onclick: () => { t.result = Math.floor((Date.now() - t.started) / 1000); save(); drawTimer(); } }, 'Stop: I’m done') : null);
+  }
+  let buzzed = false;
+  function timerTick() {
+    const t = w.timer;
+    if (!t?.started) return;
+    if (t.kind !== 'fortime' && tLeft() <= 0 && !buzzed && !t.buzzed) {
+      buzzed = t.buzzed = true; save();
+      beep(); navigator.vibrate?.([200, 100, 200]);
+      toast(t.kind === 'amrap' ? `Time! ${roundsDone()} rounds` : 'Time!');
+    }
+    const big = timerEl.querySelector('.wt-big'), rounds = timerEl.querySelector('.wt-rounds b');
+    if (big && (t.kind !== 'fortime' || t.result == null)) {
+      if (t.kind !== 'fortime' && tLeft() <= 0 && !big.classList.contains('done')) drawTimer();
+      else big.textContent = t.kind === 'fortime' ? fmtSecs(Math.floor((Date.now() - t.started) / 1000)) : fmtSecs(Math.max(0, tLeft()));
+    }
+    if (rounds) rounds.textContent = roundsDone();
+  }
+
   function updateStats() {
     const st = workoutStats(w);
     elapsed.textContent = w.past ? fmtDurationWords(w.past.dur) : fmtDuration(Date.now() - w.start);
@@ -166,6 +206,7 @@ function workoutScreen() {
         h('div.stat', h('span.stat-k', 'Volume'), volumeEl),
         h('div.stat', h('span.stat-k', 'Sets'), setsEl),
         h('div.live-progress', progress)),
+      w.timer ? timerEl : null,
       w.exercises.length ? null : h('div.empty',
         h('div.empty-icon', icon('dumbbell', 40)),
         h('div.empty-title', w.past ? 'What did you do?' : 'Freestyle workout'),
@@ -237,9 +278,10 @@ function workoutScreen() {
     if (unfinished && !(await confirmBox('Finish workout?', `${unfinished} set${unfinished > 1 ? 's are' : ' is'} not ticked off. Those will be left out.`, { ok: 'Finish' }))) return;
     stopRest();
     // Keep only completed sets; drop exercises with none
+    const tr = timerResult();
     const done = {
       ...w, end: Date.now(), rest: undefined,
-      name: (w.name || '').trim() || greeting(),
+      name: ((w.name || '').trim() || greeting()) + (tr ? ` · ${tr}` : ''),
       exercises: w.exercises.map((e) => ({ exId: e.exId, note: e.note, rest: e.rest, sets: e.sets.filter((s) => s.done).map(({ tWeight, tReps, tSecs, ...s }) => s) }))
         .filter((e) => e.sets.length),
     };
@@ -274,6 +316,15 @@ function workoutScreen() {
     });
     pop();
     toast(past.editOf ? 'Workout saved' : `Logged ${done.name} on ${shortDay(done.start)}`);
+  }
+
+  /** "18 rounds" or "6:42" for a challenge with a timer. */
+  function timerResult() {
+    const t = w.timer;
+    if (!t?.started) return '';
+    if (t.kind === 'amrap') return `${roundsDone()} round${roundsDone() === 1 ? '' : 's'}`;
+    if (t.kind === 'fortime') return fmtSecs(t.result ?? Math.floor((Date.now() - t.started) / 1000));
+    return '';
   }
 
   // ----- Rest timer -----
@@ -313,7 +364,7 @@ function workoutScreen() {
   drawRest();
   return {
     el,
-    onShow() { clearInterval(tick); tick = setInterval(() => { updateStats(); restTick(); }, 250); restTick(); },
+    onShow() { clearInterval(tick); tick = setInterval(() => { updateStats(); restTick(); timerTick(); }, 250); restTick(); drawTimer(); },
     onHide() { clearInterval(tick); },
   };
 }

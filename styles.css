@@ -1377,3 +1377,13 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .pgfx-nums.long { font-size: 21px; }
 .chal-nums { text-align: center; font-size: 40px; font-weight: 800; color: var(--gold); letter-spacing: -.02em; margin: 6px 0 4px; }
 .chal-how { margin: 0 0 4px; padding-left: 20px; font-size: 15px; line-height: 1.5; }
+
+/* Challenge timer in the workout */
+.wt { margin: 4px 0 14px; padding: 16px; border-radius: var(--radius); text-align: center; background: radial-gradient(90% 90% at 50% 0%, rgba(227, 176, 75, .16), rgba(0, 0, 0, 0) 70%), var(--surface); border: .5px solid rgba(227, 176, 75, .3); }
+.wt-big { font-size: 56px; font-weight: 800; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; color: var(--text); }
+.wt-big.done { color: var(--gold); }
+.wt-label { font-size: 13px; color: var(--muted); margin: 6px 0 10px; }
+.wt-rounds { font-size: 15px; color: var(--muted); }
+.wt-rounds b { font-size: 22px; color: var(--gold); }
+.wt .btn { margin-top: 6px; }
+.chal-mins { margin-bottom: 4px; }
