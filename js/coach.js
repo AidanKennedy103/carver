@@ -89,6 +89,24 @@ export const PROGRAMS = [
   },
 ];
 
+/** 5/3/1 has its own engine (program531.js); this is its page in the builder. */
+export const T531 = {
+  id: '531', name: '5/3/1', days: 4, minutes: '45–60', level: 'Intermediate', schedule: 'Mon, Tue, Thu, Fri', ongoingOnly: true,
+  summary: 'One main lift a day (squat, bench, deadlift, press) off a training max, plus two assistance moves. Four-week cycles: 5s, 3s, 5/3/1, deload.',
+  pros: ['Slow, steady strength gains that keep coming for years', 'The last set is as many reps as you can, so strong days count', 'Short, focused sessions'],
+  cons: ['Weights climb slowly by design', 'Less muscle-building volume unless you add the 5×10', 'Built around barbell lifts'],
+  bestFor: 'Lifters who know the big four and want long-term strength.',
+  lengthText: 'Runs in 4-week cycles with no end date. After each cycle the training maxes go up (5 lb on bench and press, 10 lb on squat and deadlift).',
+  plans: [
+    { name: 'Squat day', ex: [{ exId: 'squat', v: '5s · 3s · 5/3/1', tag: true }, E('lying-curl', 3, 10), E('hanging-leg-raise', 3, 12)] },
+    { name: 'Bench day', ex: [{ exId: 'bench', v: '5s · 3s · 5/3/1', tag: true }, E('db-row', 3, 10), E('tri-pushdown', 3, 12)] },
+    { name: 'Deadlift day', ex: [{ exId: 'deadlift', v: '5s · 3s · 5/3/1', tag: true }, E('back-ext', 3, 12), E('ab-wheel', 3, 10)] },
+    { name: 'Press day', ex: [{ exId: 'ohp', v: '5s · 3s · 5/3/1', tag: true }, E('chinup', 3, 8), E('dips', 3, 10)] },
+  ],
+};
+/** Ready-made programs, easiest to most demanding. */
+const ORDER = ['fb3', 'db3', 'bw3', 'ul4', '531', 'ppl'];
+
 // ---------- Block phases ----------
 
 const PHASES = {
@@ -430,6 +448,7 @@ const GRAPHICS = {
   db3: { ring: [[180, 360, 0], [0, 180, 1]], center: 'db', sub: 'Dumbbells A · B', week: [1, 0, 1, 0, 1, 0, 0] },
   531: { bars: true, sub: '5s · 3s · 1s', week: [1, 1, 0, 1, 1, 0, 0] },
   custom: { sliders: true, sub: 'Linear · DUP · Wave · RPE', week: null },
+  plan: { list: true, sub: 'Your exercises', week: null },
 };
 
 const pt = (a, r) => [50 + r * Math.sin((a * Math.PI) / 180), 50 - r * Math.cos((a * Math.PI) / 180)];
@@ -455,6 +474,10 @@ function graphicSvg(g) {
     [[22, 0.42, 2], [44, 0.66, 1], [66, 0.9, 0]].forEach(([x, v, tone]) => {
       const hgt = 70 * v;
       out += `<rect x="${x - 8}" y="${86 - hgt}" width="16" height="${hgt}" rx="8" fill="${SHADES[tone]}"/>`;
+    });
+  } else if (g.list) {
+    [[30, 1], [50, 0.8], [70, 0.6]].forEach(([y, v], i) => {
+      out += `<circle cx="24" cy="${y}" r="7" fill="${SHADES[i]}"/><rect x="38" y="${y - 4.5}" width="${46 * v}" height="9" rx="4.5" fill="#2c2b2e"/>`;
     });
   } else {
     [[30, 0.35], [50, 0.75], [70, 0.5]].forEach(([x, v]) => {
@@ -608,7 +631,7 @@ function programScreen(t) {
   const maxes = maxInputs(lifts);
   const el = h('div.page');
   const body = h('div.scroll-body');
-  const running = coachProgram()?.id === t.id;
+  const running = t.id === '531' ? !!program531() : coachProgram()?.id === t.id;
   function draw() {
     const preview = length === 'ongoing' ? null : { tm: Object.fromEntries(Object.entries(maxes.read()).map(([k, v]) => [k, v * 0.9])), weeks: length };
     fill(body,
@@ -630,14 +653,14 @@ function programScreen(t) {
       h('div.section-head', h('h2.section-title', 'Length')),
       t.ongoingOnly ? null : h('div.segment.coach-len', LENGTHS.map(([v, l]) => h('button' + (length === v ? '.on' : ''), { onclick: () => { length = v; draw(); } }, l))),
       length !== 'ongoing' ? timeline({ weeks: length }) : null,
-      h('p.fine', lengthText(length)),
+      h('p.fine', t.lengthText || lengthText(length)),
 
       h('div.section-head', h('h2.section-title', 'Each week'), h('span.section-count', t.schedule)),
       t.plans.map((pl) => h('section.card.coach-day',
         h('div.coach-day-name', pl.name),
         pl.ex.map((e) => h('div.coach-ex',
-          h('span', exercise(e.exId).name, e.main && length !== 'ongoing' ? h('span.coach-tag', 'main') : null),
-          h('span.coach-ex-v', e.main && preview ? mainSets(preview, e.exId, 1).text.split(' · ')[0] + ' in week 1'
+          h('span', exercise(e.exId).name, e.tag || (e.main && length !== 'ongoing') ? h('span.coach-tag', 'main') : null),
+          h('span.coach-ex-v', e.v ? e.v : e.main && preview ? mainSets(preview, e.exId, 1).text.split(' · ')[0] + ' in week 1'
             : exercise(e.exId).type === 'time' ? `${e.sets} sets` : `${e.sets} × ${e.lo === e.hi ? e.lo : `${e.lo}–${e.hi}`}`))))),
 
       lifts.length ? [
@@ -647,11 +670,12 @@ function programScreen(t) {
       ] : null,
 
       running ? h('p.fine.center', 'You’re running this program.')
-        : h('button.btn.gold.wide.coach-go', { onclick: go }, length === 'ongoing' ? `Start ${t.name}` : `Start ${length}-week block`),
+        : h('button.btn.gold.wide.coach-go', { onclick: go }, t.id === '531' ? 'Set up 5/3/1' : length === 'ongoing' ? `Start ${t.name}` : `Start ${length}-week block`),
       h('div.bottom-space'),
     );
   }
   async function go() {
+    if (t.id === '531') { setup531(); return; }
     const m = maxes.read();
     if (length !== 'ongoing') {
       const missing = lifts.filter((k) => !m[k]);
@@ -730,10 +754,15 @@ export function coachPage() {
         : h('p.coach-intro', 'Ready-made plans with the weights worked out.'),
 
       h('div.section-head', h('h2.section-title', cp || p531 ? 'Other programs' : 'Ready-made programs')),
+      h('div.pgrid', ...(() => {
+        const list = ORDER.map((id) => (id === '531' ? (p531 ? null : T531) : PROGRAMS.find((x) => x.id === id))).filter((x) => x && x.id !== cp?.id);
+        return list.map((x, i) => tile({ id: x.id, name: x.name, line: `${x.days} days · ${x.minutes} min`, tag: x.level, span: i === list.length - 1 && list.length % 2 === 1, onclick: () => push(() => programScreen(x)) }));
+      })()),
+
+      h('div.section-head', h('h2.section-title', 'Build your own')),
       h('div.pgrid',
-        PROGRAMS.filter((x) => x.id !== cp?.id).map((x) => tile({ id: x.id, name: x.name, line: `${x.days} days · ${x.minutes} min`, tag: x.level, onclick: () => push(() => programScreen(x)) })),
-        p531 ? null : tile({ id: '531', name: '5/3/1', line: '4 days · 60 min', tag: 'Strength', onclick: setup531 }),
-        tile({ id: 'custom', name: 'Custom block', line: 'Your plans, your rules', tag: 'Advanced', span: (PROGRAMS.filter((x) => x.id !== cp?.id).length + (p531 ? 0 : 1)) % 2 === 0, onclick: () => push(() => customScreen(cp?.custom || null)) })),
+        tile({ id: 'custom', name: 'Custom block', line: 'Periodized, your rules', tag: 'Advanced', onclick: () => push(() => customScreen(cp?.custom || null)) }),
+        tile({ id: 'plan', name: 'Simple plan', line: 'Pick exercises, no block', tag: 'Any level', onclick: () => (state.plans.length >= MAX_PLANS ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor())) })),
 
       h('div.section-head', h('h2.section-title', 'Popular workouts')),
       h('div.pgrid', CHALLENGES.map((c, i) => tile({ id: c.id, name: c.name, line: c.line, tag: c.tag, span: i === CHALLENGES.length - 1 && CHALLENGES.length % 2 === 1, onclick: () => challengeSheet(c) }))),

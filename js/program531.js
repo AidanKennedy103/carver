@@ -21,6 +21,13 @@ const WEEKS = [
   { name: 'Deload week', sets: [[0.40, 5], [0.50, 5], [0.60, 5]], plus: false },
 ];
 const WARMUP = [[0.40, 5], [0.50, 5], [0.60, 3]];
+/** Two assistance moves per day: [exId, sets, reps]. Yours to swap or delete. */
+const ASSIST = {
+  squat: [['lying-curl', 3, 10], ['hanging-leg-raise', 3, 12]],
+  bench: [['db-row', 3, 10], ['tri-pushdown', 3, 12]],
+  deadlift: [['back-ext', 3, 12], ['ab-wheel', 3, 10]],
+  press: [['chinup', 3, 8], ['dips', 3, 10]],
+};
 
 export const program = () => (state.program?.kind === '531' ? state.program : null);
 
@@ -131,7 +138,8 @@ export function setup531() {
       if (others + LIFTS.length > MAX_PLANS) st.plans = [];
       const plans = {};
       for (const l of LIFTS) {
-        const plan = { id: uid(), name: `5/3/1 ${l.name}`, created: Date.now(), exercises: [] };
+        const exercises = ASSIST[l.k].map(([exId, n, reps]) => ({ exId, note: '', rest: 90, sets: Array.from({ length: n }, () => ({ id: uid(), type: 'n', tReps: reps })) }));
+        const plan = { id: uid(), name: `5/3/1 ${l.name}`, created: Date.now(), exercises };
         st.plans.push(plan); plans[l.k] = plan.id;
       }
       st.program = { kind: '531', tm, extra, week: 1, cycle: 1, since: Date.now(), plans };
