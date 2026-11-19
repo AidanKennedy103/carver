@@ -393,6 +393,61 @@ export function progressAfter(w) {
   return changes;
 }
 
+// ---------- Figures: what each program looks like at a glance ----------
+
+const TONE = ['#e3b04b', '#b8862a', '#7d5c1f'];   // one colour per day type
+// Week at a glance: [label, tone] per day, null = rest
+const WEEKS = {
+  fb3: [['F', 0], null, ['F', 0], null, ['F', 0], null, null],
+  ul4: [['U', 0], ['L', 1], null, ['U', 0], ['L', 1], null, null],
+  ppl: [['Pu', 0], ['Pl', 1], ['Lg', 2], ['Pu', 0], ['Pl', 1], ['Lg', 2], null],
+  db3: [['A', 0], null, ['B', 1], null, ['A', 0], null, null],
+};
+
+/** A small SVG: the training week as bars (splits), or the load over a block as a wave (5/3/1, your own). */
+export function programFigure(id, { wide = false } = {}) {
+  const W = wide ? 340 : 150, H = wide ? 110 : 110;
+  let body = '';
+  if (WEEKS[id]) {
+    const cols = 7, gap = 3, pad = 2, bw = (W - pad * 2 - gap * (cols - 1)) / cols, base = H - 18;
+    WEEKS[id].forEach((d, i) => {
+      const x = pad + i * (bw + gap);
+      if (d) {
+        body += `<rect x="${x}" y="6" width="${bw}" height="${base - 6}" rx="5" fill="${TONE[d[1]]}"/>`;
+        const label = wide ? ({ F: 'Full', U: 'Upper', L: 'Lower', Pu: 'Push', Pl: 'Pull', Lg: 'Legs' }[d[0]] || d[0]) : d[0];
+        body += `<text x="${x + bw / 2}" y="22" text-anchor="middle" font-size="${wide ? 11 : d[0].length > 1 ? 10 : 12}" font-weight="800" fill="#17110a">${label}</text>`;
+      } else body += `<rect x="${x}" y="${base - 10}" width="${bw}" height="10" rx="4" fill="#2e2e33"/>`;
+      body += `<text x="${x + bw / 2}" y="${H - 3}" text-anchor="middle" font-size="10" font-weight="600" fill="#8e8e93">${'MTWTFSS'[i]}</text>`;
+    });
+  } else {
+    // load over the weeks: 5/3/1 climbs in 3s with a deload; your own block rises in waves to a test
+    const pts = id === '531' ? [0.62, 0.72, 0.82, 0.42, 0.67, 0.77, 0.87, 0.46] : [0.5, 0.56, 0.62, 0.38, 0.6, 0.67, 0.74, 0.44, 0.72, 0.8, 0.88, 1];
+    const n = pts.length, gap = 3, pad = 2, bw = (W - pad * 2 - gap * (n - 1)) / n, top = 8, base = H - 18;
+    pts.forEach((v, i) => {
+      const x = pad + i * (bw + gap), hgt = (base - top) * v;
+      const low = (id === '531' && i % 4 === 3) || (id !== '531' && i % 4 === 3);
+      const test = id !== '531' && i === n - 1;
+      body += `<rect x="${x}" y="${base - hgt}" width="${bw}" height="${hgt}" rx="4" fill="${test ? '#f5f5f7' : low ? '#3a3a40' : TONE[i % 4 === 3 ? 2 : i < n / 2 ? 1 : 0]}"/>`;
+    });
+    const line = pts.map((v, i) => `${i ? 'L' : 'M'}${(pad + i * (bw + gap) + bw / 2).toFixed(1)} ${(base - (base - top) * v - 6).toFixed(1)}`).join(' ');
+    body += `<path d="${line}" fill="none" stroke="#f5f5f7" stroke-opacity=".55" stroke-width="1.5" stroke-linejoin="round" stroke-dasharray="3 3"/>`;
+    body += `<text x="${pad}" y="${H - 3}" font-size="10" font-weight="600" fill="#8e8e93">week 1</text><text x="${W - pad}" y="${H - 3}" text-anchor="end" font-size="10" font-weight="600" fill="#8e8e93">${id === '531' ? 'week 8' : 'test'}</text>`;
+  }
+  const el = h('div.pfig' + (wide ? '.wide' : ''));
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Program at a glance">${body}</svg>`;
+  return el;
+}
+
+/** A square program tile for the grid. */
+function tile({ id, name, line, tag, onclick, wide = false }) {
+  return h('button.ptile' + (wide ? '.wide' : ''), { onclick },
+    programFigure(id, { wide }),
+    h('span.ptile-text',
+      h('span.ptile-name', name),
+      h('span.ptile-line', line),
+      tag ? h('span.ptile-tag', tag) : null));
+}
+
 // ---------- Pieces of UI ----------
 
 const meta = (t) => `${t.days} days a week · ${t.minutes} min · ${t.level}`;
@@ -440,6 +495,7 @@ function programScreen(t) {
   function draw() {
     const preview = length === 'ongoing' ? null : { tm: Object.fromEntries(Object.entries(maxes.read()).map(([k, v]) => [k, v * 0.9])), weeks: length };
     fill(body,
+      programFigure(t.id, { wide: true }),
       h('div.coach-head',
         h('h1.coach-title', t.name),
         h('div.coach-pills', [`${t.days} days a week`, `${t.minutes} min`, t.level].map((x) => h('span.coach-pill', x))),
@@ -487,7 +543,7 @@ function programScreen(t) {
     if (await startProgram(t, length, m)) pop();
   }
   draw();
-  el.append(navBar({ title: t.name, backLabel: 'Coach' }), body);
+  el.append(navBar({ title: t.name, backLabel: 'Programs' }), body);
   return { el };
 }
 
@@ -521,22 +577,15 @@ export function coachPage() {
     syncCoach();
     const cp = coachProgram(), t = cp && (cp.custom ? customTemplate(cp) : template(cp.id)), p531 = program531();
     fill(body,
-      navBar({ title: 'Coach', back: false, large: true, right: [goalsButton('workout')] }),
+      navBar({ title: 'Program builder', back: false, large: true, right: [goalsButton('workout')] }),
       cp && t ? running(cp, t) : p531 ? [h('div.section-head', h('h2.section-title', 'Your program')), programCard()]
         : h('p.coach-intro', 'Pick a program and Carver writes the plans and the weights. Run it ongoing or as an 8, 12 or 16-week block.'),
 
-      h('div.section-head', h('h2.section-title', cp || p531 ? 'Other programs' : 'Programs')),
-      h('section.card.list-card.coach-progs',
-        h('button.coach-row.custom', { onclick: () => push(() => customScreen(cp?.custom || null)) },
-          h('span.coach-row-text', h('span.coach-row-name', 'Build your own block', h('span.coach-tag', 'Advanced')), h('span.coach-row-meta', 'Linear · Undulating · Wave · RPE'),
-            h('span.coach-row-sum', 'Your own plans as a periodized block, with your own style and numbers.')),
-          h('span.card-go', '›')),
-        PROGRAMS.filter((x) => x.id !== cp?.id).map((x) => h('button.coach-row', { onclick: () => push(() => programScreen(x)) },
-          h('span.coach-row-text', h('span.coach-row-name', x.name), h('span.coach-row-meta', meta(x)), h('span.coach-row-sum', x.summary)),
-          h('span.card-go', '›'))),
-        p531 ? null : h('button.coach-row', { onclick: setup531 },
-          h('span.coach-row-text', h('span.coach-row-name', '5/3/1'), h('span.coach-row-meta', '4 days a week · 60 min · Strength'), h('span.coach-row-sum', 'Squat, bench, deadlift and press off a training max, with a new top set to beat every week.')),
-          h('span.card-go', '›'))),
+      h('div.section-head', h('h2.section-title', cp || p531 ? 'Other programs' : 'Ready-made programs')),
+      h('div.pgrid',
+        PROGRAMS.filter((x) => x.id !== cp?.id).map((x) => tile({ id: x.id, name: x.name, line: `${x.days} days · ${x.minutes} min`, tag: x.level, onclick: () => push(() => programScreen(x)) })),
+        p531 ? null : tile({ id: '531', name: '5/3/1', line: '4 days · 60 min', tag: 'Strength', onclick: setup531 }),
+        tile({ id: 'custom', name: 'Custom block', line: 'Your plans, your rules', tag: 'Advanced', onclick: () => push(() => customScreen(cp?.custom || null)) })),
       h('div.bottom-space'),
     );
   }
@@ -690,7 +739,8 @@ function customScreen(existing) {
     const plans = state.plans.filter((pl) => pl.exercises.some((pe) => c.lifts.includes(pe.exId)));
 
     fill(body,
-      h('div.coach-head', h('h1.coach-title', 'Build your own block'),
+      programFigure('custom', { wide: true }),
+      h('div.coach-head', h('h1.coach-title', 'Custom training block'),
         h('p.coach-summary', 'Run your own plans as a periodized block. Pick the style and numbers; Carver sets every main-lift weight. Other exercises stay as you set them.')),
 
       h('div.section-head', h('h2.section-title', 'Style')),
@@ -786,6 +836,6 @@ function customScreen(existing) {
   }
 
   draw();
-  el.append(navBar({ title: 'Your block', backLabel: 'Coach' }), body);
+  el.append(navBar({ title: 'Custom block', backLabel: 'Programs' }), body);
   return { el };
 }

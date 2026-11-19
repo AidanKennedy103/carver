@@ -144,7 +144,7 @@ export const TAB_LIST = [
   { id: 'fitness', label: 'Fitness', icon: 'activity', sub: 'Runs, walks, rides and cardio' },
   { id: 'social', label: 'Social', icon: 'users', sub: 'Groups, leaderboards and challenges' },
   { id: 'habits', label: 'Habits', icon: 'check', sub: 'Daily goals, streaks and reminders' },
-  { id: 'coach', label: 'Coach', icon: 'trophy', sub: 'Programs and training blocks that plan your weights' },
+  { id: 'coach', label: 'Programs', icon: 'trophy', sub: 'Program builder: ready-made programs and training blocks' },
   { id: 'recovery', label: 'Recovery', icon: 'moon', sub: 'Sleep, soreness and a daily readiness score' },
   { id: 'body', label: 'Body', icon: 'user', sub: 'Weight, body fat, photos and measurements' },
 ];

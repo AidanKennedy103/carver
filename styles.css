@@ -1226,3 +1226,18 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .face.on .face-num { color: var(--gold); }
 .empty-plan-row .icon { color: var(--gold); }
 .av-badge { color: var(--gold); }
+
+/* Program builder: two-wide tiles with a figure */
+.pgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ptile { display: flex; flex-direction: column; gap: 10px; padding: 10px; border-radius: var(--radius); background: var(--surface); text-align: left; min-width: 0; }
+.ptile.wide { aspect-ratio: auto; width: 100%; }
+.ptile:active { background: var(--surface-2); }
+.pfig { border-radius: 12px; background: radial-gradient(120% 90% at 20% 0%, #2a2112 0%, #161412 60%, #121214 100%); padding: 10px 10px 8px; }
+.pfig svg { width: 100%; height: auto; display: block; }
+.pfig.wide { flex: none; }
+.pfig.wide { margin-bottom: 4px; }
+.coach-head + .pfig, .scroll-body > .pfig.wide { margin-top: 6px; }
+.ptile-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ptile-name { font-weight: 700; font-size: 16px; line-height: 1.2; }
+.ptile-line { font-size: 12px; color: var(--muted); }
+.ptile-tag { align-self: flex-start; margin-top: 4px; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); border: 1px solid rgba(227, 176, 75, .45); border-radius: 6px; padding: 1px 6px; }
