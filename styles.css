@@ -207,7 +207,7 @@ input, select, textarea { font: inherit; color: inherit; }
 .search-input { flex: 1; background: none; border: 0; outline: 0; font-size: 17px; color: var(--text); -webkit-appearance: none; }
 .chips { display: flex; gap: 8px; overflow-x: auto; padding: 10px 0; scrollbar-width: none; flex: none; margin: 0 -16px; padding-left: 16px; padding-right: 16px; }
 .chips::-webkit-scrollbar { display: none; }
-.chip { flex: none; height: 32px; padding: 0 14px; border-radius: 16px; background: var(--surface-2); font-size: 14px; font-weight: 500; color: #d1d1d6; }
+.chip { flex: none; display: inline-flex; align-items: center; justify-content: center; height: 32px; padding: 0 14px; border-radius: 16px; background: var(--surface-2); font-size: 14px; font-weight: 500; color: #d1d1d6; }
 .chip.on { background: var(--gold); color: #17110a; font-weight: 600; }
 .ex-list { flex: 1; overflow-y: auto; margin: 0 -16px; padding: 0 16px; }
 .ex-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 0; border-bottom: .5px solid var(--line); text-align: left; }
