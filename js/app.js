@@ -9,7 +9,7 @@ import { nutritionPage } from './nutrition.js';
 import { fitnessPage } from './fitness.js';
 import { socialPage } from './social.js';
 import { habitsPage } from './habits.js';
-import { coachPage } from './coach.js';
+import { coachPage, syncCoach } from './coach.js';
 import { recoveryPage } from './recovery.js';
 import { progressPage } from './progress.js';
 import { openWorkout } from './session.js';
@@ -22,6 +22,10 @@ initTabs({ home: homePage, workout: workoutPage, nutrition: nutritionPage, fitne
 onChange(() => top()?.refresh?.());
 
 initCloud();
+
+// A running training block moves to the right week's targets
+syncCoach();
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncCoach(); });
 
 // Came back to an unfinished workout? Open it straight away.
 if (state.active) openWorkout();

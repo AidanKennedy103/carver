@@ -1013,19 +1013,101 @@ button.macro-rows { width: 100%; text-align: left; }
 .hour-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 14px; }
 .hm { max-width: 440px; }
 
-/* Coach tab */
+/* Coach tab: clean cards, no emoji */
 .coach-intro { color: var(--muted); font-size: 15px; line-height: 1.45; margin: 4px 2px 0; }
-.coach-card { display: block; width: 100%; text-align: left; margin-bottom: 10px; }
-.coach-top { display: flex; align-items: center; gap: 12px; }
-.coach-top > div { flex: 1; }
-.coach-emoji { font-size: 26px; width: 40px; height: 40px; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; }
-.coach-name { font-weight: 700; font-size: 17px; }
-.coach-meta { font-size: 13px; color: var(--gold); margin-top: 1px; }
-.coach-about { font-size: 14px; color: var(--muted); line-height: 1.4; margin-top: 10px; }
-.coach-plan { margin-bottom: 8px; padding: 12px 14px; }
-.coach-plan-name { font-weight: 700; margin-bottom: 4px; }
-.coach-ex { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; }
+.coach-progs { padding: 0; }
+.coach-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 16px; text-align: left; }
+.coach-row + .coach-row { border-top: .5px solid var(--surface-3); }
+.coach-row:active { background: var(--surface-2); }
+.coach-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.coach-row-name { font-weight: 700; font-size: 17px; display: flex; align-items: center; gap: 8px; }
+.coach-row-meta { font-size: 13px; color: var(--gold); font-weight: 500; }
+.coach-row-sum { font-size: 14px; color: var(--muted); line-height: 1.4; }
+.coach-tag { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); border: 1px solid rgba(227, 176, 75, .45); border-radius: 6px; padding: 1px 6px; margin-left: 6px; }
+.coach-row-name .coach-tag { margin-left: 0; }
+
+.coach-head { padding: 6px 2px 4px; }
+.coach-title { font-size: 30px; font-weight: 800; letter-spacing: -.02em; margin: 0; }
+.coach-pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.coach-pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--surface-2); color: var(--text); }
+.coach-summary { font-size: 15px; color: var(--muted); line-height: 1.5; margin: 0; }
+.coach-pc { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
+@media (min-width: 560px) { .coach-pc { grid-template-columns: 1fr 1fr; } }
+.coach-list { padding: 14px 16px; }
+.coach-list-head { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.coach-li { display: flex; gap: 10px; font-size: 14px; line-height: 1.4; padding: 4px 0; }
+.coach-mark { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; margin-top: 1px; }
+.coach-mark.pro { background: var(--gold-bg); color: var(--gold); }
+.coach-mark.con { background: var(--surface-2); color: var(--muted); }
+.coach-best { font-size: 14px; color: var(--muted); line-height: 1.45; margin: 12px 2px 0; }
+.coach-best b { color: var(--text); }
+.coach-len { margin-bottom: 12px; }
+
+.blk { margin: 4px 0 8px; }
+.blk-bar { display: flex; gap: 3px; }
+.blk-wk { flex: 1; height: 10px; border-radius: 3px; background: #6b5525; }
+.blk-wk.build, .blk-wk.linear { background: #8a6a2a; }
+.blk-wk.strength, .blk-wk.dup { background: #b8862a; }
+.blk-wk.heavy, .blk-wk.wave { background: #d9a440; }
+.blk-wk.peak, .blk-wk.rpe { background: #f0c35f; }
+.blk-wk.deload { background: var(--surface-3); }
+.blk-wk.test { background: var(--text); }
+.blk-wk.past { opacity: .45; }
+.blk-wk.now { outline: 2px solid var(--text); outline-offset: 2px; }
+.blk-labels { display: flex; gap: 3px; margin-top: 6px; font-size: 11px; color: var(--muted); }
+.blk-labels span { text-align: left; }
+
+.card.coach-day, .coach-next, .coach-plan { padding: 14px 16px; margin-bottom: 10px; }
+.coach-day-name, .coach-plan-dn { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+.coach-ex { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 14px; padding: 6px 0; }
+.coach-ex + .coach-ex { border-top: .5px solid var(--surface-3); }
+.coach-ex > span:first-child { min-width: 0; }
+.coach-ex-v { color: var(--muted); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.coach-next .btn { margin-top: 12px; }
+.coach-plan-week { font-size: 13px; font-weight: 600; color: var(--gold); margin-bottom: 8px; }
+.coach-plan-day + .coach-plan-day { margin-top: 12px; }
+.coach-weeks { margin: 0 0 10px; }
+.coach-weeks .chip.now:not(.on) { box-shadow: inset 0 0 0 1.5px var(--gold); }
+
+.coach-maxes { padding: 6px 16px; }
+.coach-max { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; column-gap: 10px; padding: 10px 0; align-items: center; }
+.coach-max + .coach-max { border-top: .5px solid var(--surface-3); }
+.coach-max-name { font-size: 15px; font-weight: 600; }
+.coach-max-in { display: flex; align-items: center; gap: 6px; grid-row: span 2; }
+.coach-in { width: 64px; height: 36px; padding: 0 8px; text-align: right; font-size: 15px; }
+.coach-in.reps { width: 44px; }
+.coach-x { font-size: 13px; color: var(--muted); }
+.coach-est { font-size: 12px; color: var(--gold); }
+.coach-go { margin-top: 20px; }
+
+.coach-now { padding: 18px; background: linear-gradient(155deg, #221b0e 0%, #141210 45%, var(--surface) 100%); border: .5px solid rgba(227, 176, 75, .28); }
+.coach-now-label { font-size: 12px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--gold); }
+.coach-now-name { font-size: 26px; font-weight: 800; margin: 4px 0 2px; }
+.coach-now-sub { font-size: 14px; color: var(--muted); line-height: 1.4; margin-bottom: 12px; }
+.coach-week { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+span.coach-day { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .coach-log { height: auto; min-height: 48px; gap: 10px; }
+.coach-actions { margin-top: 18px; }
+
+/* Build your own block */
+.cb-styles { padding: 0; }
+.cb-style { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; text-align: left; }
+.cb-style + .cb-style { border-top: .5px solid var(--surface-3); }
+.cb-radio { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--surface-3); }
+.cb-style.on .cb-radio { border-color: var(--gold); box-shadow: inset 0 0 0 4px var(--surface), inset 0 0 0 10px var(--gold); }
+.cb-card { padding: 4px 16px; }
+.cb-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; flex-wrap: wrap; }
+.cb-row + .cb-row { border-top: .5px solid var(--surface-3); }
+.cb-label { display: flex; flex-direction: column; gap: 2px; font-size: 15px; font-weight: 600; }
+.cb-sub { font-size: 12px; font-weight: 400; color: var(--muted); }
+.cb-seg { width: auto; }
+.cb-seg button { padding: 0 10px; height: 30px; font-size: 13px; }
+.cb-pair { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cb-to { font-size: 12px; color: var(--muted); }
+.stp { display: inline-flex; align-items: center; background: var(--surface-2); border-radius: 10px; height: 32px; }
+.stp button { width: 30px; height: 32px; display: grid; place-items: center; color: var(--gold); }
+.stp-v { min-width: 44px; text-align: center; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* Rest days: how the week is going */
 .rest-banner { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 14px 16px; }

@@ -144,7 +144,7 @@ export const TAB_LIST = [
   { id: 'fitness', label: 'Fitness', icon: 'activity', emoji: '🏃', sub: 'Runs, walks, rides and cardio' },
   { id: 'social', label: 'Social', icon: 'users', emoji: '👥', sub: 'Groups, leaderboards and challenges' },
   { id: 'habits', label: 'Habits', icon: 'check', emoji: '✅', sub: 'Daily goals, streaks and reminders' },
-  { id: 'coach', label: 'Coach', icon: 'trophy', emoji: '🧭', sub: 'Ready-made programs that add weight for you' },
+  { id: 'coach', label: 'Coach', icon: 'trophy', emoji: '🧭', sub: 'Programs and training blocks that plan your weights' },
   { id: 'recovery', label: 'Recovery', icon: 'moon', emoji: '😴', sub: 'Sleep, soreness and a daily readiness score' },
   { id: 'body', label: 'Body', icon: 'user', emoji: '🧍', sub: 'Weight, body fat, photos and measurements' },
 ];

@@ -177,7 +177,7 @@ export function openGoals(section = 'all') {
 
 /** The 🎯 Goals button: top right of every main page, opening that page's goals. */
 export const goalsButton = (section = 'all') =>
-  h('button.nav-goals', { onclick: () => openGoals(section), 'aria-label': section === 'all' ? 'All goals' : `${section[0].toUpperCase() + section.slice(1)} goals` }, '🎯 Goals');
+  h('button.nav-goals', { onclick: () => openGoals(section), 'aria-label': section === 'all' ? 'All goals' : `${section[0].toUpperCase() + section.slice(1)} goals` }, icon('target', 16), 'Goals');
 
 // ---------- Suggested food goals ----------
 
