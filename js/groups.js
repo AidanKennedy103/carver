@@ -443,7 +443,7 @@ export function groupsScreen({ tab = false, sections = null } = {}) {
       : eventRow(e, { time: 'clock' }));
 
     fill(body,
-      navBar({ title: tab ? 'Social' : 'Groups', back: !tab, backLabel: 'Home', large: true, right: [tab ? goalsButton() : null, h('button.icon-btn.gold-text', { onclick: addMenu, 'aria-label': 'Make or join a group' }, icon('plus', 24))] }),
+      navBar({ title: tab ? 'Social' : 'Groups', back: !tab, backLabel: 'Home', large: true, wip: true, right: [tab ? goalsButton() : null, h('button.icon-btn.gold-text', { onclick: addMenu, 'aria-label': 'Make or join a group' }, icon('plus', 24))] }),
       !account()
         ? h('button.card.empty-plan', { onclick: signInSheet }, h('div.empty-title', 'Sign in first'), h('div.empty-text', 'Groups need an account so friends can see your posts.'))
         : !groups.length

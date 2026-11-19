@@ -176,7 +176,7 @@ export function habitsPage() {
     const list = habits(), today = ymd();
     const doneToday = list.filter((g) => isDone(g, today)).length;
     fill(body,
-      navBar({ title: 'Habits', back: false, large: true, right: [goalsButton('daily'), h('button.icon-btn.gold-text', { onclick: () => addHabit(draw), 'aria-label': 'Add a daily goal' }, icon('plus', 24))] }),
+      navBar({ title: 'Habits', back: false, large: true, wip: true, right: [goalsButton('daily'), h('button.icon-btn.gold-text', { onclick: () => addHabit(draw), 'aria-label': 'Add a daily goal' }, icon('plus', 24))] }),
       list.length ? [
         h('section.card.habit-sum',
           h('div', h('div.energy-v', `${doneToday}/${list.length}`), h('div.energy-k', 'done today')),

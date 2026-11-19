@@ -167,8 +167,8 @@ export const TAB_LIST = [
   { id: 'workout', label: 'Workout', icon: 'dumbbell', sub: 'Gym workouts and plans' },
   { id: 'nutrition', label: 'Nutrition', icon: 'apple', sub: 'Food, calories and macros' },
   { id: 'fitness', label: 'Fitness', icon: 'activity', sub: 'Runs, walks, rides and cardio', wip: true },
-  { id: 'social', label: 'Social', icon: 'users', sub: 'Groups, leaderboards and challenges' },
-  { id: 'habits', label: 'Habits', icon: 'check', sub: 'Daily goals, streaks and reminders' },
+  { id: 'social', label: 'Social', icon: 'users', sub: 'Groups, leaderboards and challenges', wip: true },
+  { id: 'habits', label: 'Habits', icon: 'check', sub: 'Daily goals, streaks and reminders', wip: true },
   { id: 'recovery', label: 'Recovery', icon: 'moon', sub: 'Sleep, soreness and a daily readiness score', wip: true },
   { id: 'body', label: 'Physical Metrics', short: 'Metrics', icon: 'user', sub: 'Weight, body fat, photos and measurements', wip: true },
 ];

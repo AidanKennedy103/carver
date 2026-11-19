@@ -1302,10 +1302,6 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .pb-entry-sub { font-size: 13px; color: var(--muted); }
 
 /* Under construction */
-.wip-banner { display: flex; align-items: stretch; gap: 12px; margin: 2px 0 14px; border-radius: 12px; overflow: hidden; background: #1d1912; border: .5px solid rgba(227, 176, 75, .3); }
-.wip-stripes { flex: none; width: 10px; background: repeating-linear-gradient(-45deg, #e3b04b 0 6px, #17110a 6px 12px); }
-.wip-text { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px 10px 0; font-size: 13px; color: var(--muted); line-height: 1.35; }
-.wip-text b { color: var(--gold); font-size: 14px; }
 .wip-tag { margin-left: 8px; font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--gold); border: 1px solid rgba(227, 176, 75, .45); border-radius: 6px; padding: 1px 6px; vertical-align: 2px; }
 
 /* Editing Home in place */
@@ -1368,5 +1364,9 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .hm-m-v small { font-size: 12px; font-weight: 500; color: var(--muted); }
 .hm-m-bar { height: 5px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
 .hm-m-bar i { display: block; height: 100%; border-radius: 3px; }
-.ptile.span2 .ptile-text { align-items: center; text-align: center; }
-.ptile.span2 .ptile-tag { align-self: center; }
+
+.wip-pill { display: inline-block; margin-left: 10px; vertical-align: middle; font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); background: var(--gold-bg); border: 1px solid rgba(227, 176, 75, .4); border-radius: 999px; padding: 3px 8px; position: relative; top: -3px; }
+.nav-title .wip-pill { margin-left: 6px; top: 0; }
+.ptile { text-align: center; }
+.ptile-text { align-items: center; text-align: center; }
+.ptile-tag { align-self: center; }

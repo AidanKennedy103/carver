@@ -26,11 +26,6 @@ export function h(tag, attrs = {}, ...kids) {
   return el;
 }
 
-/** "Under construction": shown on parts of Carver that work but aren't finished. */
-export const wipBanner = (what = 'This page') => h('div.wip-banner',
-  h('span.wip-stripes'),
-  h('div.wip-text', h('b', 'Under construction'), h('span', `${what} works, but it’s still being built. Expect changes.`)));
-
 export const icon = (name, size = 22) => {
   const paths = {
     plus: '<path d="M12 5v14M5 12h14"/>',
@@ -221,14 +216,16 @@ export const depth = () => stack.length;
 export const refreshAll = () => stack.forEach((s) => s.refresh?.());
 
 /** Standard navigation bar: back button, title, optional right-side buttons. */
-export function navBar({ title = '', back = true, backLabel = 'Back', right = [], large = false } = {}) {
+/** wip: a small "Under construction" note beside the title, for pages that work but aren't finished. */
+export function navBar({ title = '', back = true, backLabel = 'Back', right = [], large = false, wip = false } = {}) {
+  const pill = wip ? h('span.wip-pill', 'Under construction') : null;
   return h('header.nav' + (large ? '.large' : ''),
     h('div.nav-row',
       h('div.nav-left', back ? h('button.nav-back', { onclick: () => pop(), 'aria-label': 'Back' }, icon('back', 24), backLabel) : null),
-      h('div.nav-title', large ? '' : title),
+      h('div.nav-title', large ? '' : [title, pill]),
       h('div.nav-right', right),
     ),
-    large ? h('h1.large-title', title) : null,
+    large ? h('h1.large-title', title, pill) : null,
   );
 }
 
