@@ -1,8 +1,8 @@
 // Home: today first (rings, workouts, food, weigh-in), then your week on the
 // calendar, your one-rep maxes, and your profile overview.
 
-import { h, fill, icon, push, sheet, toast, promptBox, fmtDate, fmtNum, fmtDurationWords, swipe } from './ui.js';
-import { state, commit, exercise, overview, toDisplay, unit, bodyDisplay, bodyUnit, tabOn, ymd, addDays, dayTotals, weekStart, dayStart, dayPlan, restNote, workoutDays, DAY_SHORT, workoutStats, waterOn, addWater, kcalLook, kcalHit } from './store.js';
+import { h, fill, icon, push, sheet, toast, promptBox, fmtDate, fmtNum, fmtDurationWords, swipe, navBar, confirmBox } from './ui.js';
+import { state, commit, exercise, overview, HOME_SECTIONS, HOME_DEFAULT, homeSections, toDisplay, unit, bodyDisplay, bodyUnit, tabOn, ymd, addDays, dayTotals, weekStart, dayStart, dayPlan, restNote, workoutDays, DAY_SHORT, workoutStats, waterOn, addWater, kcalLook, kcalHit } from './store.js';
 import { workoutDetail } from './workout.js';
 import { openSettings } from './settings.js';
 import { goTab } from './tabs.js';
@@ -18,6 +18,12 @@ import { groupsCard } from './groups.js';
 import { activityType } from './fitness.js';
 import { enabled as cloudOn } from './cloud.js';
 import { monthlyPrompts } from './monthly.js';
+import { nextPlan, lastDone } from './workout.js';
+import { startWorkout, openWorkout } from './session.js';
+import { waterCard } from './nutrition.js';
+import { readiness, checkIn, recoveryOn } from './recovery.js';
+import { MACROS } from './foods.js';
+import { MACRO_COLOR } from './food-util.js';
 
 function greeting() {
   const hr = new Date().getHours();
@@ -253,6 +259,94 @@ export function restBanner(onTrain) {
     rn.tone === 'done' ? null : h('button.btn.small.' + (rn.tone === 'behind' ? 'gold' : 'gold-soft'), { onclick: onTrain }, rn.tone === 'behind' ? 'Train today' : 'Next workout'));
 }
 
+// ---------- Sections you can add to Home ----------
+
+/** Your next plan, ready to start (or the workout going on now). */
+function nextCard() {
+  if (!tabOn('workout')) return null;
+  if (state.active) return [h('div.section-head', h('h2.section-title', 'Workout')),
+    h('button.card.home-next', { onclick: openWorkout }, h('span.home-next-text', h('span.home-next-label', 'In progress'), h('span.home-next-name', state.active.name || 'Workout')), h('span.btn.gold.small', 'Resume'))];
+  const p = nextPlan();
+  if (!p) return [h('div.section-head', h('h2.section-title', 'Next workout')),
+    h('button.card.home-next', { onclick: () => goTab('workout') }, h('span.home-next-text', h('span.home-next-label', 'No plans yet'), h('span.home-next-name', 'Start a workout')), h('span.btn.gold-soft.small', 'Open'))];
+  const last = lastDone(p);
+  return [h('div.section-head', h('h2.section-title', 'Next workout')),
+    h('div.card.home-next',
+      h('span.home-next-text', h('span.home-next-label', [`${p.exercises.length} exercise${p.exercises.length === 1 ? '' : 's'}`, last ? `last ${fmtDate(last.start, { month: 'short', day: 'numeric' })}` : null].filter(Boolean).join(' · ')), h('span.home-next-name', p.name)),
+      h('button.btn.gold.small', { onclick: () => startWorkout(p), disabled: !p.exercises.length }, icon('play', 14), 'Start'))];
+}
+
+/** Monday to Sunday: days trained and the weekly goal. */
+function weekCard() {
+  const mon = ymd(weekStart()), today = ymd(), goal = state.goals.workoutsPerWeek;
+  const ws = state.workouts.filter((w) => w.start >= weekStart());
+  const did = new Set(ws.map((w) => ymd(w.start)));
+  return [h('div.section-head', h('h2.section-title', 'This week'), h('span.section-count', `${ws.length} of ${goal}`)),
+    h('section.card.home-week', DAY_SHORT.map((d, i) => {
+      const k = addDays(mon, i);
+      return h('div.home-week-day' + (did.has(k) ? '.did' : dayPlan(k) === 'planned' && k >= today ? '.plan' : '') + (k === today ? '.today' : ''),
+        h('span', d[0]), h('i', did.has(k) ? icon('check', 12) : null));
+    }))];
+}
+
+/** Today's calories and macros against your goals. */
+function macrosCard(t) {
+  if (!tabOn('nutrition')) return null;
+  const g = state.goals;
+  const row = (label, v, goal, color, unitLabel) => h('div.home-macro',
+    h('div.home-macro-top', h('span', label), h('span.muted', `${fmtNum(v)} / ${fmtNum(goal)} ${unitLabel}`)),
+    h('div.bar', h('div.bar-fill', { style: { width: Math.min(100, goal ? (v / goal) * 100 : 0) + '%', background: color } })));
+  return [h('div.section-head', h('h2.section-title', 'Calories & macros')),
+    h('button.card.home-macros', { onclick: () => goTab('nutrition') },
+      row('Calories', t.kcal, g.kcal, COLORS.calories, 'kcal'),
+      MACROS.map((m) => row(m.name, t[m.k], g[m.k], MACRO_COLOR[m.k], 'g')))];
+}
+
+/** Today's readiness, or a nudge to check in. */
+function readinessCard() {
+  const rd = readiness();
+  return [h('div.section-head', h('h2.section-title', 'Readiness')),
+    rd ? h('button.card.home-ready', { onclick: () => (tabOn('recovery') ? goTab('recovery') : checkIn()) },
+      h('span.home-ready-score', rd.score), h('span.home-next-text', h('span.home-next-name', rd.word), h('span.home-next-label', rd.sub)))
+      : h('button.card.home-next', { onclick: () => checkIn() }, h('span.home-next-text', h('span.home-next-label', 'Morning check-in'), h('span.home-next-name', 'How did you sleep?')), h('span.btn.gold-soft.small', 'Check in'))];
+}
+
+// ---------- Edit Home page ----------
+
+/** Pick which sections Home shows, and their order. */
+export function editHomeScreen() {
+  const el = h('div.page');
+  const body = h('div.scroll-body');
+  const save = (list) => { commit((s) => { s.settings.home = list; }); draw(); };
+  function draw() {
+    const on = homeSections();
+    const off = HOME_SECTIONS.filter((x) => !on.includes(x.id));
+    const info = (id) => HOME_SECTIONS.find((x) => x.id === id);
+    const move = (i, d) => { const l = on.slice(); [l[i], l[i + d]] = [l[i + d], l[i]]; save(l); };
+    fill(body,
+      h('p.coach-intro', 'Choose what shows on Home and in what order.'),
+      h('div.section-head', h('h2.section-title', 'On Home'), h('span.section-count', on.length)),
+      on.length ? h('section.card.list-card.eh-list', on.map((id, i) => h('div.eh-row',
+        h('button.eh-btn.remove', { onclick: () => save(on.filter((x) => x !== id)), 'aria-label': `Remove ${info(id).name}` }, icon('minus', 14)),
+        h('span.eh-text', h('span.eh-name', info(id).name), h('span.eh-sub', info(id).sub)),
+        h('button.eh-btn', { onclick: () => move(i, -1), disabled: i === 0, 'aria-label': `Move ${info(id).name} up` }, h('span.eh-up', icon('back', 16))),
+        h('button.eh-btn', { onclick: () => move(i, 1), disabled: i === on.length - 1, 'aria-label': `Move ${info(id).name} down` }, h('span.eh-down', icon('back', 16))))))
+        : h('div.feed-empty.card', 'Home is empty. Add something below.'),
+      off.length ? [
+        h('div.section-head', h('h2.section-title', 'Add to Home')),
+        h('section.card.list-card.eh-list', off.map((x) => h('button.eh-row.add', { onclick: () => save([...on, x.id]) },
+          h('span.eh-btn.plus', icon('plus', 14)),
+          h('span.eh-text', h('span.eh-name', x.name), h('span.eh-sub', x.sub))))),
+      ] : null,
+      h('button.link.home-edit', { onclick: async () => { if (await confirmBox('Reset Home?', 'Back to the standard sections and order.', { ok: 'Reset' })) save(HOME_DEFAULT.slice()); } }, 'Reset to default'),
+      h('div.bottom-space'),
+    );
+  }
+  draw();
+  el.append(navBar({ title: 'Edit Home page', backLabel: 'Back' }), body);
+  return { el, refresh: draw };
+}
+
 // ---------- The page ----------
 
 export function homePage() {
@@ -276,16 +370,10 @@ export function homePage() {
     const prompts = monthlyPrompts({ takePhoto: takeProgressPhoto });
     const stat = (value, label, sub) => h('div.tile', h('div.tile-v', value), h('div.tile-k', label), sub ? h('div.tile-sub', sub) : null);
 
-    fill(body,
-      h('header.home-head',
-        h('div.home-hello',
-          h('div.home-date', fmtDate(Date.now(), { weekday: 'long', month: 'short', day: 'numeric' })),
-          h('h1.home-title', name ? `${greeting()}, ${name}` : greeting())),
-        h('div.home-head-btns',
-          goalsButton(),
-          h('button.icon-btn', { onclick: openSettings, 'aria-label': 'Settings' }, icon('gear')))),
 
-      // Rings (swipe for Today / Week)
+    // Every piece Home can show; homeSections() picks which, in order
+    const SECTIONS = {
+      rings: () => [
       swipe(h('section.card.rings-card',
         h('div.rings-top',
           h('div.segment.ring-view', [['day', 'Today'], ['week', 'Week']].map(([v, l]) => h('button' + (view === v ? '.on' : ''), { onclick: () => commit((st) => { st.settings.ringView = v; }) }, l))),
@@ -304,21 +392,21 @@ export function homePage() {
           : h('button.link', { onclick: editRings }, 'Pick your rings')),
       { left: view === 'day' ? setView('week') : null, right: view === 'week' ? setView('day') : null, target: () => body.querySelector('.rings-card') }),
       view === 'day' ? goals.filter((g) => g.hit && (g.id === 'protein' || g.id === 'kcal')).map((g) => h('div.hit-banner', icon('trophy', 18), g.cheer)) : null,
-      tabOn('workout') && !state.active ? restBanner(() => goTab('workout')) : null,
-
-      habitsCard(openGoals),
-
-      // Progress and Trends live here instead of in the tab bar
+    ],
+      restday: () => tabOn('workout') && !state.active ? restBanner(() => goTab('workout')) : null,
+      daily: () => habitsCard(openGoals),
+      next: () => nextCard(),
+      week: () => weekCard(),
+      macros: () => macrosCard(t),
+      water: () => (tabOn('nutrition') ? h('div.home-solo', waterCard(today)) : null),
+      readiness: () => readinessCard(),
+      progress: () => [
       h('div.section-head', h('h2.section-title', 'Progress & trends')),
       progressCards(),
-
-      // Strength tracking (estimated one-rep max)
-      tabOn('workout') ? oneRmSection() : null,
-
-      // Calendar
-      tabOn('workout') ? [h('div.section-head', h('h2.section-title', 'Calendar')), calendar(draw)] : null,
-
-      // Today
+    ],
+      strength: () => (tabOn('workout') ? oneRmSection() : null),
+      calendar: () => tabOn('workout') ? [h('div.section-head', h('h2.section-title', 'Calendar')), calendar(draw)] : null,
+      today: () => [
       h('div.section-head', h('h2.section-title', 'Today')),
       h('section.card.list-card.today',
         tabOn('workout') || tabOn('fitness') ? h('div.today-row',
@@ -339,16 +427,16 @@ export function homePage() {
             h('span.today-k', 'Weigh-in'),
             h('span.today-v', todayWeigh ? `${bodyDisplay(todayWeigh.kg)} ${bodyUnit()}` : 'Not yet')),
           todayWeigh ? h('span.ring-check.big', '✓') : h('button.btn.gold-soft.small', { onclick: logWeightSheet }, 'Log'))),
-
-      // Monthly nudges
+    ],
+      nudges: () => [
       prompts.map((p) => h('button.card.prompt', { onclick: p.action },
         h('span.prompt-ico', icon(p.icon, 20)), h('span.today-text', h('span.today-k.strong', p.text), h('span.today-v', p.sub)), h('span.prompt-go', icon('back', 16)))),
-
-      // Groups
+    ],
+      groups: () => [
       cloudOn() ? h('div.section-head', h('h2.section-title', 'Groups')) : null,
       groupsCard(),
-
-      // Profile overview
+    ],
+      profile: () => [
       h('div.section-head', h('h2.section-title', 'Profile')),
       h('section.card.profile',
         h('button.avatar', { onclick: editName, 'aria-label': 'Edit your name' }, name ? name[0].toUpperCase() : icon('user', 26)),
@@ -367,6 +455,20 @@ export function homePage() {
         h('span.pr-icon', icon('trophy', 16)),
         h('span.pr-line-text', h('span.pr-line-name', exercise(p.exId).name), h('span.pr-line-kind', `${p.kind} · ${fmtDate(p.when, { month: 'short', day: 'numeric' })}`)),
         h('span.pr-line-val', p.kg != null ? `${toDisplay(p.kg)} ${unit()}` : `${p.reps} reps`)))) : null,
+    ],
+    };
+
+    fill(body,
+      h('header.home-head',
+        h('div.home-hello',
+          h('div.home-date', fmtDate(Date.now(), { weekday: 'long', month: 'short', day: 'numeric' })),
+          h('h1.home-title', name ? `${greeting()}, ${name}` : greeting())),
+        h('div.home-head-btns',
+          goalsButton(),
+          h('button.icon-btn', { onclick: openSettings, 'aria-label': 'Settings' }, icon('gear')))),
+
+      homeSections().map((id) => SECTIONS[id]?.()),
+      h('button.link.home-edit', { onclick: () => push(editHomeScreen) }, 'Edit Home page'),
       h('div.bottom-space'),
     );
     setTimeout(celebrate, 0);   // it may save, which redraws: do that after this draw

@@ -1261,3 +1261,35 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .pb-name { font-weight: 600; font-size: 16px; display: flex; align-items: center; gap: 8px; }
 .pb-meta { font-size: 13px; color: var(--muted); }
 .ptile.span2 { grid-column: span 2; }
+
+/* Customizable Home */
+.home-edit { display: block; margin: 22px auto 0; font-size: 14px; }
+.home-next { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; }
+.home-next-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.home-next-label { font-size: 13px; color: var(--muted); }
+.home-next-name { font-size: 17px; font-weight: 700; }
+.home-next .btn .icon { margin-right: 2px; }
+.home-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; padding: 14px 12px; }
+.home-week-day { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); font-weight: 600; }
+.home-week-day i { width: 30px; height: 30px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; color: #17110a; }
+.home-week-day.did i { background: var(--gold); }
+.home-week-day.plan i { box-shadow: inset 0 0 0 1.5px rgba(227, 176, 75, .6); }
+.home-week-day.today span { color: var(--text); }
+.home-macros { display: flex; flex-direction: column; gap: 10px; width: 100%; text-align: left; }
+.home-macro-top { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.home-ready { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; }
+.home-ready-score { flex: none; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; font-size: 20px; font-weight: 800; background: var(--gold-bg); color: var(--gold); box-shadow: inset 0 0 0 2px rgba(227, 176, 75, .5); }
+.eh-list { padding: 0; }
+.eh-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; width: 100%; text-align: left; }
+.eh-row + .eh-row { border-top: .5px solid var(--surface-3); }
+.eh-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.eh-name { font-weight: 600; font-size: 15px; }
+.eh-sub { font-size: 12px; color: var(--muted); }
+.eh-btn { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--text); }
+.eh-btn:disabled { opacity: .3; }
+.eh-btn.remove { width: 24px; height: 24px; background: #5a2a26; color: #ff9f94; }
+.eh-btn.plus { width: 24px; height: 24px; background: var(--gold-bg); color: var(--gold); }
+.eh-up { transform: rotate(90deg); display: grid; }
+.eh-down { transform: rotate(-90deg); display: grid; }
+.home-solo { margin-top: 20px; }
+.home-week-day.today:not(.did) i { box-shadow: inset 0 0 0 1.5px var(--text); }

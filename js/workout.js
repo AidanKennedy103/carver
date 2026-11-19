@@ -163,7 +163,7 @@ export function workoutPage() {
 export const lastDone = (p) => state.workouts.find((w) => w.planId === p.id || (!w.planId && w.name === p.name));
 
 /** The plan after the one you did most recently (plans rotate in order). */
-function nextPlan() {
+export function nextPlan() {
   const plans = state.plans.filter((p) => p.exercises.length);
   if (!plans.length) return state.plans[0] || null;
   const lastW = state.workouts.find((w) => plans.some((p) => p.id === w.planId));

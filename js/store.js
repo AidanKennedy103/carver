@@ -136,6 +136,31 @@ export function bodyFromDisplay(v) {
 }
 /** Distance for runs and rides: 'km' or 'mi'. */
 export const distUnit = () => state.settings.distUnit || (unit() === 'kg' ? 'km' : 'mi');
+// The pieces of Home, in the order people choose (Settings → Edit Home page).
+export const HOME_SECTIONS = [
+  { id: 'rings', name: 'Goal rings', sub: 'Your rings for today or the week' },
+  { id: 'restday', name: 'Rest-day check', sub: 'How your week is going on rest days' },
+  { id: 'daily', name: 'Daily goals', sub: 'Slide to mark your daily goals done' },
+  { id: 'next', name: 'Next workout', sub: 'Your next plan, ready to start' },
+  { id: 'week', name: 'This week', sub: 'Workouts done against your weekly goal' },
+  { id: 'macros', name: 'Calories & macros', sub: 'Today’s calories, protein, carbs and fat' },
+  { id: 'water', name: 'Water', sub: 'Log water in one tap' },
+  { id: 'readiness', name: 'Readiness', sub: 'Today’s recovery check-in' },
+  { id: 'progress', name: 'Progress & trends', sub: 'Weight and maintenance calories' },
+  { id: 'strength', name: 'Strength progression', sub: 'Estimated one-rep max graphs' },
+  { id: 'calendar', name: 'Workout calendar', sub: 'Your month of workouts' },
+  { id: 'today', name: 'Today', sub: 'Workout, food and weigh-in at a glance' },
+  { id: 'nudges', name: 'Monthly reminders', sub: 'Monthly goals, progress photo and recap' },
+  { id: 'groups', name: 'Groups', sub: 'Your friends’ latest posts' },
+  { id: 'profile', name: 'Profile & stats', sub: 'Streak, totals and recent records' },
+];
+export const HOME_DEFAULT = ['rings', 'restday', 'daily', 'progress', 'strength', 'calendar', 'today', 'nudges', 'groups', 'profile'];
+/** The Home sections you've picked, in order. */
+export function homeSections() {
+  const known = new Set(HOME_SECTIONS.map((x) => x.id));
+  return (state.settings.home || HOME_DEFAULT).filter((id) => known.has(id));
+}
+
 /** Tabs you can hide in Settings (Home always shows). */
 // The tabs you can show, in bar order. Home is always first. New ones start off.
 export const TAB_LIST = [

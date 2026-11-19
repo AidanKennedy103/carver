@@ -145,7 +145,7 @@ function weekStrip(key, go) {
 // ---------- Water ----------
 
 const L = (ml) => `${+(ml / 1000).toFixed(2)} L`;   // 0 L, 1.5 L, 1.25 L
-function waterCard(date) {
+export function waterCard(date) {
   const ml = waterOn(date), goal = state.goals.water || 2500;
   const glasses = Math.max(4, Math.round(goal / 250));
   const full = Math.min(glasses, Math.floor(ml / 250));
