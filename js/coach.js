@@ -464,6 +464,7 @@ const GRAPHICS = {
   531: { bars: true, sub: '5s · 3s · 1s', week: [1, 1, 0, 1, 1, 0, 0] },
   custom: { sliders: true, sub: 'Linear · DUP · Wave · RPE', week: null },
   plan: { list: true, sub: 'Your exercises', week: null },
+  gear: { ring: [[0, 360, 2]], center: 'home', sub: 'What you have', week: [1, 0, 1, 0, 1, 0, 0] },
 };
 
 const pt = (a, r) => [50 + r * Math.sin((a * Math.PI) / 180), 50 - r * Math.cos((a * Math.PI) / 180)];
@@ -820,7 +821,8 @@ export function coachPage() {
       h('div.section-head', h('h2.section-title', 'Build your own')),
       h('div.pgrid',
         tile({ id: 'custom', name: 'Custom block', line: 'Periodized, your rules', tag: 'Advanced', onclick: () => push(() => customScreen(cp?.custom || null)) }),
-        tile({ id: 'plan', name: 'Simple plan', line: 'Pick exercises, no block', tag: 'Any level', onclick: () => (state.plans.length >= MAX_PLANS ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor())) })),
+        tile({ id: 'plan', name: 'Simple plan', line: 'Pick exercises, no block', tag: 'Any level', onclick: () => (state.plans.length >= MAX_PLANS ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor())) }),
+        tile({ id: 'gear', name: 'My equipment', line: 'Built from the gear you have', tag: 'Any level', span: true, onclick: () => import('./gearbuilder.js').then((m) => push(m.gearScreen)) })),
 
       h('div.section-head', h('h2.section-title', 'Popular workouts')),
       h('p.fine.pw-note', 'Guided step by step. Post your score and challenge friends to beat it.'),

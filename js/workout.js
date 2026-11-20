@@ -17,7 +17,6 @@ import { shareWorkout } from './share.js';
 export function workoutPage() {
   const el = h('div.page');
   const body = h('div.scroll-body');
-  let showAll = false;
 
   const nav = navBar({
     title: 'Workout', back: false, large: true,
@@ -51,9 +50,9 @@ export function workoutPage() {
       h('button.btn.gold.wide.build-btn', { onclick: () => push(coachPage) }, icon('trophy', 18), 'Build a program'),
       state.active ? null : startOptions(next),
 
-      h('div.section-head', h('h2.section-title', 'History'), state.workouts.length ? h('span.section-count', `${state.workouts.length} workout${state.workouts.length === 1 ? '' : 's'}`) : null),
-      state.workouts.length ? historyByWeek(showAll ? state.workouts : state.workouts.slice(0, 12)) : h('div.empty-small', 'Finished workouts show up here.'),
-      !showAll && state.workouts.length > 12 ? h('button.btn.dark.wide', { onclick: () => { showAll = true; draw(); } }, `Show all ${state.workouts.length}`) : null,
+      h('div.section-head', h('h2.section-title', 'History'), state.workouts.length > 3 ? h('button.link', { onclick: () => push(historyScreen) }, `See all ${state.workouts.length}`) : null),
+      state.workouts.length ? h('section.card.list-card', state.workouts.slice(0, 3).map(historyCard)) : h('div.empty-small', 'Finished workouts show up here.'),
+      state.workouts.length > 3 ? h('button.btn.dark.wide.hist-more', { onclick: () => push(historyScreen) }, 'See more') : null,
       h('div.bottom-space'),
     );
   }
@@ -202,6 +201,19 @@ const ago = (ts) => {
   return d <= 0 ? 'today' : d === 1 ? 'yesterday' : d < 7 ? `${d} days ago` : fmtDate(ts, { month: 'short', day: 'numeric' });
 };
 
+/** Every workout, by week. */
+function historyScreen() {
+  const el = h('div.page');
+  const body = h('div.scroll-body');
+  const draw = () => fill(body,
+    navBar({ title: 'History', backLabel: 'Workout' }),
+    state.workouts.length ? historyByWeek(state.workouts) : h('div.empty-small', 'Finished workouts show up here.'),
+    h('div.bottom-space'));
+  draw();
+  el.append(body);
+  return { el, refresh: draw };
+}
+
 /** History in weeks: "This week · 3 workouts · 24,500 lb", then each workout. */
 function historyByWeek(list) {
   const weeks = [];
@@ -250,6 +262,7 @@ export function workoutDetail(w) {
           { label: 'Repeat this workout', onClick: () => { pop(); repeatWorkout(w); } },
           { label: 'Save as a plan', onClick: () => saveAsPlan(w) },
           { label: 'Share', onClick: () => shareWorkout(w) },
+          { label: 'Post to a group', onClick: () => import('./groups.js').then((m) => m.postWorkout(w)) },
           { label: 'Rename', onClick: async () => { const n = await promptBox('Rename workout', w.name); if (n) { commit((s) => { const x = s.workouts.find((y) => y.id === w.id); if (x) x.name = n; }); pop(); } } },
           { label: 'Delete workout', danger: true, onClick: async () => {
             if (await confirmBox('Delete this workout?', 'This cannot be undone.', { ok: 'Delete', danger: true })) { commit((s) => { s.workouts = s.workouts.filter((x) => x.id !== w.id); }); pop(); }

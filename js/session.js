@@ -428,6 +428,7 @@ export function showSummary(w, prs, changes = []) {
         h('span.pr-val', p.kind + ': ' + (p.kg != null ? `${toDisplay(p.kg)} ${unit()}` : `${p.reps} reps`))))) : null,
     w.past ? null : feelPicker(w),
     h('button.btn.gold.wide', { onclick: () => s.close() }, 'Done'),
+    h('button.btn.dark.wide.summary-plan', { onclick: () => import('./groups.js').then((m) => m.postWorkout(w)) }, icon('users', 16), 'Post to a group'),
     w.planId ? null : h('button.btn.dark.wide.summary-plan', { onclick: () => { s.close(); saveAsPlan(w); } }, 'Save as a plan to repeat it'),
   ));
 }

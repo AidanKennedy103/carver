@@ -127,6 +127,7 @@ export function guidedScreen(c, mins = null, invite = null) {
     commit((s) => { s.workouts.unshift(w); s.workouts.sort((a, b) => b.start - a.start); });
     pop();
     showSummary(w, prs);
+    import('./groups.js').then((m) => m.postChallengeBoard(c, result())).catch(() => {});
   }
 
   // ---------- Drawing ----------
