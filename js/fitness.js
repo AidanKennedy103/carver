@@ -400,7 +400,7 @@ export function fitnessPage() {
         h('div.tile', h('div.tile-v', fmtNum(sum(week, activityKcal))), h('div.tile-k', 'Burned'), h('div.tile-sub', 'active kcal'))),
 
       h('div.btn-pair',
-        h('button.btn.gold', { onclick: importHealth }, hasHealth() ? 'Update from Health' : 'Import from Health'),
+        h('button.btn.gold', { onclick: () => import('./healthsync.js').then((m) => m.openHealthSync()) }, state.health?.auto ? 'Health sync' : 'Sync with Health'),
         h('button.btn.dark', { onclick: () => activitySheet() }, icon('plus', 18), 'Add')),
       h('button.link.small-link.center-link', { onclick: importActivitiesSheet }, 'Or paste activities'),
 

@@ -213,6 +213,8 @@ For text posts in groups, run `supabase/social3.sql` too (after social2.sql), an
 
 For emoji reactions, run `supabase/social4.sql`, then redeploy `carver-push` (so notifications say which emoji).
 
+For automatic Apple Health sync, run `supabase/health.sql` and redeploy `carver-push`. Each person then opens Settings → Apple Health sync in the app, copies their private address, and sets up a daily Shortcut (steps are shown in the app). Health Auto Export can post to the same address.
+
 ## Put it online (free)
 
 It's on GitHub (`AidanKennedy103/carver`, private) and Cloudflare Workers. Every push to `main` updates the live app in about a minute. `wrangler.jsonc` serves the folder as it is (no build step), and `.assetsignore` keeps scripts and dev files off the site.

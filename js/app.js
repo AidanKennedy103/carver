@@ -24,6 +24,11 @@ onChange(() => top()?.refresh?.());
 
 initCloud();
 
+// Apple Health data a Shortcut sent: collect it when Carver opens or comes back
+const pullHealthSoon = () => import('./healthsync.js').then((m) => m.pullHealth()).then((n) => { if (n) import('./ui.js').then((u) => u.toast('Synced from Apple Health')); }).catch(() => {});
+setTimeout(pullHealthSoon, 4000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pullHealthSoon(); });
+
 // A running training block moves to the right week's targets
 syncCoach();
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') syncCoach(); });

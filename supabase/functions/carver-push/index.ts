@@ -9,6 +9,8 @@
 //                     does nothing new; each new post then notifies through the trigger.
 //   { test: <endpoint> }  send one test notification to that phone.
 //   { reply: { table, event, user, text } }  a kudos or comment: tell the post's owner.
+//   ?key=<sync key> (any body)  Apple Health data from a Shortcut or Health Auto Export: kept in that
+//                     person's inbox (carver_health_inbox) until the app picks it up.
 //
 // Secrets (Edge Functions → Secrets): VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT.
 // Turn OFF "Enforce JWT verification" for this function: the database calls it without a login.
@@ -31,8 +33,10 @@ const CORS = {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  const healthKey = new URL(req.url).searchParams.get('key');
   const body = await req.json().catch(() => ({}));
   try {
+    if (healthKey || (body.key && !body.event && !body.cron)) return Response.json(await healthIn(String(healthKey || body.key), body), { headers: CORS });
     if (body.event) await notify(String(body.event));
     else if (body.reply) await reply(body.reply);
     else if (body.cron) { await sweep(); await remind(); }
@@ -199,6 +203,20 @@ async function reply(r: { table: string; event: string; user: string; text?: str
   const body = r.table === 'carver_comments' ? `${who} on ${what}: ${String(r.text || '').slice(0, 120)}` : `${who} reacted ${EMOJI[r.kind || 'kudos'] || '👏'} to ${what}`;
   const { data: subs } = await db.from('carver_push').select('endpoint, p256dh, auth').eq('user_id', ev.user_id);
   if (subs?.length) await send(subs, { title: 'Carver', body, tag: `reply-${r.event}` });
+}
+
+// ---------- Apple Health in ----------
+
+/** Keep a Health payload for the person whose sync key this is. */
+async function healthIn(key: string, payload: any) {
+  if (!/^[A-Za-z0-9_-]{24,64}$/.test(key)) return { ok: false, error: 'bad key' };
+  const { data: k } = await db.from('carver_health_keys').select('user_id').eq('key', key).maybeSingle();
+  if (!k) return { ok: false, error: 'unknown key: make a new one in Carver' };
+  const size = JSON.stringify(payload).length;
+  if (size > 2_000_000) return { ok: false, error: 'too big: send a day or a week at a time' };
+  const { error } = await db.from('carver_health_inbox').insert({ user_id: k.user_id, payload });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
 }
 
 // ---------- The hourly check ----------

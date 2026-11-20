@@ -124,7 +124,8 @@ export function importSheet() {
     h('div.sheet-head', h('span'), h('div.sheet-title', 'Scale & Health'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
 
     h('label.form-label', 'Apple Health'),
-    h('button.btn.gold.wide', { onclick: () => { s.close(); importHealth(); } }, 'Import Apple Health export'),
+    h('button.btn.gold.wide', { onclick: () => { s.close(); import('./healthsync.js').then((m) => m.openHealthSync()); } }, 'Set up automatic sync'),
+    h('button.btn.dark.wide', { onclick: () => { s.close(); importHealth(); } }, 'Import a Health export'),
     h('p.fine', 'Health app → your picture → Export All Health Data, save it to Files, then pick it here. Brings in every weigh-in and body-fat reading (Withings, Renpho, Eufy and other smart scales sync to Health), plus steps, sleep and heart data.'),
 
     h('label.form-label', 'Bluetooth scale'),

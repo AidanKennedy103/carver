@@ -1885,3 +1885,9 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .cm-field { flex: 1; display: flex; align-items: center; gap: 6px; padding: 4px 4px 4px 14px; border-radius: 22px; background: var(--surface-2); }
 .cm-in { flex: 1; min-width: 0; border: 0; background: none; color: var(--text); font-size: 16px; height: 34px; outline: none; }
 .cm-send { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--gold); color: #17110a; }
+
+/* Apple Health sync */
+.sync-url { font-family: ui-monospace, Menlo, monospace; font-size: 12px; word-break: break-all; padding: 12px; border-radius: 12px; background: var(--surface); border: .5px solid rgba(227, 176, 75, .35); margin-bottom: 10px; user-select: all; -webkit-user-select: all; }
+.sync-steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; font-size: 14px; line-height: 1.45; color: var(--muted); }
+.sync-steps li { padding: 12px 14px; border-radius: 14px; background: var(--surface); }
+.sync-steps li b { color: var(--text); }

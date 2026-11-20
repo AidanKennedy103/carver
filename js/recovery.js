@@ -223,7 +223,7 @@ export function recoveryPage() {
         tip: (p) => `<b>${p.y} h</b><span>${fmtDate(p.x, { weekday: 'short', month: 'short', day: 'numeric' })}</span>`,
       })),
       h('div.btn-pair',
-        h('button.btn.dark', { onclick: importHealth }, hasHealth() ? 'Update from Health' : 'Import from Health'),
+        h('button.btn.dark', { onclick: () => import('./healthsync.js').then((m) => m.openHealthSync()) }, state.health?.auto ? 'Health sync' : 'Sync with Health'),
         h('button.btn.dark', { onclick: () => importSheet(draw) }, 'Paste sleep')),
       h('p.fine', 'Apple Watch, Oura, Ultrahuman and Whoop all write sleep and heart data to Apple Health.'),
 
