@@ -54,7 +54,18 @@ export function parsePayload(p, receivedAt = Date.now()) {
   // The Carver Shortcut: one day of numbers
   const k = dayOf(p.date) || ymd(receivedAt);
   const d = day(k);
-  const steps = num(p.steps), active = num(p.active), sleep = num(p.sleep), rhr = num(p.rhr), hrv = num(p.hrv), vo2 = num(p.vo2);
+  // Each field can be one number, or the raw list of samples (a JSON array, or text with one per line):
+  // lists are added up (steps, energy, sleep) or averaged (heart rate, HRV), so Calculate Statistics is optional.
+  const many = (v) => {
+    if (v == null) return [];
+    if (Array.isArray(v)) return v.map((x) => num(typeof x === 'object' && x ? x.value ?? x.quantity ?? x.qty : x)).filter((x) => x != null);
+    const s = String(v);
+    return /[\n;]/.test(s) || (s.match(/\d[\d,]*(\.\d+)?/g) || []).length > 1 && /\n|, /.test(s)
+      ? s.split(/[\n;]+/).map(num).filter((x) => x != null) : [num(v)].filter((x) => x != null);
+  };
+  const sum = (v) => { const a = many(v); return a.length ? a.reduce((x, y) => x + y, 0) : null; };
+  const mean = (v) => { const a = many(v); return a.length ? a.reduce((x, y) => x + y, 0) / a.length : null; };
+  const steps = sum(p.steps), active = sum(p.active), sleep = sum(p.sleep), rhr = mean(p.rhr), hrv = mean(p.hrv), vo2 = mean(p.vo2);
   if (steps != null) d.steps = Math.round(steps);
   if (active != null) d.active = Math.round(active);
   if (sleep) d.sleep = Math.round((sleep > 1440 ? sleep / 3600 : sleep > 24 ? sleep / 60 : sleep) * 10) / 10;   // seconds, minutes or hours
@@ -62,7 +73,7 @@ export function parsePayload(p, receivedAt = Date.now()) {
   if (hrv) d.hrv = Math.round(hrv);
   if (vo2) d.vo2 = Math.round(vo2 * 10) / 10;
   if (!Object.keys(d).length) delete out.days[k];
-  const wt = num(p.weight);
+  const wt = many(p.weight)[0] ?? null;
   if (wt) out.weights.push({ ts: receivedAt, kg: toKg(wt, p.weightUnit || bodyUnit()) });
   const fat = num(p.fat);
   if (fat) out.fats.push({ ts: receivedAt, fat: fat <= 1 ? fat * 100 : fat });
@@ -146,13 +157,13 @@ export function healthSyncScreen() {
                   h('div.section-head', h('h2.section-title', 'Set up the Shortcut (5 minutes, once)')),
                   h('ol.sync-steps',
                     step(1, 'Open ', h('b', 'Shortcuts'), ' → ', h('b', 'Automation'), ' → ', h('b', '+'), ' → ', h('b', 'Time of Day'), '. Pick ', h('b', '11:55 PM'), ', ', h('b', 'Daily'), ', and ', h('b', 'Run Immediately'), '. Then ', h('b', 'New Blank Automation'), '.'),
-                    step(2, 'Add ', h('b', 'Find Health Samples'), ': Type ', h('b', 'Steps'), ', Start Date ', h('b', 'is today'), '. Then add ', h('b', 'Calculate Statistics'), ' → ', h('b', 'Sum'), '.'),
-                    step(3, 'Do the same for ', h('b', 'Active Energy'), ' (Sum), ', h('b', 'Resting Heart Rate'), ' (Average) and ', h('b', 'Heart Rate Variability'), ' (Average).'),
-                    step(4, 'For sleep: ', h('b', 'Find Health Samples'), ', Type ', h('b', 'Sleep Analysis'), ', End Date ', h('b', 'is today'), ', Value ', h('b', 'is Asleep'), '. Add ', h('b', 'Calculate Statistics'), ' → ', h('b', 'Sum'), ' (it counts the time).'),
+                    step(2, 'Add ', h('b', 'Find Health Samples'), ': Type ', h('b', 'Steps'), ', Start Date ', h('b', 'is today'), '. (Optional: add ', h('b', 'Calculate Statistics'), ' → Sum. Carver adds them up either way.)'),
+                    step(3, 'Add three more ', h('b', 'Find Health Samples'), ' the same way: ', h('b', 'Active Energy'), ', ', h('b', 'Resting Heart Rate'), ' and ', h('b', 'Heart Rate Variability'), '.'),
+                    step(4, 'Sleep is fiddly in Shortcuts, so it’s optional: ', h('b', 'Find Health Samples'), ', Type ', h('b', 'Sleep Analysis'), ', End Date ', h('b', 'is today'), ', then ', h('b', 'Get Details of Health Samples'), ' → ', h('b', 'Duration'), '. (Health Auto Export below handles sleep for you.)'),
                     step(5, 'Optional, weight: ', h('b', 'Find Health Samples'), ', Type ', h('b', 'Weight'), ', Start Date ', h('b', 'is today'), ', Sort by ', h('b', 'Start Date'), ', Latest First, Limit 1.'),
-                    step(6, 'Add ', h('b', 'Get Contents of URL'), '. Paste your address. Tap ', h('b', 'Show More'), ': Method ', h('b', 'POST'), ', Request Body ', h('b', 'JSON'), '. Add Number fields named ', h('b', 'steps, active, rhr, hrv, sleep, weight'), ' and set each to its result from above.'),
+                    step(6, 'Add ', h('b', 'Get Contents of URL'), '. Paste your address. Tap ', h('b', 'Show More'), ': Method ', h('b', 'POST'), ', Request Body ', h('b', 'JSON'), '. Add ', h('b', 'Text'), ' fields named ', h('b', 'steps, active, rhr, hrv, sleep, weight'), ' and set each to the matching Health Samples (tap the field, then pick the variable).'),
                     step(7, 'Tap ', h('b', 'Done'), '. To test, run it once by hand, then tap ', h('b', 'Check now'), ' here.')),
-                  h('p.fine', 'Leave out anything you don’t track. Sleep can be in hours, minutes or seconds; Carver works it out. Weight uses your weight unit in Carver unless you add a text field weightUnit set to kg or lb.'),
+                  h('p.fine', 'Leave out anything you don’t track. Can’t find Calculate Statistics? Skip it: Carver adds up steps and energy and averages heart rate itself. Sleep can be in hours, minutes or seconds. Weight uses your weight unit in Carver unless you add a text field weightUnit set to kg or lb.'),
 
                   h('div.section-head', h('h2.section-title', 'Or use Health Auto Export')),
                   h('p.fine', 'The Health Auto Export app (App Store) can send automatically with no Shortcut: add a REST API automation, paste your address as the URL, choose JSON, aggregate by day, and pick Steps, Active Energy, Sleep, Resting Heart Rate, HRV, Weight, Body Fat and Workouts.'),
