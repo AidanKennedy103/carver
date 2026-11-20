@@ -98,6 +98,7 @@ export function parsePayload(p, receivedAt = Date.now()) {
 }
 
 let pulling = false, lastPull = 0;
+export let lastPullError = null;
 /** Collect what the Shortcut sent, merge it in, and clear the inbox. */
 export async function pullHealth({ force = false } = {}) {
   if (!account() || pulling || (!force && Date.now() - lastPull < 5 * 6e4)) return 0;
@@ -105,6 +106,7 @@ export async function pullHealth({ force = false } = {}) {
   try {
     const db = await client();
     const { data, error } = await db.from('carver_health_inbox').select('id, payload, created_at').order('id').limit(200);
+    lastPullError = error ? error.message : null;
     if (error || !data?.length) return 0;
     const all = { days: {}, weights: [], fats: [], workouts: [] };
     for (const r of data) {
@@ -118,7 +120,7 @@ export async function pullHealth({ force = false } = {}) {
     commit((s) => { s.health.auto = Date.now(); });
     await db.from('carver_health_inbox').delete().in('id', data.map((r) => r.id));
     return data.length;
-  } catch { return 0; } finally { pulling = false; }
+  } catch (e) { lastPullError = e?.message || 'offline'; return 0; } finally { pulling = false; }
 }
 
 // ---------- Your sync key ----------
@@ -167,7 +169,7 @@ export function healthSyncScreen() {
                 : [
                   h('label.form-label', 'Your sync address'),
                   h('div.sync-url', url),
-                  h('div.btn-pair', h('button.btn.gold', { onclick: () => copy(url, 'Address') }, 'Copy address'), h('button.btn.dark', { onclick: async () => { const n = await pullHealth({ force: true }); toast(n ? `Synced ${n} update${n === 1 ? '' : 's'}` : 'Nothing new yet'); } }, 'Check now')),
+                  h('div.btn-pair', h('button.btn.gold', { onclick: () => copy(url, 'Address') }, 'Copy address'), h('button.btn.dark', { onclick: async () => { const n = await pullHealth({ force: true }); toast(n ? `Synced ${n} update${n === 1 ? '' : 's'}` : lastPullError ? `Couldn’t check: ${lastPullError}` : 'Nothing has arrived yet. Run the Shortcut and look at what it says.'); } }, 'Check now')),
                   h('p.fine', 'Private to you: anyone with this address can add data to your Carver, so don’t share it. ', h('button.link.small-link', { onclick: async () => { const { confirmBox } = await import('./ui.js'); if (await confirmBox('Make a new address?', 'The old one stops working. Update your Shortcut with the new one.', { ok: 'Make new' })) load(true); } }, 'Make a new one')),
                   state.health?.auto ? h('p.fine', `Last synced ${new Date(state.health.auto).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}.`) : null,
 
