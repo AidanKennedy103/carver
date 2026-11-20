@@ -64,11 +64,28 @@ export function parsePayload(p, receivedAt = Date.now()) {
       ? s.split(/[\n;]+/).map(num).filter((x) => x != null) : [num(v)].filter((x) => x != null);
   };
   const sum = (v) => { const a = many(v); return a.length ? a.reduce((x, y) => x + y, 0) : null; };
+  // Sleep durations: "7 hr 12 min", "7h 12m", "7:12:00", "25920" (seconds) or "432" (minutes), one per line
+  const hoursOf = (s) => {
+    const t = String(s).trim().toLowerCase();
+    if (!t) return null;
+    const c = t.match(/^(\d+):(\d\d)(?::(\d\d))?$/);
+    if (c) return +c[1] + +c[2] / 60 + (+c[3] || 0) / 3600;
+    const hr = t.match(/(\d+(?:\.\d+)?)\s*(?:h|hr|hrs|hour|hours)\b/), mn = t.match(/(\d+(?:\.\d+)?)\s*(?:m|min|mins|minute|minutes)\b/), sc = t.match(/(\d+(?:\.\d+)?)\s*(?:s|sec|secs|second|seconds)\b/);
+    if (hr || mn || sc) return (hr ? +hr[1] : 0) + (mn ? +mn[1] / 60 : 0) + (sc ? +sc[1] / 3600 : 0);
+    const n = num(t);
+    return n == null ? null : n > 1440 ? n / 3600 : n > 24 ? n / 60 : n;   // seconds, minutes or hours
+  };
+  const sleepHours = (v) => {
+    if (v == null) return null;
+    const parts = Array.isArray(v) ? v : String(v).split(/[\n;]+/);
+    const hrs = parts.map((x) => hoursOf(typeof x === 'object' && x ? x.value ?? x.duration ?? '' : x)).filter((x) => x != null);
+    return hrs.length ? hrs.reduce((a, b) => a + b, 0) : null;
+  };
   const mean = (v) => { const a = many(v); return a.length ? a.reduce((x, y) => x + y, 0) / a.length : null; };
-  const steps = sum(p.steps), active = sum(p.active), sleep = sum(p.sleep), rhr = mean(p.rhr), hrv = mean(p.hrv), vo2 = mean(p.vo2);
+  const steps = sum(p.steps), active = sum(p.active), sleep = sleepHours(p.sleep), rhr = mean(p.rhr), hrv = mean(p.hrv), vo2 = mean(p.vo2);
   if (steps != null) d.steps = Math.round(steps);
   if (active != null) d.active = Math.round(active);
-  if (sleep) d.sleep = Math.round((sleep > 1440 ? sleep / 3600 : sleep > 24 ? sleep / 60 : sleep) * 10) / 10;   // seconds, minutes or hours
+  if (sleep && sleep < 20) d.sleep = Math.round(sleep * 10) / 10;
   if (rhr) d.rhr = Math.round(rhr);
   if (hrv) d.hrv = Math.round(hrv);
   if (vo2) d.vo2 = Math.round(vo2 * 10) / 10;
