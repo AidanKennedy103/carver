@@ -1692,3 +1692,12 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .gd-pool span.zero { text-decoration: line-through; opacity: .6; }
 .gd-pool b { color: var(--text); }
 .gd-result .gd-what { font-size: 34px; color: var(--gold); }
+
+/* Guided: one-tap Done, challenges */
+.gd-big { height: 56px; font-size: 18px; }
+.gd-links { justify-content: center; gap: 18px; margin-top: 10px; }
+.gd-challenge { margin-top: 8px; }
+.gd-invite { display: flex; align-items: center; gap: 10px; padding: 12px 14px; margin-bottom: 12px; color: var(--muted); font-size: 14px; border: .5px solid rgba(227, 176, 75, .4); }
+.gd-invite svg { color: var(--gold); flex: none; }
+.gd-invite b { color: var(--text); }
+.ch-go { margin-top: 10px; }

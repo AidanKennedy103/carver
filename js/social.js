@@ -104,9 +104,30 @@ function challenges(g, rows, people, redraw) {
     });
   return [
     h('div.section-head', h('h2.section-title', 'Challenges'), h('button.link', { onclick: () => newChallenge(g, redraw) }, '+ New')),
-    list.length ? list.map((c) => challengeCard(c, rows, people, redraw))
+    list.length ? list.map((c) => (c.data.wod ? wodCard(c, rows, people, redraw) : challengeCard(c, rows, people, redraw)))
       : h('button.card.empty-plan-row', { onclick: () => newChallenge(g, redraw) }, icon('flag', 18), h('span', 'Start a challenge for the group')),
   ];
+}
+
+/** "Murph: beat 48:10": each person's best that week, from their workout posts, best first. */
+function wodCard(c, rows, people, redraw) {
+  const d = c.data, today = ymd(), ended = d.end < today;
+  const amrap = /round/.test(d.score || '') || ['cindy', 'nickels'].includes(d.wod);
+  const name = { cindy: 'Cindy', murph: 'Murph', nickels: 'Nickels and Dimes', '1230': '12-3-30', fran: 'Fran' }[d.wod] || d.title;
+  const val = (s) => { if (!s) return null; const r = s.match(/(\d+) rounds?(?: \+ (\d+) reps)?/); if (r) return +r[1] * 1000 + (+r[2] || 0); const t = s.match(/(\d+):(\d\d)(?::(\d\d))?/); return t ? (t[3] ? +t[1] * 3600 + +t[2] * 60 + +t[3] : +t[1] * 60 + +t[2]) : null; };
+  const best = people.map((p) => {
+    const mine = rows.filter((e) => e.user_id === p.user_id && e.kind === 'workout' && (e.data?.name || '').startsWith(name + ' · ') && ymd(Date.parse(e.created_at)) >= d.start && ymd(Date.parse(e.created_at)) <= d.end)
+      .map((e) => e.data.name.slice(name.length + 3)).filter((s) => val(s) != null);
+    const top = mine.sort((a, b) => (amrap ? val(b) - val(a) : val(a) - val(b)))[0] || null;
+    return { ...p, top };
+  }).sort((a, b) => (a.top ? 0 : 1) - (b.top ? 0 : 1) || (amrap ? val(b.top) - val(a.top) : val(a.top) - val(b.top)));
+  const left = Math.round((Date.parse(d.end + 'T12:00') - Date.parse(today + 'T12:00')) / 864e5) + 1;
+  return h('section.card.ch-card' + (ended ? '.ended' : ''),
+    h('div.ch-head', h('div', h('div.ch-title', d.title), h('div.ch-meta', [ended ? 'Finished' : left === 1 ? 'Last day' : `${left} days left`, `${best.filter((p) => p.top).length} of ${best.length} done`].join(' · ')))),
+    best.map((p, i) => h('div.ch-row' + (p.top && i === 0 ? '.hit' : ''), avatar(p.name, p.user_id),
+      h('div.lb-main', h('div.lb-name', p.user_id === account()?.id ? 'You' : p.name)),
+      h('b.lb-val', p.top || '–'))),
+    ended ? null : h('button.btn.gold-soft.wide.ch-go', { onclick: () => Promise.all([import('./coach.js'), import('./guided.js')]).then(([co, gd]) => { const ch = co.CHALLENGES.find((x) => x.id === d.wod); if (ch) gd.openGuided(ch, { from: c.who, score: d.score }); }) }, `Do ${name}`));
 }
 
 export function challengeCard(c, rows, people, redraw) {

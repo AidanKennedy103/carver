@@ -8,7 +8,7 @@
 //   { type: 'rounds', items: [{ exId, reps }] } a round of each, again and again until time's up (Cindy);
 //                                               "Add round" logs a whole round in one tap
 
-import { h, fill, icon, navBar, pop, push, toast, confirmBox, fmtSecs } from './ui.js';
+import { h, fill, icon, navBar, pop, push, toast, confirmBox, fmtSecs, actionSheet } from './ui.js';
 import { commit, uid, exercise, findPRs } from './store.js';
 import { beep, unlockAudio } from './sound.js';
 import { showSummary } from './session.js';
@@ -17,7 +17,8 @@ import { howTo } from './howto.js';
 const lower = (exId) => exercise(exId).name.toLowerCase();
 const plural = (n, exId) => { const nm = lower(exId); return n === 1 ? nm.replace(/s$/, '') : /s$/.test(nm) ? nm : nm + 's'; };
 
-export function guidedScreen(c, mins = null) {
+export function guidedScreen(c, mins = null, invite = null) {
+  let adjust = false;   // rounds: show the number box to enter a different count
   const el = h('div.page');
   const body = h('div.scroll-body.guided');
   const timer = c.timer ? { ...c.timer, ...(mins ? { secs: mins * 60 } : {}) } : { kind: 'fortime' };
@@ -134,6 +135,7 @@ export function guidedScreen(c, mins = null) {
 
   function brief() {
     return [
+      invite ? h('section.card.gd-invite', icon('flag', 18), h('span', h('b', invite.from || 'A friend'), ' challenged you', invite.score ? [' · score to beat: ', h('b', invite.score)] : '')) : null,
       h('div.chal-nums', c.nums),
       h('p.coach-summary', c.about),
       h('label.form-label', 'How it works'),
@@ -145,6 +147,7 @@ export function guidedScreen(c, mins = null) {
       h('p.fine', c.scale),
       c.choose ? [h('label.form-label', 'How long'), h('div.segment', c.choose.map((m) => h('button' + (m === (mins ?? c.choose[c.choose.length - 1]) ? '.on' : ''), { onclick: () => { mins = m; timer.secs = m * 60; draw(); } }, `${m} min`)))] : null,
       h('button.btn.gold.wide.coach-go', { onclick: start }, icon('play', 16), 'Start'),
+      h('button.btn.dark.wide.gd-challenge', { onclick: () => challengeFriends(c, null) }, icon('users', 16), 'Challenge friends'),
       h('p.fine.center', amrap ? 'The timer starts when you tap Start. Carver tells you each move as you go.' : timer.kind === 'countdown' ? 'The timer starts when you tap Start.' : 'The clock runs until the last move is done.'),
     ];
   }
@@ -180,10 +183,11 @@ export function guidedScreen(c, mins = null) {
         h('div.gd-kicker', `Round ${rounds + 1}${s.times ? ` of ${s.times}` : ''}`),
         h('div.gd-round', s.items.map((x, i) => h('span' + (i === ri ? '.on' : i < ri ? '.past' : ''), `${x.reps} ${plural(x.reps, x.exId)}`))),
         h('div.gd-what', exLink(it.exId, `${it.reps} ${plural(it.reps, it.exId)}`)),
-        stepper,
-        h('div.btn-pair',
-          h('button.btn.gold', { onclick: doneStep }, 'Done'),
-          h('button.btn.dark', { onclick: addRound }, ri ? 'Finish round' : 'Add round')));
+        adjust ? stepper : null,
+        h('button.btn.gold.wide.gd-big', { onclick: () => { if (!adjust) value = it.reps; adjust = false; doneStep(); } }, adjust ? 'Done' : `Done ${plural(2, it.exId)}`),
+        h('div.text-actions.gd-links',
+          adjust ? null : h('button.link.small-link', { onclick: () => { adjust = true; value = it.reps; draw(); } }, 'Did a different number?'),
+          h('button.link.small-link', { onclick: addRound }, ri ? 'Rest of the round done' : 'Whole round done')));
     }
     return null;
   }
@@ -199,7 +203,9 @@ export function guidedScreen(c, mins = null) {
       phase === 'brief' ? brief() : phase === 'go' ? stepCard() : h('section.card.gd-step.gd-result',
         h('div.gd-kicker', 'Your result'), h('div.gd-what', result()),
         h('div.gd-sub', `${log.filter((x) => x.reps).reduce((a, x) => a + x.reps, 0)} reps in total`),
+        invite?.score ? h('div.gd-sub', `${invite.from || 'Your friend'}’s score: ${invite.score}`) : null,
         h('button.btn.gold.wide.gd-done', { onclick: save }, 'Save workout'),
+        h('button.btn.dark.wide.gd-challenge', { onclick: () => challengeFriends(c, result()) }, icon('users', 16), 'Challenge friends to beat it'),
         h('button.link.center-link', { onclick: async () => { if (await confirmBox('Discard this?', 'Nothing is saved.', { ok: 'Discard', danger: true })) pop(); } }, 'Discard')),
       h('div.bottom-space'));
     const back = h('button.link', { onclick: async () => { if (phase !== 'go' || await confirmBox('Leave the workout?', 'Your progress here is lost.', { ok: 'Leave', danger: true })) { clearInterval(tick); pop(); } } }, phase === 'brief' ? 'Close' : 'Cancel');
@@ -211,4 +217,22 @@ export function guidedScreen(c, mins = null) {
   return { el, onHide: () => {}, refresh: () => {} };
 }
 
-export const openGuided = (c) => push(() => guidedScreen(c));
+export const openGuided = (c, invite = null) => push(() => guidedScreen(c, null, invite));
+
+/** Send a link, or post a week-long challenge to one of your groups (with a leaderboard there). */
+export async function challengeFriends(c, score) {
+  const [{ myGroups }, { account, client }, share, { addDays, ymd }] = await Promise.all([import('./groups.js'), import('./cloud.js'), import('./share.js'), import('./store.js')]);
+  const groups = account() ? myGroups() : [];
+  actionSheet(score ? `Challenge friends to beat ${score}` : `Challenge friends to ${c.name}`, [
+    { label: 'Send a link', onClick: () => share.shareChallenge(c, score) },
+    ...groups.map((g) => ({ label: `Post to ${g.name} (one week)`, onClick: async () => {
+      try {
+        const db = await client();
+        const { error } = await db.from('carver_events').insert({ group_id: g.id, user_id: account().id, kind: 'challenge', ref: 'c:' + uid(),
+          data: { title: score ? `${c.name}: beat ${score}` : c.name, wod: c.id, score: score || null, start: ymd(), end: addDays(ymd(), 6) } });
+        if (error) throw error;
+        toast(`Challenge posted to ${g.name}`);
+      } catch { toast('Couldn’t post it. Are you online?'); }
+    } })),
+  ]);
+}

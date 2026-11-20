@@ -51,6 +51,16 @@ export async function shareWorkout(src) {
   try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch { toast('Could not copy the link'); }
 }
 
+/** Challenge a friend to a popular workout (Cindy, Murph…), with your score if you have one. */
+export async function shareChallenge(c, score) {
+  if (!installed()) { shareWorkout({ name: c.name, exercises: [] }); return; }
+  const from = state.profile.name?.trim() || '';
+  const url = `${location.origin}${location.pathname}#c=${encodeURIComponent(c.id)}${score ? `&s=${encodeURIComponent(score)}` : ''}${from ? `&f=${encodeURIComponent(from)}` : ''}`;
+  const text = score ? `I did ${c.name}: ${score}. Think you can beat it?` : `Try ${c.name} with me on Carver.`;
+  if (navigator.share) { try { await navigator.share({ title: c.name, text, url }); } catch (err) { if (err.name !== 'AbortError') toast('Could not share'); } return; }
+  try { await navigator.clipboard.writeText(`${text} ${url}`); toast('Link copied'); } catch { toast('Could not copy the link'); }
+}
+
 /** Turn a shared link's data back into a plan (custom exercises are added to yours). */
 function unpack(d) {
   const ids = new Set(allExercises().map((e) => e.id));
@@ -81,6 +91,15 @@ const setText = (info, s) => info.type === 'time' ? (s.tSecs ? fmtSecs(s.tSecs) 
 
 /** Opened from a shared link: show the workout, then save it or start it. */
 export async function openShared() {
+  const ch = location.hash.match(/^#c=([^&]+)(.*)$/);
+  if (ch) {
+    history.replaceState(null, '', location.pathname + location.search);
+    const q = new URLSearchParams(ch[2].replace(/^&/, ''));
+    const [{ CHALLENGES }, { openGuided }] = await Promise.all([import('./coach.js'), import('./guided.js')]);
+    const c = CHALLENGES.find((x) => x.id === decodeURIComponent(ch[1]));
+    if (c) openGuided(c, { from: (q.get('f') || '').slice(0, 30), score: (q.get('s') || '').slice(0, 30) });
+    return;
+  }
   const m = location.hash.match(/^#w=([A-Za-z0-9_-]+)/);
   if (!m) return;
   history.replaceState(null, '', location.pathname + location.search);

@@ -787,6 +787,7 @@ export function coachPage() {
         tile({ id: 'plan', name: 'Simple plan', line: 'Pick exercises, no block', tag: 'Any level', onclick: () => (state.plans.length >= MAX_PLANS ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor())) })),
 
       h('div.section-head', h('h2.section-title', 'Popular workouts')),
+      h('p.fine.pw-note', 'Guided step by step. Post your score and challenge friends to beat it.'),
       h('div.pgrid', CHALLENGES.map((c, i) => tile({ id: c.id, name: c.name, line: c.line, tag: c.tag, span: i === CHALLENGES.length - 1 && CHALLENGES.length % 2 === 1, onclick: () => challengeSheet(c) }))),
     ];
   }
