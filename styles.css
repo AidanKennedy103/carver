@@ -1815,3 +1815,32 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .win-person .av { width: 24px; height: 24px; font-size: 11px; }
 .win-note { color: var(--gold); font-weight: 700; }
 .has-live .gs-fab { bottom: calc(146px + var(--safe-bottom)); }
+
+/* Wins: a podium for the week */
+.wins-board { padding: 16px 14px 12px; background: radial-gradient(90% 70% at 50% 0%, rgba(227, 176, 75, .16), rgba(0, 0, 0, 0) 70%), var(--surface); }
+.podium { display: flex; justify-content: center; align-items: flex-end; gap: 10px; margin-bottom: 14px; }
+.pod { flex: 1; max-width: 110px; display: flex; flex-direction: column; align-items: center; text-align: center; min-width: 0; }
+.pod-av { position: relative; margin-bottom: 6px; }
+.pod .av { width: 44px; height: 44px; font-size: 18px; box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px #8e8e93; }
+.pod.p1 .av { width: 58px; height: 58px; font-size: 24px; box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--gold); }
+.pod.p3 .av { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px #b0773e; }
+.pod-crown { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); color: var(--gold); }
+.pod-name { font-size: 14px; font-weight: 700; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pod-pts { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.pod-step { width: 100%; display: grid; place-items: start center; padding-top: 6px; border-radius: 10px 10px 4px 4px; background: linear-gradient(#3a3a3e, #26262a); }
+.pod-step b { font-size: 18px; font-weight: 800; color: #c9c9ce; }
+.pod.p1 .pod-step { height: 70px; background: linear-gradient(#e3b04b, #9c7024); }
+.pod.p1 .pod-step b { color: #17110a; }
+.pod.p2 .pod-step { height: 50px; }
+.pod.p3 .pod-step { height: 36px; background: linear-gradient(#b0773e, #6e4a26); }
+.pod.p3 .pod-step b { color: #f2e3bd; }
+.wb-row { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-top: .5px solid var(--line); }
+.wb-place { width: 18px; text-align: center; font-weight: 700; color: var(--muted); }
+.wb-row .av { width: 28px; height: 28px; font-size: 12px; }
+.wb-name { flex: 1; font-weight: 600; }
+.wb-pts { color: var(--gold); }
+.wb-badges { display: grid; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: .5px solid var(--line); }
+.wb-badge { display: flex; align-items: center; gap: 10px; }
+.wb-badge-text { display: flex; flex-direction: column; font-size: 13px; color: var(--muted); min-width: 0; }
+.wb-badge-text b { color: var(--text); font-size: 13px; }
+.wb-how { margin: 12px 0 0; }

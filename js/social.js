@@ -102,13 +102,29 @@ export function winsCard(rows, people) {
   if (habits && habits.n >= 3) wins.push({ ico: 'check', label: `Most daily goals: ${habits.n}`, who: habits.who });
   const protein = tops(count((e) => e.kind === 'protein'));
   if (protein && protein.n >= 3) wins.push({ ico: 'up', label: `Hit protein most: ${plural(protein.n, 'day')}`, who: protein.who });
+  // Points for effort this week (never for how much you lift); only people with points are shown
+  const PTS = { workout: 3, cardio: 2, week: 5, habit: 1, protein: 1 };
+  const pts = new Map();
+  for (const e of week) {
+    const p = (PTS[e.kind] || 0) + (e.kind === 'workout' ? 2 * (e.data?.prs?.length || 0) : 0);
+    if (p) pts.set(e.user_id, (pts.get(e.user_id) || 0) + p);
+  }
+  const board = [...pts].sort((a, b) => b[1] - a[1]).map(([u, p]) => ({ u, p, badges: wins.filter((w) => w.who.includes(u)) }));
+  const left = 7 - ((new Date().getDay() + 6) % 7);
+  const spot = (x, place) => h('div.pod.p' + place,
+    h('div.pod-av', avatar(nameOf(x.u), x.u), place === 1 ? h('span.pod-crown', icon('trophy', 14)) : null),
+    h('div.pod-name', nameOf(x.u)),
+    h('div.pod-pts', `${x.p} pts`),
+    h('div.pod-step', h('b', place)));
   return [
-    h('div.section-head', h('h2.section-title', 'Wins this week')),
-    wins.length ? h('section.card.wins', wins.map((w) => h('div.win',
-      h('span.win-ico', icon(w.ico, 16)),
-      h('div.win-main', h('div.win-label', w.label),
-        h('div.win-who', w.who.map((u) => h('span.win-person', avatar(nameOf(u), u), nameOf(u), w.note ? h('span.win-note', ` ${w.note(u)}`) : null)))))))
-      : h('div.feed-empty.card', 'Wins show up here as the week goes on: weekly goals hit, new records, streaks.'),
+    h('div.section-head', h('h2.section-title', 'This week'), h('span.section-count', left === 1 ? 'Last day' : `${left} days left`)),
+    board.length ? h('section.card.wins-board',
+      h('div.podium', [board[1] && spot(board[1], 2), spot(board[0], 1), board[2] && spot(board[2], 3)].filter(Boolean)),
+      board.slice(3).map((x, i) => h('div.wb-row', h('span.wb-place', i + 4), avatar(nameOf(x.u), x.u), h('span.wb-name', nameOf(x.u)), h('b.wb-pts', `${x.p}`))),
+      wins.length ? h('div.wb-badges', wins.map((w) => h('div.wb-badge', h('span.win-ico', icon(w.ico, 14)),
+        h('span.wb-badge-text', h('b', w.label), h('span', w.who.map((u) => nameOf(u) + (w.note ? ` (${w.note(u)})` : '')).join(', ')))))) : null,
+      h('p.fine.wb-how', 'Points for showing up: workout 3, run or ride 2, weekly goal 5, new record 2, daily goal 1, protein day 1.'))
+      : h('div.feed-empty.card', 'The board fills up as people train this week. First workout takes the top spot.'),
   ];
 }
 
