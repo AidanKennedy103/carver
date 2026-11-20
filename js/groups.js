@@ -398,16 +398,17 @@ function reactPicker(e, redraw, anchor) {
 /** Comments on a post, and a box to add one. */
 function commentsSheet(e, redraw) {
   const list = h('div.cm-list');
-  const input = h('input.field.cm-in', { placeholder: 'Add a comment', maxlength: 280, enterkeyhint: 'send', onkeydown: (ev) => { if (ev.key === 'Enter') send(); } });
-  const draw = () => fill(list, (e.comments || []).length ? e.comments.map((c) => h('div.cm',
-    avatar(c.who, c.user_id),
-    h('div.cm-text', h('b', c.me ? 'You' : c.who), h('span', c.body)),
-    c.me ? h('button.link.small-link', { onclick: () => remove(c) }, 'Delete') : null)) : h('p.fine.center', 'No comments yet.'));
+  const input = h('input.cm-in', { placeholder: 'Write a comment…', maxlength: 280, enterkeyhint: 'send', onkeydown: (ev) => { if (ev.key === 'Enter') send(); } });
+  const draw = () => {
+    fill(list, (e.comments || []).length ? e.comments.map((c) => commentBubble(c, () => remove(c)))
+      : h('div.cm-none', h('b', 'No comments yet'), h('span', 'Say something nice.')));
+    list.scrollTop = list.scrollHeight;
+  };
   async function send() {
     const body = input.value.trim();
     if (!body) return;
     input.value = '';
-    const c = { id: 'tmp', event_id: e.id, user_id: account().id, body, who: 'You', me: true };
+    const c = { id: 'tmp', event_id: e.id, user_id: account().id, body, who: 'You', me: true, created_at: new Date().toISOString() };
     e.comments = [...(e.comments || []), c];
     draw(); redraw();
     try {
@@ -423,11 +424,20 @@ function commentsSheet(e, redraw) {
   }
   draw();
   const s = sheet(h('div.form.cm-sheet',
-    h('div.sheet-head', h('span'), h('div.sheet-title', 'Comments'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
+    h('div.sheet-head', h('span'), h('div.sheet-title', `Comments${e.comments?.length ? ` · ${e.comments.length}` : ''}`), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
     h('div.cm-post', eventRow(e, { time: 'ago' })),
     list,
-    h('div.cm-bar', input, h('button.btn.gold.small', { onclick: send }, 'Send'))));
+    h('div.cm-bar', avatar(state.profile.name || 'You', account().id), h('div.cm-field', input, h('button.cm-send', { onclick: send, 'aria-label': 'Send' }, icon('up', 18))))));
   setTimeout(() => input.focus(), 300);
+}
+
+/** One comment: face, then a bubble with name and text, and when it was. */
+function commentBubble(c, onDelete = null) {
+  return h('div.cmb' + (c.me ? '.mine' : ''),
+    avatar(c.who, c.user_id),
+    h('div.cmb-col',
+      h('div.cmb-bubble', h('b', c.me ? 'You' : c.who), h('span', c.body)),
+      h('div.cmb-meta', c.created_at ? ago(c.created_at) : 'now', c.me && onDelete ? h('button.cmb-del', { onclick: onDelete }, 'Delete') : null)));
 }
 
 /** Reactions, comments (and Remove on your own posts) under a post. */
@@ -447,7 +457,7 @@ function postActions(e, redraw, onRemove) {
 export function eventRow(e, { showGroup = false, time = 'ago', actions = null } = {}) {
   const x = describe(e);
   const grp = showGroup ? myGroups().find((g) => g.id === e.group_id)?.name : null;
-  const last = actions && e.comments?.length ? e.comments[e.comments.length - 1] : null;
+  const recent = actions && CAN_REACT.has(e.kind) ? (e.comments || []).slice(-2) : [];
   return h('div.feed-row' + (x.bad ? '.bad' : '') + (e.kind === 'weekly' ? '.weekly' : '') + (x.prs?.length ? '.has-pr' : ''),
     avatar(e.who, e.user_id, x.ico),
     h('div.feed-text',
@@ -462,8 +472,11 @@ export function eventRow(e, { showGroup = false, time = 'ago', actions = null } 
       x.lines ? h('div.week-lines', x.lines.map(([ico, label, val, good]) => h('div.week-line' + (good ? '.good' : ''), h('span.wl-dot'), h('span.wl-name', label), h('b', val)))) : null,
       x.quote ? h('div.feed-quote', x.quote) : null,
       x.photo ? groupPhoto(x.photo) : null,
-      last ? h('div.cm-last', h('b', last.me ? 'You' : last.who), ' ', last.body) : null,
-      actions ? postActions(e, actions.redraw, actions.remove) : null),
+      actions ? postActions(e, actions.redraw, actions.remove) : null,
+      actions && CAN_REACT.has(e.kind) ? h('div.cm-thread',
+        e.comments?.length > 2 ? h('button.cm-all', { onclick: () => commentsSheet(e, actions.redraw) }, `View all ${e.comments.length} comments`) : null,
+        recent.map((c) => commentBubble(c)),
+        h('button.cm-write', { onclick: () => commentsSheet(e, actions.redraw) }, avatar(state.profile.name || 'You', account()?.id), h('span.cm-write-field', 'Write a comment…'))) : null),
     h('span.feed-when', time === 'clock' ? clock(e.created_at) : ago(e.created_at)));
 }
 
