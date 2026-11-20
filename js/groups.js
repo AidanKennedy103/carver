@@ -83,8 +83,31 @@ export async function loadFeed(groupIds = myGroups().map((g) => g.id)) {
     comments: comments.filter((c) => c.event_id === e.id).map((c) => ({ ...c, who: names.get(e.group_id + c.user_id) || 'Someone', me: c.user_id === account().id })),
   }));
   if (groupIds.length === myGroups().length) cache('carver.feed', feed.slice(0, 40));
+  prAlert(feed);
   return feed;
 }
+/** A friend hit a PR you haven't seen: a gold banner slides in (once per post). */
+export function prAlert(feed) {
+  const seen = cache('carver.prSeen');
+  const fresh = feed.filter((e) => e.kind === 'workout' && e.data?.prs?.length && !e.me && Date.now() - Date.parse(e.created_at) < 24 * 36e5);
+  if (!seen) { cache('carver.prSeen', fresh.map((e) => e.id)); return; }   // first time: don't replay old ones
+  const show = fresh.filter((e) => !seen.includes(e.id));
+  if (!show.length) return;
+  cache('carver.prSeen', [...seen, ...show.map((e) => e.id)].slice(-200));
+  const e = show[0], p = e.data.prs[0];
+  const more = show.length - 1 + (e.data.prs.length - 1);
+  document.querySelector('.pr-toast')?.remove();
+  const el = h('button.pr-toast', { onclick: () => { el.remove(); openSocial(); } },
+    h('span.pr-toast-ico', icon('trophy', 20)),
+    h('span.pr-toast-text',
+      h('span.pr-toast-k', 'New PR'),
+      h('b', `${e.who} hit a PR`),
+      h('span', `${p.ex}${p.kg != null ? ` · ${toDisplay(p.kg)} ${unit()}` : p.reps ? ` · ${p.reps} reps` : ''}${more > 0 ? ` · +${more} more` : ''}`)));
+  document.body.append(el);
+  requestAnimationFrame(() => el.classList.add('in'));
+  setTimeout(() => { el.classList.remove('in'); setTimeout(() => el.remove(), 400); }, 6500);
+}
+
 export const groupMembers = (gid) => (cache('carver.members') || {})[gid] || [];
 
 const defaultName = () => state.profile.name?.trim() || account()?.email?.split('@')[0] || 'Me';
@@ -288,7 +311,7 @@ function describe(e) {
     case 'workout': return {
       ico: 'dumbbell', text: `finished ${d.name}`,
       sub: [d.mins ? fmtDurationWords(d.mins * 6e4) : '', d.sets ? `${d.sets} sets` : '', d.kg ? `${fmtNum(+toDisplay(d.kg))} ${unit()}` : ''].filter(Boolean).join(' · '),
-      extra: (d.prs || []).map((p) => `PR · ${p.ex} · ${p.kind}${p.kg != null ? ` ${toDisplay(p.kg)} ${unit()}` : p.reps ? ` ${p.reps} reps` : ''}`),
+      prs: (d.prs || []).map((p) => ({ ex: p.ex, what: `${p.kind}${p.kg != null ? ` · ${toDisplay(p.kg)} ${unit()}` : p.reps ? ` · ${p.reps} reps` : ''}` })),
     };
     case 'cardio': { const t = activityType(d.type); return { ico: t.icon, text: `did a ${t.name.toLowerCase()}`, sub: [d.m ? dist(d.m) : '', d.mins ? fmtDurationWords(d.mins * 6e4) : '', d.kcal ? `${fmtNum(d.kcal)} kcal` : ''].filter(Boolean).join(' · ') }; }
     case 'protein': return { ico: 'check', text: 'hit their protein goal', sub: `${d.g} of ${d.goal} g` };
@@ -425,7 +448,7 @@ export function eventRow(e, { showGroup = false, time = 'ago', actions = null } 
   const x = describe(e);
   const grp = showGroup ? myGroups().find((g) => g.id === e.group_id)?.name : null;
   const last = actions && e.comments?.length ? e.comments[e.comments.length - 1] : null;
-  return h('div.feed-row' + (x.bad ? '.bad' : '') + (e.kind === 'weekly' ? '.weekly' : ''),
+  return h('div.feed-row' + (x.bad ? '.bad' : '') + (e.kind === 'weekly' ? '.weekly' : '') + (x.prs?.length ? '.has-pr' : ''),
     avatar(e.who, e.user_id, x.ico),
     h('div.feed-text',
       e.kind === 'weekly'
@@ -433,6 +456,9 @@ export function eventRow(e, { showGroup = false, time = 'ago', actions = null } 
         : h('div.feed-line', h('b', e.me ? 'You' : e.who), ' ', x.text),
       x.sub || grp ? h('div.feed-sub', [x.sub, grp].filter(Boolean).join(' · ')) : null,
       (x.extra || []).map((t) => h('div.feed-pr', t)),
+      x.prs?.length ? h('div.pr-burst',
+        h('span.pr-ribbon', icon('trophy', 12), x.prs.length > 1 ? `${x.prs.length} new PRs` : 'New PR'),
+        x.prs.map((p) => h('div.pr-line', h('b', p.ex), h('span', p.what)))) : null,
       x.lines ? h('div.week-lines', x.lines.map(([ico, label, val, good]) => h('div.week-line' + (good ? '.good' : ''), h('span.wl-dot'), h('span.wl-name', label), h('b', val)))) : null,
       x.quote ? h('div.feed-quote', x.quote) : null,
       x.photo ? groupPhoto(x.photo) : null,
@@ -684,7 +710,7 @@ export function groupsScreen({ tab = false, sections = null, only = null } = {})
       h('span.gs-member-text', h('b', m.user_id === me ? `${m.name} (you)` : m.name), h('span', [m.joined_at ? `Joined ${fmtDate(Date.parse(m.joined_at), { month: 'short', year: 'numeric' })}` : null, `${thisWeek(m.user_id)} this week`].filter(Boolean).join(' · '))),
       activeToday.has(m.user_id) ? h('span.gs-active', 'Active today') : h('span.card-go', '›'))));
     else content = [
-      days[0]?.label === 'Today' ? days[0].items.map((e) => h('section.card.post-card', row(e)))
+      days[0]?.label === 'Today' ? days[0].items.map((e) => h('section.card.post-card' + (e.data?.prs?.length ? '.pr' : ''), row(e)))
         : h('div.feed-empty.card', loading ? 'Loading…' : 'Nothing yet today. Tap + to post, or finish a workout and it shows up here.'),
       days.some((d) => d.label !== 'Today') ? h('button.btn.dark.wide.hist-more', { onclick: () => push(() => activityScreen(g, days.filter((d) => d.label !== 'Today'), row)) }, 'See earlier posts') : null,
     ];

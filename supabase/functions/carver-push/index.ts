@@ -183,7 +183,9 @@ async function notify(id: string) {
   const others = (members || []).map((m) => m.user_id).filter((u) => u !== ev.user_id);
   if (!body || !others.length) return;
   const { data: subs } = await db.from('carver_push').select('endpoint, p256dh, auth').in('user_id', others);
-  if (subs?.length) await send(subs, { title: group?.name || 'Carver', body, tag: `${ev.kind}-${id}` });
+  const prs = ev.kind === 'workout' ? ev.data?.prs || [] : [];
+  const prBody = prs.length ? `${who} hit a PR on ${prs[0].ex} 🏆${prs.length > 1 ? ` (+${prs.length - 1} more)` : ''}` : null;
+  if (subs?.length) await send(subs, { title: prs.length ? `New PR · ${group?.name || 'Carver'}` : group?.name || 'Carver', body: prBody || body, tag: `${ev.kind}-${id}` });
 }
 
 /** Someone gave kudos or commented: tell the post's owner (not themselves). */
