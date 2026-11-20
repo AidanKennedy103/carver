@@ -153,6 +153,7 @@ function text(kind: string, who: string, d: any): string | null {
     case 'photo': return `${who} shared a progress photo`;
     case 'challenge': return `${who} started a challenge: ${d.title} 🏁`;
     case 'gym': return `${who} is heading to the gym ${d.when || 'now'}. Join them?`;
+    case 'note': return `${who}: ${String(d.text || '').slice(0, 140)}`;
     case 'weekly': {
       const bits = [];
       if (d.workouts) bits.push(`${d.workouts.n}/${d.workouts.goal} workouts`);

@@ -1744,3 +1744,37 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .gear-check { flex: none; width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; background: var(--surface-2); color: #17110a; }
 .gear.on .gear-check { background: var(--gold); }
 .gear-ex { width: 100%; text-align: left; }
+
+/* Inside a group */
+.gs-hero { padding: 16px; background: radial-gradient(120% 100% at 0% 0%, rgba(227, 176, 75, .16), rgba(0, 0, 0, 0) 65%), var(--surface); }
+.gs-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.gs-name { font-size: 26px; font-weight: 800; letter-spacing: -.01em; }
+.gs-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.gs-people { display: flex; gap: 12px; overflow-x: auto; margin: 14px -16px 0; padding: 0 16px 2px; scrollbar-width: none; }
+.gs-people::-webkit-scrollbar { display: none; }
+.gs-person { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 50px; font-size: 11px; color: var(--muted); position: relative; }
+.gs-person .av { width: 44px; height: 44px; font-size: 18px; }
+.gs-person span:last-child { max-width: 50px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gs-person.on .av { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--gold); }
+.gs-live { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 12px 14px; margin-top: 10px; font-size: 14px; color: var(--muted); }
+.gs-live b { color: var(--text); }
+.gs-live-text { flex: 1; }
+.gs-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #3ecf6e; box-shadow: 0 0 0 4px rgba(62, 207, 110, .2); }
+.gs-join { flex: none; color: var(--gold); font-weight: 700; }
+.gs-actions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 14px 0; }
+.gs-act { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); padding: 4px 0; }
+.gs-act-ico { width: 46px; height: 46px; border-radius: 16px; display: grid; place-items: center; background: var(--surface); color: var(--gold); }
+.gs-act:active .gs-act-ico { background: var(--surface-2); }
+.gs-tabs { margin-bottom: 12px; }
+.gs-tabs button { font-size: 13px; padding: 0 4px; }
+.gs-compose { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; margin-bottom: 12px; border-radius: 14px; background: var(--surface); color: var(--muted); font-size: 14px; text-align: left; }
+.post-card { padding: 2px 14px; margin-bottom: 8px; }
+.post-card .feed-row { border-top: 0 !important; }
+.feed-quote { margin-top: 6px; font-size: 15px; line-height: 1.4; color: var(--text); white-space: pre-wrap; }
+.gs-members { padding: 2px 14px; }
+.gs-member { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 0; text-align: left; }
+.gs-member + .gs-member { border-top: .5px solid var(--line); }
+.gs-member-text { flex: 1; display: flex; flex-direction: column; font-size: 13px; color: var(--muted); min-width: 0; }
+.gs-member-text b { color: var(--text); font-size: 15px; }
+.gs-active { font-size: 11px; font-weight: 700; color: var(--gold); }
+.post-in { width: 100%; resize: none; font-size: 16px; }

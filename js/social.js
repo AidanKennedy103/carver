@@ -60,10 +60,10 @@ export function socialPage({ tab = true } = {}) {
       }
       const rows = hist.get(g.id).rows;
       const people = members.length ? members : [{ user_id: account()?.id, name: g.myName }];
-      return [
-        leaderboard(rows, people, period, board, (p, b) => { period = p; board = b; redraw(); }),
-        challenges(g, rows, people, redraw),
-      ];
+      return {
+        week: leaderboard(rows, people, period, board, (p, b) => { period = p; board = b; redraw(); }),
+        challenges: challenges(g, rows, people, redraw),
+      };
     },
   });
 }

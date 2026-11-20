@@ -61,7 +61,7 @@ export async function loadFeed(groupIds = myGroups().map((g) => g.id)) {
   const db = await client();
   const [ev, mem] = await Promise.all([
     db.from('carver_events').select('id, group_id, user_id, kind, data, created_at').in('group_id', groupIds).order('created_at', { ascending: false }).limit(80),
-    db.from('carver_members').select('group_id, user_id, name').in('group_id', groupIds),
+    db.from('carver_members').select('group_id, user_id, name, joined_at').in('group_id', groupIds),
   ]);
   if (ev.error) throw ev.error;
   const names = new Map((mem.data || []).map((m) => [m.group_id + m.user_id, m.name]));
@@ -215,7 +215,7 @@ function workoutPost(w) {
 }
 
 /** Post one workout to a group you pick (even if that group doesn't get workouts automatically). */
-export async function postWorkout(w) {
+export async function postWorkout(w, only = null) {
   if (!account()) { signInSheet(); return; }
   const groups = myGroups().length ? myGroups() : await loadGroups().catch(() => []);
   if (!groups.length) { toast('Make or join a group first (Social)'); return; }
@@ -228,6 +228,7 @@ export async function postWorkout(w) {
       toast(list.length === 1 ? `Posted to ${list[0].name}` : `Posted to ${list.length} groups`);
     } catch { toast('Couldn’t post. Are you online?'); }
   };
+  if (only) { send([only]); return; }
   actionSheet('Post this workout', [
     ...groups.map((g) => ({ label: g.name, onClick: () => send([g]) })),
     ...(groups.length > 1 ? [{ label: 'All my groups', onClick: () => send(groups) }] : []),
@@ -283,6 +284,7 @@ function describe(e) {
     case 'challenge': return { ico: 'flag', text: `started a challenge: ${d.title}`, sub: d.end ? `Until ${fmtDate(Date.parse(d.end + 'T12:00'), { month: 'short', day: 'numeric' })}` : '' };
     case 'started': return { ico: 'pin', text: 'is at the gym', sub: d.name && d.name !== 'Workout' ? `Started ${d.name}` : '' };
     case 'gym': return { ico: 'pin', text: `is heading to the gym ${d.when || 'now'}`, sub: d.note || 'Join them?' };
+    case 'note': return { ico: 'chat', text: 'posted', quote: d.text };
     case 'workout': return {
       ico: 'dumbbell', text: `finished ${d.name}`,
       sub: [d.mins ? fmtDurationWords(d.mins * 6e4) : '', d.sets ? `${d.sets} sets` : '', d.kg ? `${fmtNum(+toDisplay(d.kg))} ${unit()}` : ''].filter(Boolean).join(' · '),
@@ -339,7 +341,7 @@ export function tidyFeed(feed) {
 
 const clock = (iso) => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 
-const CAN_REACT = new Set(['workout', 'cardio', 'week', 'photo', 'habit', 'challenge', 'gym', 'protein', 'kcal', 'weekly']);
+const CAN_REACT = new Set(['workout', 'cardio', 'week', 'photo', 'habit', 'challenge', 'gym', 'protein', 'kcal', 'weekly', 'note']);
 
 /** Give or take back kudos on a post. */
 async function toggleKudos(e, redraw) {
@@ -412,6 +414,7 @@ export function eventRow(e, { showGroup = false, time = 'ago', actions = null } 
       x.sub || grp ? h('div.feed-sub', [x.sub, grp].filter(Boolean).join(' · ')) : null,
       (x.extra || []).map((t) => h('div.feed-pr', t)),
       x.lines ? h('div.week-lines', x.lines.map(([ico, label, val, good]) => h('div.week-line' + (good ? '.good' : ''), h('span.wl-dot'), h('span.wl-name', label), h('b', val)))) : null,
+      x.quote ? h('div.feed-quote', x.quote) : null,
       x.photo ? groupPhoto(x.photo) : null,
       last ? h('div.cm-last', h('b', last.me ? 'You' : last.who), ' ', last.body) : null,
       actions ? postActions(e, actions.redraw, actions.remove) : null),
@@ -553,6 +556,7 @@ export function groupsCard() {
 // ---------- Groups screen ----------
 
 let selected = null;
+let gtab = 'feed';   // inside a group: feed, week, challenges or members
 
 /** The groups screen. tab: shown as the Social tab (no back button). sections(g, members, redraw): extra cards after This week. */
 export function groupsScreen({ tab = false, sections = null, only = null } = {}) {
@@ -626,7 +630,7 @@ export function groupsScreen({ tab = false, sections = null, only = null } = {})
     const row = (e) => eventRow(e, { time: 'clock', actions: { redraw: draw, remove: e.me && !e.merged ? () => deletePost(e).then((ok) => ok && refresh()) : null } });
 
     fill(body,
-      only ? navBar({ title: myGroups().find((x) => x.id === only)?.name || 'Group', backLabel: tab ? 'Social' : 'Groups' })
+      only ? navBar({ title: '', backLabel: tab ? 'Social' : 'Groups' })
         : navBar({ title: tab ? 'Social' : 'Groups', back: !tab, backLabel: 'Home', large: true, wip: true, right: [tab ? goalsButton() : null, h('button.icon-btn.gold-text', { onclick: addMenu, 'aria-label': 'Make or join a group' }, icon('plus', 24))] }),
       !account()
         ? h('button.card.empty-plan', { onclick: signInSheet }, h('div.empty-title', 'Sign in first'), h('div.empty-text', 'Groups need an account so friends can see your posts.'))
@@ -635,33 +639,80 @@ export function groupsScreen({ tab = false, sections = null, only = null } = {})
             h('div.empty-title', 'Keep each other honest'),
             h('div.empty-text', 'Make a group and share the invite code, or join a friend’s. They see your finished workouts and daily goals, plus a Monday summary. You choose what each group sees.'),
             h('div.btn-pair', h('button.btn.gold', { onclick: () => createGroup().then((x) => { if (x) { selected = x.id; refresh(); } }) }, 'Make a group'), h('button.btn.dark', { onclick: () => joinGroup().then((x) => { if (x) { selected = x.id; refresh(); } }) }, 'Join with code')))
-          : [
-            h('section.card.group-hero',
-              h('div.group-hero-top',
-                h('div',
-                  h('div.group-title', g.name),
-                  h('div.group-meta', `${members.length || 1} member${(members.length || 1) === 1 ? '' : 's'}`)),
-                h('button.icon-btn', { onclick: () => groupSettings(g, refresh), 'aria-label': 'Group settings' }, icon('gear'))),
-              h('div.av-stack', (members.length ? members : [{ user_id: account().id, name: g.myName }]).slice(0, 8).map((m) => avatar(m.name, m.user_id))),
-              h('button.btn.gold.wide', { onclick: () => gymPing(g, refresh) }, icon('pin', 16), 'Heading to the gym')),
-            pushNudge(),
-
-            h('div.section-head', h('h2.section-title', 'This week'), loading ? h('span.section-count', 'Updating…') : null),
-            weekBoard(g, raw, members),
-            sections ? sections(g, members, draw) : null,
-
-            h('div.section-head', h('h2.section-title', 'Today'), days.length ? h('button.link', { onclick: () => push(() => activityScreen(g, days, row)) }, 'All activity') : null),
-            days[0]?.label === 'Today'
-              ? h('section.card.list-card.feed-list', days[0].items.map(row))
-              : h('div.feed-empty.card', loading ? 'Loading…' : days.length ? 'Nothing yet today.' : 'Nothing yet. Posts show up as people train and finish their daily goals.'),
-            days.length ? h('button.btn.dark.wide.hist-more', { onclick: () => push(() => activityScreen(g, days, row)) }, 'See earlier activity') : null,
-            h('div.group-foot',
-              h('button.link.small-link', { onclick: () => invite(g) }, 'Invite friends'),
-              only ? null : h('button.link.small-link', { onclick: addMenu }, 'Make or join another group')),
-          ],
+          : groupSpace(g, raw, members, days, row),
       h('div.bottom-space'),
     );
   }
+  /** Inside a group: who's here, what's happening, quick actions, then Feed / This week / Challenges / Members. */
+  function groupSpace(g, raw, members, days, row) {
+    const me = account().id;
+    const people = members.length ? members : [{ user_id: me, name: g.myName }];
+    const today = ymd();
+    const activeToday = new Set(raw.filter((e) => ymd(Date.parse(e.created_at)) === today && e.kind !== 'weekly').map((e) => e.user_id));
+    const atGym = [...new Map(raw.filter((e) => (e.kind === 'started' || e.kind === 'gym') && Date.now() - Date.parse(e.created_at) < 3 * 36e5).map((e) => [e.user_id, e])).values()];
+    const extra = sections ? sections(g, members, draw) : null;
+    const weekPart = Array.isArray(extra) ? extra[0] : extra?.week;
+    const chPart = Array.isArray(extra) ? extra[1] : extra?.challenges;
+    const first = (m) => (m.user_id === me ? 'You' : (m.name || '').split(' ')[0]);
+    const names = (list) => { const n = list.map((e) => (e.user_id === me ? 'You' : e.who)); return n.length <= 2 ? n.join(' and ') : `${n.slice(0, -1).join(', ')} and ${n[n.length - 1]}`; };
+    const act = (ico, label, fn) => h('button.gs-act', { onclick: fn }, h('span.gs-act-ico', icon(ico, 18)), label);
+    const tabs = [['feed', 'Feed'], ['week', 'This week'], ['challenges', 'Challenges'], ['members', 'Members']];
+    const thisWeek = (uid) => raw.filter((e) => e.user_id === uid && (e.kind === 'workout' || e.kind === 'cardio') && ymd(Date.parse(e.created_at)) >= ymd(weekStart())).length;
+    let body2;
+    if (gtab === 'week') body2 = [weekBoard(g, raw, members), weekPart];
+    else if (gtab === 'challenges') body2 = chPart || h('div.feed-empty.card', 'Challenges load in the Social tab.');
+    else if (gtab === 'members') body2 = h('section.card.list-card.gs-members', people.map((m) => h('button.gs-member', { onclick: () => profileSheet(m.user_id, m.name) },
+      avatar(m.name, m.user_id),
+      h('span.gs-member-text', h('b', m.user_id === me ? `${m.name} (you)` : m.name), h('span', [m.joined_at ? `Joined ${fmtDate(Date.parse(m.joined_at), { month: 'short', year: 'numeric' })}` : null, `${thisWeek(m.user_id)} this week`].filter(Boolean).join(' · '))),
+      activeToday.has(m.user_id) ? h('span.gs-active', 'Active today') : h('span.card-go', '›'))));
+    else body2 = [
+      h('button.gs-compose', { onclick: () => writePost(g, refresh) }, avatar(g.myName, me), h('span', 'Share something with the group…')),
+      days.slice(0, 2).map((d) => [h('div.feed-day-head', d.label), d.items.map((e) => h('section.card.post-card', row(e)))]),
+      days.length ? null : h('div.feed-empty.card', loading ? 'Loading…' : 'Nothing yet. Post something, or finish a workout and it shows up here.'),
+      days.length > 2 ? h('button.btn.dark.wide.hist-more', { onclick: () => push(() => activityScreen(g, days, row)) }, 'See earlier posts') : null,
+    ];
+    return [
+      h('section.card.gs-hero',
+        h('div.gs-top',
+          h('div', h('div.gs-name', g.name), h('div.gs-meta', `${people.length} member${people.length === 1 ? '' : 's'} · ${activeToday.size} active today`)),
+          h('button.icon-btn', { onclick: () => groupSettings(g, refresh), 'aria-label': 'Group settings' }, icon('gear'))),
+        h('div.gs-people', people.slice(0, 12).map((m) => h('div.gs-person' + (activeToday.has(m.user_id) ? '.on' : ''), avatar(m.name, m.user_id), h('span', first(m)))))),
+      atGym.length ? h('button.card.gs-live', { onclick: () => gymPing(g, refresh) },
+        h('span.gs-dot'), h('span.gs-live-text', h('b', names(atGym)), atGym.length === 1 && atGym[0].user_id !== me ? ' is' : ' are', ' heading to or at the gym'), h('span.gs-join', 'Join')) : null,
+      pushNudge(),
+      h('div.gs-actions',
+        act('pin', 'Gym', () => gymPing(g, refresh)),
+        act('chat', 'Post', () => writePost(g, refresh)),
+        act('dumbbell', 'Workout', () => {
+          const recent = state.workouts.slice(0, 5);
+          if (!recent.length) { toast('Finish a workout first'); return; }
+          actionSheet(`Post to ${g.name}`, recent.map((w) => ({ label: `${w.name} · ${fmtDate(w.start, { weekday: 'short', month: 'short', day: 'numeric' })}`, onClick: () => postWorkout(w, g).then(refresh) })));
+        }),
+        act('camera', 'Photo', async () => { const { photos } = await import('./photos.js'); const p = photos()[0]; if (p) sharePhoto(p); else toast('Take a progress photo first (Physical Metrics)'); }),
+        act('flag', 'Challenge', () => challengeMenu(g))),
+      h('div.segment.gs-tabs', tabs.map(([v, l]) => h('button' + (gtab === v ? '.on' : ''), { onclick: () => { gtab = v; draw(); } }, l))),
+      body2,
+      h('div.group-foot',
+        h('button.link.small-link', { onclick: () => invite(g) }, 'Invite friends'),
+        only ? null : h('button.link.small-link', { onclick: addMenu }, 'Make or join another group')),
+    ];
+  }
+  /** Challenge the group: a popular workout (with a leaderboard) or a goal like 12 workouts in 30 days. */
+  async function challengeMenu(g) {
+    const { CHALLENGES } = await import('./coach.js');
+    actionSheet(`Challenge ${g.name}`, [
+      ...CHALLENGES.map((c) => ({ label: `${c.name} · ${c.line}`, onClick: async () => {
+        try {
+          const db = await client();
+          const { error } = await db.from('carver_events').insert({ group_id: g.id, kind: 'challenge', ref: 'c:' + c.id + ':' + Date.now(), data: { title: c.name, wod: c.id, score: null, start: ymd(), end: addDays(ymd(), 6) } });
+          if (error) throw error;
+          toast(`${c.name} challenge posted`); gtab = 'challenges'; refresh();
+        } catch { toast('Couldn’t post it. Are you online?'); }
+      } })),
+      { label: 'A goal: workouts, daily goals…', onClick: () => { gtab = 'challenges'; draw(); toast('Tap + New to set it up'); } },
+    ]);
+  }
+
   function addMenu() {
     if (!account()) { signInSheet(); return; }
     actionSheet('Groups', [
@@ -724,6 +775,27 @@ export async function profileSheet(uid, name) {
       shared.length ? h('p.fine.center', `In ${shared.join(', ')} with you`) : null,
       h('p.fine.center', 'Counted from what they share with your groups. Lifts and maxes stay private.'));
   } catch { fill(body, h('p.fine.center', 'Couldn’t load this profile. Are you online?')); }
+}
+
+/** Write a short post to a group. */
+function writePost(g, after) {
+  const ta = h('textarea.field.post-in', { rows: 4, maxlength: 280, placeholder: 'Leg day was rough. Who’s training tomorrow?' });
+  const count = h('span.fine', '0 / 280');
+  ta.addEventListener('input', () => { count.textContent = `${ta.value.length} / 280`; });
+  const s = sheet(h('div.form',
+    h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', g.name), h('button.link.strong', { onclick: send }, 'Post')),
+    ta, count));
+  setTimeout(() => ta.focus(), 300);
+  async function send() {
+    const text = ta.value.trim();
+    if (!text) return;
+    try {
+      const db = await client();
+      const { error } = await db.from('carver_events').insert({ group_id: g.id, kind: 'note', ref: 'n:' + Date.now(), data: { text } });
+      if (error) throw error;
+      s.close(); toast('Posted'); after?.();
+    } catch (e) { toast(/check constraint/i.test(e?.message || '') ? 'Posts need the latest server update (supabase/social3.sql).' : 'Couldn’t post. Are you online?'); }
+  }
 }
 
 /** Everything a group has posted lately, by day. */
