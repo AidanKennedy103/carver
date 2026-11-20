@@ -23,6 +23,7 @@ import { program as program531, programCard, setup531 } from './program531.js';
 import { goalsButton } from './goals.js';
 import { startWorkout } from './session.js';
 import { planEditor, lastDone } from './workout.js';
+import { pickExercises } from './picker.js';
 
 // [exId, sets, low reps, high reps]; M() marks a main lift (follows the block's plan)
 const E = (exId, sets, lo, hi = lo) => ({ exId, sets, lo, hi });
@@ -195,6 +196,8 @@ export function blockWeek(p, w) {
 
 export const coachProgram = () => (state.program?.kind === 'coach' ? state.program : null);
 const template = (id) => PROGRAMS.find((p) => p.id === id);
+/** The program as you started it (with your edits). */
+const progTemplate = (cp) => { const b = template(cp.id); return b && cp.tpl ? { ...b, plans: cp.tpl } : b; };
 export const currentWeek = (p) => Math.floor((weekStart() - p.start) / WEEK) + 1;
 
 /** Round to what you can load: 5 lb or 2.5 kg (stored in kg). */
@@ -355,7 +358,7 @@ async function startProgram(t, length, maxes) {
   const tm = Object.fromEntries(Object.entries(maxes).filter(([, v]) => v > 0).map(([k, v]) => [k, v * 0.9]));
   commit((s) => {
     s.plans = [...(replace ? [] : s.plans.filter((p) => !p.coach)), ...plans];
-    s.program = { kind: 'coach', id: t.id, mode: length === 'ongoing' ? 'ongoing' : 'block', weeks: length === 'ongoing' ? null : length, start: weekStart(), since: Date.now(),
+    s.program = { kind: 'coach', id: t.id, ...(JSON.stringify(t.plans) !== JSON.stringify(template(t.id)?.plans) ? { tpl: t.plans } : {}), mode: length === 'ongoing' ? 'ongoing' : 'block', weeks: length === 'ongoing' ? null : length, start: weekStart(), since: Date.now(),
       tm, tm0: { ...tm }, miss: {}, result: {}, plans: plans.map((p) => p.id), log: [] };
     s.goals.workoutsPerWeek = t.days;
     s.settings.program = { ...(s.settings.program || {}), ...Object.fromEntries(plans.map((p) => [p.id, t.days / t.plans.length >= 2 ? 2 : 1])) };
@@ -647,14 +650,18 @@ function maxInputs(lifts, current = {}) {
 
 // ---------- Program detail ----------
 
-function programScreen(t) {
+function programScreen(t0) {
+  const t = structuredClone(t0);   // your copy: edit the days before you start
   let length = t.ongoingOnly ? 'ongoing' : 12;
-  const lifts = mainLifts(t);
-  const maxes = maxInputs(lifts);
+  let lifts = mainLifts(t);
+  let maxes = maxInputs(lifts);
+  const edited = () => JSON.stringify(t.plans) !== JSON.stringify(t0.plans);
+  const canEdit = t.id !== '531';
   const el = h('div.page');
   const body = h('div.scroll-body');
   const running = t.id === '531' ? !!program531() : coachProgram()?.id === t.id;
   function draw() {
+    if (mainLifts(t).join() !== lifts.join()) { lifts = mainLifts(t); maxes = maxInputs(lifts); }
     const preview = length === 'ongoing' ? null : { tm: Object.fromEntries(Object.entries(maxes.read()).map(([k, v]) => [k, v * 0.9])), weeks: length };
     fill(body,
       programFigure(t.id, { wide: true }),
@@ -678,8 +685,9 @@ function programScreen(t) {
       h('p.fine', t.lengthText || lengthText(length)),
 
       h('div.section-head', h('h2.section-title', 'Each week'), h('span.section-count', t.schedule)),
-      t.plans.map((pl) => h('section.card.coach-day',
-        h('div.coach-day-name', pl.name),
+      canEdit ? h('p.fine', edited() ? 'Edited. Your changes are used when you start.' : 'Tap Edit on a day to swap, add or remove exercises before you start.') : null,
+      t.plans.map((pl, di) => h('section.card.coach-day',
+        h('div.coach-day-top', h('div.coach-day-name', pl.name), canEdit && !running ? h('button.link.small-link', { onclick: () => editDay(di) }, 'Edit') : null),
         pl.ex.map((e) => h('div.coach-ex',
           h('span', exercise(e.exId).name, e.tag || (e.main && length !== 'ongoing') ? h('span.coach-tag', 'main') : null),
           h('span.coach-ex-v', e.v ? e.v : e.main && preview ? mainSets(preview, e.exId, 1).text.split(' · ')[0] + ' in week 1'
@@ -691,11 +699,39 @@ function programScreen(t) {
         maxes.el,
       ] : null,
 
+      edited() && !running ? h('button.link.center-link', { onclick: () => { t.plans = structuredClone(t0.plans); draw(); } }, 'Undo my changes') : null,
       running ? h('p.fine.center', 'You’re running this program.')
         : h('button.btn.gold.wide.coach-go', { onclick: go }, t.id === '531' ? 'Set up 5/3/1' : length === 'ongoing' ? `Start ${t.name}` : `Start ${length}-week block`),
       h('div.bottom-space'),
     );
   }
+  /** Change one day: swap, remove or add exercises, and sets and reps. */
+  function editDay(di) {
+    const pl = t.plans[di];
+    const box = h('div');
+    const redraw = () => fill(box,
+      pl.ex.map((e, i) => {
+        const info = exercise(e.exId), time = info.type === 'time';
+        const num = (key, label) => h('input.field.ed-num', { value: e[key] ?? '', inputmode: 'numeric', 'aria-label': label,
+          onchange: (ev) => { const v = Math.max(1, Math.min(50, parseInt(ev.target.value, 10) || 1)); e[key] = v; if (key === 'lo' && e.hi < v) e.hi = v; if (key === 'hi' && e.lo > v) e.lo = v; redraw(); } });
+        return h('div.ed-row',
+          h('div.ed-top',
+            h('button.ed-name', { onclick: () => pickExercises(([id]) => { const was = e.main; e.exId = id; e.main = was && exercise(id).type === 'wr'; redraw(); }, { single: true, title: 'Swap for' }) }, info.name, h('span.ed-swap', 'Swap')),
+            h('button.icon-btn.ed-del', { onclick: () => { pl.ex.splice(i, 1); redraw(); }, 'aria-label': `Remove ${info.name}` }, icon('close', 16))),
+          h('div.ed-nums',
+            h('button.gd-pm.small', { onclick: () => { e.sets = Math.max(1, e.sets - 1); redraw(); }, 'aria-label': 'One fewer set' }, icon('minus', 14)),
+            h('span.ed-sets', `${e.sets} set${e.sets === 1 ? '' : 's'}`),
+            h('button.gd-pm.small', { onclick: () => { e.sets = Math.min(10, e.sets + 1); redraw(); }, 'aria-label': 'One more set' }, icon('plus', 14)),
+            time ? null : [h('span.ed-x', '×'), num('lo', 'Fewest reps'), h('span.ed-x', '–'), num('hi', 'Most reps'), h('span.ed-x', 'reps')]),
+          e.main ? h('div.fine.ed-main', 'Main lift: its weights follow the block.') : null);
+      }),
+      h('button.btn.dark.wide', { onclick: () => pickExercises((ids) => { ids.forEach((id) => pl.ex.push(exercise(id).type === 'time' ? { exId: id, sets: 3, lo: 0, hi: 0 } : { exId: id, sets: 3, lo: 8, hi: 12 })); redraw(); }, { title: `Add to ${pl.name}` }) }, icon('plus', 16), 'Add exercise'));
+    redraw();
+    const s = sheet(h('div.form',
+      h('div.sheet-head', h('span'), h('div.sheet-title', pl.name), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
+      box), { onClose: draw });
+  }
+
   async function go() {
     if (t.id === '531') { setup531(); return; }
     const m = maxes.read();
@@ -739,7 +775,7 @@ export function coachPage() {
   let viewWeek = null, view = 'programs';
   function draw() {
     syncCoach();
-    const cp = coachProgram(), t = cp && (cp.custom ? customTemplate(cp) : template(cp.id)), p531 = program531();
+    const cp = coachProgram(), t = cp && (cp.custom ? customTemplate(cp) : progTemplate(cp)), p531 = program531();
     fill(body,
       navBar({ title: 'Program builder', backLabel: 'Workout', large: true, right: [goalsButton('workout')] }),
       h('div.segment.pb-switch', [['programs', 'Programs'], ['mine', 'My workouts']].map(([v, l]) => h('button' + (view === v ? '.on' : ''), { onclick: () => { view = v; draw(); } }, l))),

@@ -1701,3 +1701,18 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .gd-invite svg { color: var(--gold); flex: none; }
 .gd-invite b { color: var(--text); }
 .ch-go { margin-top: 10px; }
+
+/* Editing a ready-made program's day */
+.coach-day-top { display: flex; justify-content: space-between; align-items: center; }
+.ed-row { padding: 12px 0; border-bottom: .5px solid var(--line); }
+.ed-top { display: flex; align-items: center; gap: 8px; }
+.ed-name { flex: 1; display: flex; align-items: center; gap: 8px; text-align: left; font-size: 16px; font-weight: 600; padding: 0; }
+.ed-swap { font-size: 12px; font-weight: 600; color: var(--gold); }
+.ed-del { color: var(--muted); }
+.ed-nums { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.gd-pm.small { width: 32px; height: 32px; }
+.ed-sets { min-width: 52px; text-align: center; font-weight: 600; }
+.ed-x { color: var(--muted); }
+.ed-num { width: 52px; height: 34px; text-align: center; padding: 0; }
+.ed-main { margin-top: 6px; }
+.form > .btn.dark.wide { margin-top: 12px; }
