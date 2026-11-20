@@ -211,6 +211,8 @@ For kudos, comments and "Heading to the gym" pings, run `supabase/social2.sql` i
 
 For text posts in groups, run `supabase/social3.sql` too (after social2.sql), and redeploy `carver-push` once more.
 
+For emoji reactions, run `supabase/social4.sql`, then redeploy `carver-push` (so notifications say which emoji).
+
 ## Put it online (free)
 
 It's on GitHub (`AidanKennedy103/carver`, private) and Cloudflare Workers. Every push to `main` updates the live app in about a minute. `wrangler.jsonc` serves the folder as it is (no build step), and `.assetsignore` keeps scripts and dev files off the site.

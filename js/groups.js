@@ -69,7 +69,7 @@ export async function loadFeed(groupIds = myGroups().map((g) => g.id)) {
   let kudos = [], comments = [];
   if (ids.length) {
     const [r, c] = await Promise.all([
-      db.from('carver_reactions').select('event_id, user_id').in('event_id', ids),
+      db.from('carver_reactions').select('event_id, user_id, kind').in('event_id', ids),
       db.from('carver_comments').select('id, event_id, user_id, body, created_at').in('event_id', ids).order('created_at'),
     ]);
     kudos = r.data || []; comments = c.data || [];
@@ -79,7 +79,7 @@ export async function loadFeed(groupIds = myGroups().map((g) => g.id)) {
   cache('carver.members', Object.fromEntries(members));
   const feed = (ev.data || []).map((e) => ({
     ...e, who: names.get(e.group_id + e.user_id) || 'Someone', me: e.user_id === account().id,
-    kudos: kudos.filter((k) => k.event_id === e.id).map((k) => k.user_id),
+    reacts: kudos.filter((k) => k.event_id === e.id).map((k) => ({ u: k.user_id, k: k.kind })),
     comments: comments.filter((c) => c.event_id === e.id).map((c) => ({ ...c, who: names.get(e.group_id + c.user_id) || 'Someone', me: c.user_id === account().id })),
   }));
   if (groupIds.length === myGroups().length) cache('carver.feed', feed.slice(0, 40));
@@ -343,17 +343,33 @@ const clock = (iso) => new Date(iso).toLocaleTimeString([], { hour: 'numeric', m
 
 const CAN_REACT = new Set(['workout', 'cardio', 'week', 'photo', 'habit', 'challenge', 'gym', 'protein', 'kcal', 'weekly', 'note']);
 
-/** Give or take back kudos on a post. */
-async function toggleKudos(e, redraw) {
-  const mine = e.kudos?.includes(account().id);
-  e.kudos = mine ? e.kudos.filter((u) => u !== account().id) : [...(e.kudos || []), account().id];
+// Reactions: a few emojis you can pin to a post (one of each per person). Older 'kudos' show as a clap.
+export const REACTS = [['fire', '🔥'], ['strong', '💪'], ['clap', '👏'], ['heart', '❤️'], ['laugh', '😂'], ['wow', '😮']];
+const emojiOf = (k) => (REACTS.find((r) => r[0] === k) || REACTS[2])[1];
+
+/** Add or take back one of your reactions on a post. */
+async function toggleReact(e, kind, redraw) {
+  const me = account().id;
+  const mine = (e.reacts || []).some((r) => r.u === me && r.k === kind);
+  e.reacts = mine ? e.reacts.filter((r) => !(r.u === me && r.k === kind)) : [...(e.reacts || []), { u: me, k: kind }];
   redraw();
   try {
     const db = await client();
-    const q = mine ? db.from('carver_reactions').delete().eq('event_id', e.id).eq('user_id', account().id) : db.from('carver_reactions').insert({ event_id: e.id, kind: 'kudos' });
+    const q = mine ? db.from('carver_reactions').delete().eq('event_id', e.id).eq('user_id', me).eq('kind', kind) : db.from('carver_reactions').insert({ event_id: e.id, kind });
     const { error } = await q;
     if (error) throw error;
-  } catch { toast('Kudos need the latest server update (see README).'); }
+  } catch { toast('Reactions need the latest server update (supabase/social4.sql).'); }
+}
+
+/** The emoji picker that pops up from React. */
+function reactPicker(e, redraw, anchor) {
+  document.querySelector('.react-pop')?.remove();
+  const me = account().id;
+  const pop = h('div.react-pop', REACTS.map(([k, em]) => h('button.react-opt' + ((e.reacts || []).some((r) => r.u === me && r.k === k) ? '.on' : ''), {
+    onclick: (ev) => { ev.stopPropagation(); pop.remove(); toggleReact(e, k, redraw); }, 'aria-label': `React ${k}`,
+  }, em)));
+  anchor.after(pop);
+  setTimeout(() => document.addEventListener('click', function off(ev) { if (!pop.contains(ev.target)) { pop.remove(); document.removeEventListener('click', off, true); } }, true), 0);
 }
 
 /** Comments on a post, and a box to add one. */
@@ -391,12 +407,16 @@ function commentsSheet(e, redraw) {
   setTimeout(() => input.focus(), 300);
 }
 
-/** Kudos, comments (and Remove on your own posts) under a post. */
+/** Reactions, comments (and Remove on your own posts) under a post. */
 function postActions(e, redraw, onRemove) {
   if (!CAN_REACT.has(e.kind)) return e.me && onRemove ? h('div.post-acts', h('button.post-act.right', { onclick: onRemove }, 'Remove')) : null;
-  const n = e.kudos?.length || 0, mine = e.kudos?.includes(account()?.id), c = e.comments?.length || 0;
+  const me = account()?.id, c = e.comments?.length || 0;
+  const counts = new Map();
+  for (const r of e.reacts || []) { const k = r.k === 'kudos' ? 'clap' : r.k; counts.set(k, { n: (counts.get(k)?.n || 0) + 1, mine: counts.get(k)?.mine || r.u === me }); }
+  const reactBtn = h('button.post-act', { onclick: () => reactPicker(e, redraw, reactBtn), 'aria-label': 'React' }, icon('plus', 13), 'React');
   return h('div.post-acts',
-    e.me ? h('span.post-act.static' + (n ? '.on' : ''), icon('flame', 15), n ? `${n} kudos` : 'Kudos') : h('button.post-act' + (mine ? '.on' : ''), { onclick: () => toggleKudos(e, redraw), 'aria-pressed': String(!!mine) }, icon('flame', 15), n ? `${n}` : 'Kudos'),
+    [...counts].map(([k, v]) => h('button.react-chip' + (v.mine ? '.on' : ''), { onclick: () => toggleReact(e, k, redraw), 'aria-label': `${v.n} ${k}` }, emojiOf(k), h('b', v.n))),
+    reactBtn,
     h('button.post-act', { onclick: () => commentsSheet(e, redraw) }, icon('chat', 15), c ? `${c}` : 'Comment'),
     e.me && onRemove ? h('button.post-act.right', { onclick: onRemove }, 'Remove') : null);
 }
@@ -667,9 +687,9 @@ export function groupsScreen({ tab = false, sections = null, only = null } = {})
       activeToday.has(m.user_id) ? h('span.gs-active', 'Active today') : h('span.card-go', '›'))));
     else body2 = [
       h('button.gs-compose', { onclick: () => writePost(g, refresh) }, avatar(g.myName, me), h('span', 'Share something with the group…')),
-      days.slice(0, 2).map((d) => [h('div.feed-day-head', d.label), d.items.map((e) => h('section.card.post-card', row(e)))]),
-      days.length ? null : h('div.feed-empty.card', loading ? 'Loading…' : 'Nothing yet. Post something, or finish a workout and it shows up here.'),
-      days.length > 2 ? h('button.btn.dark.wide.hist-more', { onclick: () => push(() => activityScreen(g, days, row)) }, 'See earlier posts') : null,
+      days[0]?.label === 'Today' ? days[0].items.map((e) => h('section.card.post-card', row(e)))
+        : h('div.feed-empty.card', loading ? 'Loading…' : 'Nothing yet today. Post something, or finish a workout and it shows up here.'),
+      days.some((d) => d.label !== 'Today') ? h('button.btn.dark.wide.hist-more', { onclick: () => push(() => activityScreen(g, days.filter((d) => d.label !== 'Today'), row)) }, 'See earlier posts') : null,
     ];
     return [
       h('section.card.gs-hero',

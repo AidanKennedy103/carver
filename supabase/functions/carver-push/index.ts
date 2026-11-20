@@ -187,13 +187,14 @@ async function notify(id: string) {
 }
 
 /** Someone gave kudos or commented: tell the post's owner (not themselves). */
-async function reply(r: { table: string; event: string; user: string; text?: string | null }) {
+const EMOJI: Record<string, string> = { fire: '🔥', strong: '💪', clap: '👏', heart: '❤️', laugh: '😂', wow: '😮', kudos: '👏' };
+async function reply(r: { table: string; event: string; user: string; text?: string | null; kind?: string | null }) {
   const { data: ev } = await db.from('carver_events').select('group_id, user_id, kind, data').eq('id', r.event).maybeSingle();
   if (!ev || ev.user_id === r.user) return;
   const { data: m } = await db.from('carver_members').select('name').eq('group_id', ev.group_id).eq('user_id', r.user).maybeSingle();
   const who = m?.name || 'Someone';
   const what = ev.kind === 'workout' ? (ev.data?.name || 'your workout') : ev.kind === 'cardio' ? `your ${CARDIO[ev.data?.type] || 'workout'}` : 'your post';
-  const body = r.table === 'carver_comments' ? `${who} on ${what}: ${String(r.text || '').slice(0, 120)}` : `${who} gave you kudos for ${what}`;
+  const body = r.table === 'carver_comments' ? `${who} on ${what}: ${String(r.text || '').slice(0, 120)}` : `${who} reacted ${EMOJI[r.kind || 'kudos'] || '👏'} to ${what}`;
   const { data: subs } = await db.from('carver_push').select('endpoint, p256dh, auth').eq('user_id', ev.user_id);
   if (subs?.length) await send(subs, { title: 'Carver', body, tag: `reply-${r.event}` });
 }
