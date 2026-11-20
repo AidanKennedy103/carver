@@ -33,11 +33,11 @@ export const PROGRAMS = [
     id: 'fb3', name: 'Full Body', days: 3, minutes: '45–60', level: 'Beginner', schedule: 'Mon, Wed, Fri',
     summary: 'Three full-body days a week on the big lifts, alternating A and B.',
     pros: ['Every muscle trained every session: the fastest way to learn the lifts and get stronger', 'A short list of exercises that’s easy to run', 'Miss a day and the next workout still covers everything'],
-    cons: ['Little time for arms and shoulder isolation work', 'Heavy squats and deadlifts on alternate days still add up as the weights climb', 'Less variety than a split'],
+    cons: ['Little time for arms and shoulder isolation work', 'Squats get tiring as the weights climb', 'Less variety than a split'],
     bestFor: 'Your first year of lifting, or coming back after a break.',
     plans: [
       { name: 'Full Body A', ex: [M('squat', 3, 5), M('bench', 3, 5), E('bb-row', 3, 8, 10), E('plank', 3, 0)] },
-      { name: 'Full Body B', ex: [M('deadlift', 3, 5), M('ohp', 3, 5), E('lat-pulldown', 3, 8, 12), E('lying-curl', 3, 10, 12), E('hanging-knee-raise', 3, 10, 15)] },
+      { name: 'Full Body B', ex: [M('ohp', 3, 5), E('db-rdl', 3, 8, 10), E('lat-pulldown', 3, 8, 12), E('lying-curl', 3, 10, 12), E('hanging-knee-raise', 3, 10, 15)] },
     ],
   },
   {
