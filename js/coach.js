@@ -526,23 +526,30 @@ export const CHALLENGES = [
   {
     id: 'cindy', name: 'Cindy', nums: '5 · 10 · 15', line: '20-min AMRAP', tag: 'Bodyweight',
     about: 'As many rounds as you can in 20 minutes of 5 pull-ups, 10 push-ups and 15 air squats. 20+ rounds is strong.',
-    how: ['Set a 20-minute timer.', 'Do 5 pull-ups, 10 push-ups, 15 squats. That’s one round.', 'Repeat until time’s up and tick off each round.'],
+    how: ['The 20-minute timer starts when you tap Start.', 'One round is 5 pull-ups, 10 push-ups and 15 squats. Carver shows each move: tap Done after each, or Add round after a whole round.', 'Keep going until time’s up. Your score is rounds plus extra reps.'],
     scale: 'Swap pull-ups for inverted rows or band-assisted pull-ups, and do push-ups on your knees or a bench.',
     ex: [R('pullup', 5, 20), R('pushup', 10, 20), R('bw-squat', 15, 20)], timer: { kind: 'amrap', secs: 1200 },
+    guide: [{ type: 'rounds', items: [{ exId: 'pullup', reps: 5 }, { exId: 'pushup', reps: 10 }, { exId: 'bw-squat', reps: 15 }] }],
   },
   {
     id: 'murph', name: 'Murph', nums: '100 · 200 · 300', line: 'Hero workout · for time', tag: 'Hard',
     about: 'A 1-mile run, 100 pull-ups, 200 push-ups, 300 squats, then another 1-mile run, for time. The classic Memorial Day hero workout, traditionally done in a 20 lb vest.',
-    how: ['Run 1 mile.', 'Split the middle into 20 rounds of 5 pull-ups, 10 push-ups and 15 squats (or do it any way you like).', 'Run 1 more mile and stop the clock.'],
+    how: ['Run 1 mile.', 'Then 100 pull-ups, 200 push-ups and 300 squats, split however you like. Carver asks for as many of each as you can, then the next, and keeps count of what’s left.', 'Run 1 more mile and the clock stops.'],
     scale: 'Half Murph: half a mile, 50 / 100 / 150. Skip the vest until the whole thing is under an hour.',
     ex: [R('treadmill', 600, 1), R('pullup', 5, 20), R('pushup', 10, 20), R('bw-squat', 15, 20), R('treadmill', 600, 1)], timer: { kind: 'fortime' },
+    guide: [
+      { type: 'task', exId: 'treadmill', label: 'Run 1 mile', sub: 'Tap Done when you’re back.' },
+      { type: 'pool', items: [{ exId: 'pullup', total: 100, chunk: 5 }, { exId: 'pushup', total: 200, chunk: 10 }, { exId: 'bw-squat', total: 300, chunk: 15 }] },
+      { type: 'task', exId: 'treadmill', label: 'Run the last mile', sub: 'The clock stops when you tap Done.' },
+    ],
   },
   {
     id: 'nickels', name: 'Nickels and Dimes', nums: '5 · 10', line: 'Pull-ups & push-ups', tag: 'Bodyweight',
     about: '5 pull-ups then 10 push-ups, over and over. The pull-ups are the nickels, the push-ups the dimes.',
-    how: ['Pick a time: 20 or 30 minutes.', 'Do 5 pull-ups, then 10 push-ups. Rest as little as you can.', 'Keep going until time’s up; tick off each round.'],
+    how: ['Pick 20 or 30 minutes.', 'One round is 5 pull-ups then 10 push-ups. Tap Done after each, or Add round after both.', 'Rest as little as you can until time’s up.'],
     scale: 'Keep the 1-to-2 ratio with smaller numbers: 3 pull-ups and 6 push-ups.',
     ex: [R('pullup', 5, 15), R('pushup', 10, 15)], timer: { kind: 'amrap', secs: 1800 }, choose: [20, 30],
+    guide: [{ type: 'rounds', items: [{ exId: 'pullup', reps: 5 }, { exId: 'pushup', reps: 10 }] }],
   },
   {
     id: '1230', name: '12-3-30', nums: '12 · 3 · 30', line: 'Incline walk', tag: 'Cardio',
@@ -550,13 +557,15 @@ export const CHALLENGES = [
     how: ['Set the treadmill to 12% incline and 3 mph.', 'Walk for 30 minutes without holding the rails.'],
     scale: 'Start at 8–10% incline or 20 minutes and build up.',
     ex: [R('treadmill', 1800, 1)], timer: { kind: 'countdown', secs: 1800 },
+    guide: [{ type: 'task', exId: 'treadmill', label: 'Walk: 12% incline, 3 mph', sub: 'No holding the rails. Tap Done if you stop early.' }],
   },
   {
     id: 'fran', name: 'Fran', nums: '21 · 15 · 9', line: 'Thrusters & pull-ups · for time', tag: 'Sprint',
     about: '21-15-9 reps of barbell thrusters (95 lb / 65 lb) and pull-ups, for time. Short and brutal: most people finish in 4–10 minutes.',
-    how: ['21 thrusters, 21 pull-ups.', '15 thrusters, 15 pull-ups.', '9 thrusters, 9 pull-ups. Stop the clock.'],
+    how: ['21 thrusters, then 21 pull-ups.', '15 thrusters, then 15 pull-ups.', '9 thrusters, then 9 pull-ups. Carver shows each step and stops the clock after the last one.'],
     scale: 'Lighter bar (45–65 lb), and band-assisted pull-ups or inverted rows.',
     ex: [{ exId: 'thruster', reps: [21, 15, 9] }, { exId: 'pullup', reps: [21, 15, 9] }], timer: { kind: 'fortime' },
+    guide: [21, 15, 9].flatMap((n) => [{ type: 'reps', exId: 'thruster', total: n }, { type: 'reps', exId: 'pullup', total: n }]),
   },
 ];
 
@@ -573,6 +582,7 @@ function challengePlan(c, mins = null) {
 }
 
 function challengeSheet(c) {
+  if (c.guide) { import('./guided.js').then((m) => m.openGuided(c)); return; }
   let mins = c.choose ? c.choose[c.choose.length - 1] : null;
   const pick = c.choose ? h('div.segment.chal-mins') : null;
   const drawPick = () => pick && fill(pick, c.choose.map((m) => h('button' + (m === mins ? '.on' : ''), { onclick: () => { mins = m; drawPick(); } }, `${m} min`)));

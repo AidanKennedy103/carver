@@ -1666,3 +1666,29 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .goal-input.short { width: 44px; }
 .dc-you { margin-top: 10px; }
 .dc-act button { font-size: 12px; padding: 0 4px; }
+
+/* Guided challenges */
+.gd-clock { text-align: center; margin: 4px 0 14px; padding: 14px; border-radius: var(--radius); background: radial-gradient(90% 90% at 50% 0%, rgba(227, 176, 75, .16), rgba(0, 0, 0, 0) 70%), var(--surface); border: .5px solid rgba(227, 176, 75, .3); }
+.gd-time { font-size: 52px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.gd-clock.done .gd-time { color: var(--gold); }
+.gd-clock-k { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.gd-rounds { margin-top: 6px; font-size: 15px; color: var(--muted); }
+.gd-rounds b { font-size: 22px; color: var(--gold); }
+.gd-step { padding: 18px 16px; text-align: center; }
+.gd-kicker { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--gold); font-weight: 700; }
+.gd-what { font-size: 26px; font-weight: 800; margin: 8px 0 6px; line-height: 1.15; }
+.gd-sub { font-size: 14px; color: var(--muted); margin-bottom: 14px; }
+.gd-ex { display: inline-flex; align-items: center; gap: 8px; font: inherit; color: inherit; padding: 0; }
+.gd-stepper { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 6px 0 14px; }
+.gd-pm { width: 48px; height: 48px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; }
+.gd-num { width: 90px; height: 56px; text-align: center; font-size: 30px; font-weight: 800; border-radius: 14px; background: var(--surface-2); color: var(--text); border: 0; }
+.gd-done { margin-top: 4px; }
+.gd-round { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.gd-round span { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
+.gd-round span.on { background: rgba(227, 176, 75, .18); color: var(--gold); font-weight: 700; }
+.gd-round span.past { text-decoration: line-through; }
+.gd-pool { display: flex; justify-content: center; gap: 12px; margin-top: 14px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.gd-pool span.on { color: var(--gold); }
+.gd-pool span.zero { text-decoration: line-through; opacity: .6; }
+.gd-pool b { color: var(--text); }
+.gd-result .gd-what { font-size: 34px; color: var(--gold); }

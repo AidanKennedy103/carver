@@ -406,7 +406,7 @@ export function feelPicker(w, after) {
   return box;
 }
 
-function showSummary(w, prs, changes = []) {
+export function showSummary(w, prs, changes = []) {
   const st = workoutStats(w);
   const s = sheet(h('div.summary',
     h('div.summary-burst', icon('trophy', 44)),
