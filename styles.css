@@ -1792,3 +1792,26 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .react-opt { width: 38px; height: 38px; border-radius: 50%; font-size: 22px; display: grid; place-items: center; }
 .react-opt.on { background: rgba(227, 176, 75, .2); }
 .react-opt:active { transform: scale(1.2); }
+
+/* Inside a group, calmer */
+.gs-head { display: flex; justify-content: space-between; align-items: flex-start; margin: 2px 0 12px; }
+.gs-head .gs-name { font-size: 28px; font-weight: 800; letter-spacing: -.01em; }
+.gs-faces { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 0; text-align: left; }
+.gs-stack { display: flex; padding: 3px 0 3px 3px; }
+.gs-stack .av { width: 26px; height: 26px; font-size: 11px; margin-left: -7px; box-shadow: 0 0 0 2px var(--bg); }
+.gs-stack .av:first-child { margin-left: 0; }
+.gs-faces .gs-meta { margin: 0; font-size: 13px; color: var(--muted); }
+.gs-fab { position: fixed; right: 18px; bottom: calc(82px + var(--safe-bottom)); z-index: 6; width: 56px; height: 56px; border-radius: 50%; background: var(--gold); color: #17110a; display: grid; place-items: center; box-shadow: 0 8px 24px rgba(0, 0, 0, .5); }
+.gs-fab:active { transform: scale(.95); }
+/* Wins */
+.wins { padding: 4px 14px; }
+.win { display: flex; gap: 12px; padding: 12px 0; }
+.win + .win { border-top: .5px solid var(--line); }
+.win-ico { flex: none; width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: rgba(227, 176, 75, .14); color: var(--gold); }
+.win-main { flex: 1; min-width: 0; }
+.win-label { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+.win-who { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.win-person { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+.win-person .av { width: 24px; height: 24px; font-size: 11px; }
+.win-note { color: var(--gold); font-weight: 700; }
+.has-live .gs-fab { bottom: calc(146px + var(--safe-bottom)); }

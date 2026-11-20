@@ -22,7 +22,7 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 // ---------- A couple of months of each group's posts ----------
 
-const KINDS = ['workout', 'cardio', 'habit', 'protein', 'challenge'];
+const KINDS = ['workout', 'cardio', 'habit', 'protein', 'challenge', 'week'];
 const hist = new Map();   // group id → { at, rows }
 const dayOf = (e) => e.data?.day || ymd(Date.parse(e.created_at));
 
@@ -60,12 +60,56 @@ export function socialPage({ tab = true } = {}) {
       }
       const rows = hist.get(g.id).rows;
       const people = members.length ? members : [{ user_id: account()?.id, name: g.myName }];
+      void period; void board;
       return {
-        week: leaderboard(rows, people, period, board, (p, b) => { period = p; board = b; redraw(); }),
+        week: winsCard(rows, people),
         challenges: challenges(g, rows, people, redraw),
       };
     },
   });
+}
+
+/**
+ * Wins this week: only the people who hit something are named. Nobody is ranked last,
+ * and anyone who didn't train simply isn't listed.
+ */
+export function winsCard(rows, people) {
+  const mon = ymd(weekStart()), me = account()?.id;
+  const week = rows.filter((e) => dayOf(e) >= mon);
+  const nameOf = (uid) => (uid === me ? 'You' : people.find((p) => p.user_id === uid)?.name || 'Someone');
+  const count = (pred) => { const m = new Map(); for (const e of week) if (pred(e)) m.set(e.user_id, (m.get(e.user_id) || 0) + 1); return m; };
+  const tops = (m) => { const best = Math.max(0, ...m.values()); return best ? { n: best, who: [...m].filter(([, v]) => v === best).map(([u]) => u) } : null; };
+  const wins = [];
+  const goal = [...new Set(week.filter((e) => e.kind === 'week').map((e) => e.user_id))];
+  if (goal.length) wins.push({ ico: 'check', label: 'Hit their weekly goal', who: goal });
+  const active = tops(count((e) => e.kind === 'workout' || e.kind === 'cardio'));
+  if (active && active.n >= 2) wins.push({ ico: 'flame', label: `Most active: ${plural(active.n, 'session')}`, who: active.who });
+  const prs = new Map();
+  for (const e of week) if (e.kind === 'workout' && e.data?.prs?.length) prs.set(e.user_id, (prs.get(e.user_id) || 0) + e.data.prs.length);
+  if (prs.size) wins.push({ ico: 'trophy', label: 'Set new personal records', who: [...prs.keys()], note: (u) => `${prs.get(u)}` });
+  // Weeks in a row with a workout or cardio (this week counts once it has one)
+  const streak = (uid) => {
+    const weeks = new Set(rows.filter((e) => e.user_id === uid && (e.kind === 'workout' || e.kind === 'cardio')).map((e) => ymd(weekStart(Date.parse(e.created_at)))));
+    let w = weekStart(), n = 0;
+    if (!weeks.has(ymd(w))) w = weekStart(w - 3 * 864e5);
+    while (weeks.has(ymd(w))) { n++; w = weekStart(w - 3 * 864e5); }
+    return n;
+  };
+  const st = new Map(people.map((p) => [p.user_id, streak(p.user_id)]).filter(([, n]) => n >= 2));
+  const longest = tops(st);
+  if (longest) wins.push({ ico: 'bolt', label: `Longest streak: ${longest.n} weeks`, who: longest.who });
+  const habits = tops(count((e) => e.kind === 'habit'));
+  if (habits && habits.n >= 3) wins.push({ ico: 'check', label: `Most daily goals: ${habits.n}`, who: habits.who });
+  const protein = tops(count((e) => e.kind === 'protein'));
+  if (protein && protein.n >= 3) wins.push({ ico: 'up', label: `Hit protein most: ${plural(protein.n, 'day')}`, who: protein.who });
+  return [
+    h('div.section-head', h('h2.section-title', 'Wins this week')),
+    wins.length ? h('section.card.wins', wins.map((w) => h('div.win',
+      h('span.win-ico', icon(w.ico, 16)),
+      h('div.win-main', h('div.win-label', w.label),
+        h('div.win-who', w.who.map((u) => h('span.win-person', avatar(nameOf(u), u), nameOf(u), w.note ? h('span.win-note', ` ${w.note(u)}`) : null)))))))
+      : h('div.feed-empty.card', 'Wins show up here as the week goes on: weekly goals hit, new records, streaks.'),
+  ];
 }
 
 export function leaderboard(rows, people, period, board, set) {
@@ -124,9 +168,10 @@ function wodCard(c, rows, people, redraw) {
   const left = Math.round((Date.parse(d.end + 'T12:00') - Date.parse(today + 'T12:00')) / 864e5) + 1;
   return h('section.card.ch-card' + (ended ? '.ended' : ''),
     h('div.ch-head', h('div', h('div.ch-title', d.title), h('div.ch-meta', [ended ? 'Finished' : left === 1 ? 'Last day' : `${left} days left`, `${best.filter((p) => p.top).length} of ${best.length} done`].join(' · ')))),
-    best.map((p, i) => h('div.ch-row' + (p.top && i === 0 ? '.hit' : ''), avatar(p.name, p.user_id),
+    best.some((p) => p.top) ? best.filter((p) => p.top).map((p, i) => h('div.ch-row' + (i === 0 ? '.hit' : ''),
+      h('span.lb-place' + (i < 3 ? '.top' + (i + 1) : ''), String(i + 1)), avatar(p.name, p.user_id),
       h('div.lb-main', h('div.lb-name', p.user_id === account()?.id ? 'You' : p.name)),
-      h('b.lb-val', p.top || '–'))),
+      h('b.lb-val', p.top))) : h('p.fine', 'No results yet. Be the first.'),
     ended ? null : h('button.btn.gold-soft.wide.ch-go', { onclick: () => Promise.all([import('./coach.js'), import('./guided.js')]).then(([co, gd]) => { const ch = co.CHALLENGES.find((x) => x.id === d.wod); if (ch) gd.openGuided(ch, { from: c.who, score: d.score }); }) }, `Do ${name}`));
 }
 
@@ -148,7 +193,7 @@ export function challengeCard(c, rows, people, redraw) {
           try { const db = await client(); await db.from('carver_events').delete().eq('id', c.id); c.data.end = '0000'; redraw(); } catch { toast('Couldn’t delete it. Try again online.'); }
         },
       }, 'Delete') : null),
-    ranked.map((p) => {
+    ranked.filter((p) => p.v > 0).map((p) => {
       const me = p.user_id === account()?.id, hit = p.v >= d.target;
       return h('div.ch-row' + (hit ? '.hit' : ''),
         avatar(p.name, p.user_id),
