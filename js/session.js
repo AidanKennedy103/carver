@@ -10,6 +10,8 @@ import { progressAfter } from './coach.js';
 import { beep, unlockAudio } from './sound.js';
 
 const defaultRest = () => state.settings.restDefault ?? 90;
+/** Carver never brings warm-up sets into a workout or plan. */
+const noWarm = (sets) => { const k = sets.filter((s) => s.type !== 'w'); return k.length ? k : sets.length ? [{ ...sets[sets.length - 1], type: 'n' }] : sets; };
 
 function greeting(ts = Date.now()) {
   const hr = new Date(ts).getHours();
@@ -27,7 +29,7 @@ export async function startWorkout(plan = null) {
     id: uid(), name: plan ? plan.name : greeting(), planId: plan?.id || null, start: Date.now(), end: null, rest: null,
     exercises: plan ? plan.exercises.map((pe) => ({
       exId: pe.exId, note: pe.note || '', rest: pe.rest ?? defaultRest(),
-      sets: (pe.sets.length ? pe.sets : [{}]).map((ps) => newSet(ps)),
+      sets: (pe.sets.length ? noWarm(pe.sets) : [{}]).map((ps) => newSet(ps)),
     })) : [],
     ...(plan?.timer ? { timer: { ...plan.timer, started: null, result: null } } : {}),
   };
@@ -39,7 +41,7 @@ export async function startWorkout(plan = null) {
 export function repeatWorkout(old) {
   startWorkout({
     id: null, name: old.name,
-    exercises: old.exercises.map((e) => ({ exId: e.exId, note: '', rest: e.rest, sets: e.sets.filter((s) => s.done).map((s) => ({ type: s.type, tWeight: s.weight, tReps: s.reps, tSecs: s.secs })) })),
+    exercises: old.exercises.map((e) => ({ exId: e.exId, note: '', rest: e.rest, sets: noWarm(e.sets.filter((s) => s.done)).map((s) => ({ type: s.type, tWeight: s.weight, tReps: s.reps, tSecs: s.secs })) })),
   });
 }
 
@@ -91,8 +93,8 @@ export function logPastWorkout(plan = null) {
   whenSheet({ start: y.getTime(), dur: 60 * 6e4, title: 'Log a past workout', choose: !plan }, ({ start, dur, from }) => {
     const p = plan || from.plan, old = from.workout;
     const exercises = old
-      ? old.exercises.map((e) => ({ exId: e.exId, note: '', rest: e.rest, sets: e.sets.map((x) => newSet({ type: x.type, tWeight: x.weight, tReps: x.reps, tSecs: x.secs })) }))
-      : p ? p.exercises.map((pe) => ({ exId: pe.exId, note: pe.note || '', rest: pe.rest ?? defaultRest(), sets: (pe.sets.length ? pe.sets : [{}]).map((ps) => newSet(ps)) }))
+      ? old.exercises.map((e) => ({ exId: e.exId, note: '', rest: e.rest, sets: noWarm(e.sets).map((x) => newSet({ type: x.type, tWeight: x.weight, tReps: x.reps, tSecs: x.secs })) }))
+      : p ? p.exercises.map((pe) => ({ exId: pe.exId, note: pe.note || '', rest: pe.rest ?? defaultRest(), sets: (pe.sets.length ? noWarm(pe.sets) : [{}]).map((ps) => newSet(ps)) }))
         : [];
     commit((s) => {
       s.active = { id: uid(), name: (p || old)?.name || greeting(start), planId: p?.id || old?.planId || null, start, end: null, rest: null, past: { dur }, exercises };
@@ -381,7 +383,7 @@ export async function saveAsPlan(w) {
     id: uid(), name, created: Date.now(),
     exercises: w.exercises.map((e) => ({
       exId: e.exId, note: '', rest: e.rest ?? defaultRest(),
-      sets: (e.sets.filter((s) => s.done).length ? e.sets.filter((s) => s.done) : e.sets).map((s) => ({ id: uid(), type: s.type, tWeight: s.weight ?? s.tWeight, tReps: s.reps ?? s.tReps, tSecs: s.secs ?? s.tSecs })),
+      sets: noWarm(e.sets.filter((s) => s.done).length ? e.sets.filter((s) => s.done) : e.sets).map((s) => ({ id: uid(), type: s.type, tWeight: s.weight ?? s.tWeight, tReps: s.reps ?? s.tReps, tSecs: s.secs ?? s.tSecs })),
     })),
   });
   toast('Saved to My plans');

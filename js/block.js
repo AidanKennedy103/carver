@@ -7,7 +7,7 @@ import { pickExercises } from './picker.js';
 import { musclesText } from './exercises.js';
 
 export const REST_CHOICES = [0, 30, 45, 60, 90, 120, 150, 180, 240, 300];
-const SET_TYPES = { n: 'Normal set', w: 'Warm-up set', d: 'Drop set', f: 'Failure set' };
+const SET_TYPES = { n: 'Normal set', d: 'Drop set', f: 'Failure set' };   // no warm-up sets in Carver
 
 export const newSet = (from = {}) => ({ id: uid(), type: from.type || 'n', weight: null, reps: null, secs: null, done: false,
   tWeight: from.weight ?? from.tWeight ?? null, tReps: from.reps ?? from.tReps ?? null, tSecs: from.secs ?? from.tSecs ?? null });
