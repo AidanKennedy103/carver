@@ -57,7 +57,8 @@ export function exerciseCard(opts) {
   requestAnimationFrame(() => autoGrow(note));
 
   const valueCols = type === 'wr' ? [unit().toUpperCase(), 'REPS'] : type === 'bw' ? ['REPS'] : ['TIME'];
-  const cols = ['SET', ...(live ? ['PREVIOUS'] : []), ...valueCols, ...(live ? [''] : [''])];
+  const tgt = live && ex.tgt;   // a block sets this lift: show this week's target, not last time
+  const cols = ['SET', ...(live ? [tgt ? 'TARGET' : 'PREVIOUS'] : []), ...valueCols, ...(live ? [''] : [''])];
   const grid = `grid-${live ? 'l' : 'p'}${valueCols.length}`;
 
   const table = h('div.sets ' + grid,
@@ -68,10 +69,11 @@ export function exerciseCard(opts) {
   const nextIdx = live && opts.current ? ex.sets.findIndex((x) => !x.done) : -1;   // the set to do next
   ex.sets.forEach((set, si) => {
     const label = set.type === 'n' ? String(++normalN) : set.type.toUpperCase();
-    const p = prev[si];
-    const prevText = p ? (type === 'wr' ? `${toDisplay(p.weight)} × ${p.reps ?? 0}` : type === 'bw' ? `${p.reps ?? 0} reps` : fmtSecs(p.secs || 0)) : '—';
+    // In a block the plan's target stands in for last time
+    const p = tgt ? (set.tWeight != null || set.tReps != null || set.tSecs != null ? { weight: set.tWeight, reps: set.tReps, secs: set.tSecs } : null) : prev[si];
+    const prevText = !p ? '—' : type === 'wr' ? (p.weight != null ? `${toDisplay(p.weight)} × ${p.reps ?? 0}` : `${p.reps ?? 0} reps`) : type === 'bw' ? `${p.reps ?? 0} reps` : fmtSecs(p.secs || 0);
 
-    // Placeholders: last time's numbers first, then the plan's targets
+    // Placeholders: last time's numbers (or the block's target) first, then the plan's targets
     const phW = p?.weight != null ? toDisplay(p.weight) : set.tWeight != null ? toDisplay(set.tWeight) : '';
     const phR = p?.reps != null ? String(p.reps) : set.tReps != null ? String(set.tReps) : '';
     const phS = p?.secs != null ? fmtSecs(p.secs) : set.tSecs != null ? fmtSecs(set.tSecs) : '';
@@ -108,9 +110,10 @@ export function exerciseCard(opts) {
     if (live) cells.push(h('button.prev', {
       onclick: () => {   // tap "previous" to copy it in
         if (!p) return;
-        set.weight = p.weight; set.reps = p.reps; set.secs = p.secs; opts.redraw();
+        set.weight = p.weight ?? set.weight; set.reps = p.reps; set.secs = p.secs; opts.redraw();
       },
     }, prevText));
+    if (live && tgt) cells[cells.length - 1].classList.add('tgt');
     if (type === 'wr') cells.push(mkInput('weight', phW || '0', 'decimal'), mkInput('reps', phR || '0', 'numeric'));
     else if (type === 'bw') cells.push(mkInput('reps', phR || '0', 'numeric'));
     else cells.push(mkInput('secs', phS || '0:00', 'text'));

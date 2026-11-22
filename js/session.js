@@ -6,7 +6,17 @@ import { h, fill, icon, push, pop, navBar, confirmBox, promptBox, actionSheet, s
 import { state, commit, save, uid, exercise, previousSets, workoutStats, findPRs, toDisplay, unit, MAX_PLANS, savePlan } from './store.js';
 import { exerciseCard, newSet } from './block.js';
 import { pickExercises } from './picker.js';
-import { progressAfter } from './coach.js';
+import { progressAfter, coachProgram } from './coach.js';
+import { program as program531 } from './program531.js';
+
+/** Lifts a running block sets the numbers for: they show this week's target, not last time. */
+function blockRun(plan, pe) {
+  if (!plan) return false;
+  const p5 = program531();
+  if (p5 && Object.values(p5.plans || {}).includes(plan.id)) return !!pe.prog;
+  const cp = coachProgram();
+  return !!(cp && cp.mode === 'block' && cp.plans.includes(plan.id) && pe.coach && !pe.manual);
+}
 import { beep, unlockAudio } from './sound.js';
 
 const defaultRest = () => state.settings.restDefault ?? 90;
@@ -28,7 +38,7 @@ export async function startWorkout(plan = null) {
   const w = {
     id: uid(), name: plan ? plan.name : greeting(), planId: plan?.id || null, start: Date.now(), end: null, rest: null,
     exercises: plan ? plan.exercises.map((pe) => ({
-      exId: pe.exId, note: pe.note || '', rest: pe.rest ?? defaultRest(),
+      exId: pe.exId, note: pe.note || '', rest: pe.rest ?? defaultRest(), ...(blockRun(plan, pe) ? { tgt: true } : {}),
       sets: (pe.sets.length ? noWarm(pe.sets) : [{}]).map((ps) => newSet(ps)),
     })) : [],
     ...(plan?.timer ? { timer: { ...plan.timer, started: null, result: null } } : {}),
@@ -94,7 +104,7 @@ export function logPastWorkout(plan = null) {
     const p = plan || from.plan, old = from.workout;
     const exercises = old
       ? old.exercises.map((e) => ({ exId: e.exId, note: '', rest: e.rest, sets: noWarm(e.sets).map((x) => newSet({ type: x.type, tWeight: x.weight, tReps: x.reps, tSecs: x.secs })) }))
-      : p ? p.exercises.map((pe) => ({ exId: pe.exId, note: pe.note || '', rest: pe.rest ?? defaultRest(), sets: (pe.sets.length ? noWarm(pe.sets) : [{}]).map((ps) => newSet(ps)) }))
+      : p ? p.exercises.map((pe) => ({ exId: pe.exId, note: pe.note || '', rest: pe.rest ?? defaultRest(), ...(blockRun(p, pe) ? { tgt: true } : {}), sets: (pe.sets.length ? noWarm(pe.sets) : [{}]).map((ps) => newSet(ps)) }))
         : [];
     commit((s) => {
       s.active = { id: uid(), name: (p || old)?.name || greeting(start), planId: p?.id || old?.planId || null, start, end: null, rest: null, past: { dur }, exercises };
@@ -225,7 +235,7 @@ function workoutScreen() {
           if (ex.sets.some((s) => s.done) && !(await confirmBox('Remove ' + exercise(ex.exId).name + '?', 'Its logged sets will be removed too.', { ok: 'Remove', danger: true }))) return;
           w.exercises.splice(i, 1); save(); draw();
         },
-        onReplace: (id) => { ex.exId = id; ex.sets.forEach((s) => { s.tWeight = s.tReps = s.tSecs = null; }); save(); draw(); },
+        onReplace: (id) => { ex.exId = id; delete ex.tgt; ex.sets.forEach((s) => { s.tWeight = s.tReps = s.tSecs = null; }); save(); draw(); },
       })),
       h('button.btn.gold.wide', { onclick: addExercises }, icon('plus', 18), 'Add exercise'),
       h('div.text-actions',

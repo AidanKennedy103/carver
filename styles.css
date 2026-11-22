@@ -1979,3 +1979,6 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .bb-wk-note { margin: 8px 0 0; }
 .ed-role { margin-top: 8px; }
 .coach-tag.dim { color: var(--muted); border-color: #3a3a40; }
+
+/* Block lifts: the TARGET column reads in gold */
+.prev.tgt { color: var(--gold); font-weight: 600; }
