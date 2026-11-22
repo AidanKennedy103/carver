@@ -20,7 +20,6 @@ const WEEKS = [
   { name: '5/3/1 week', sets: [[0.75, 5], [0.85, 3], [0.95, 1]], plus: true },
   { name: 'Deload week', sets: [[0.40, 5], [0.50, 5], [0.60, 5]], plus: false },
 ];
-const WARMUP = [[0.40, 5], [0.50, 5], [0.60, 3]];
 /** Two assistance moves per day: [exId, sets, reps]. Yours to swap or delete. */
 const ASSIST = {
   squat: [['lying-curl', 3, 10], ['hanging-leg-raise', 3, 12]],
@@ -41,7 +40,7 @@ function liftExercises(p, lift) {
   const main = {
     exId: lift.exId, prog: 'main', rest: 180,
     note: wk.plus ? `${wk.name}, cycle ${p.cycle}. Last set: as many good reps as you can (at least ${wk.sets[2][1]}).` : `${wk.name}, cycle ${p.cycle}. Keep it easy.`,
-    sets: [...(wk.plus ? WARMUP.map(([pc, r]) => set('w', tm * pc, r)) : []), ...wk.sets.map(([pc, r]) => set('n', tm * pc, r))],
+    sets: wk.sets.map(([pc, r]) => set('n', tm * pc, r)),   // no warm-up sets
   };
   const extra = p.extra && wk.plus ? { exId: lift.exId, prog: 'extra', rest: 90, note: '5 sets of 10 at half your training max.', sets: Array.from({ length: 5 }, () => set('n', tm * 0.5, 10)) } : null;
   return [main, extra].filter(Boolean);

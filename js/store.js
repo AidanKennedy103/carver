@@ -35,6 +35,10 @@ function upgrade(data) {
     if (data[k] == null) data[k] = v;
     else if (v && typeof v === 'object' && !Array.isArray(v) && k !== 'active') data[k] = { ...v, ...data[k] };
   }
+  // Carver no longer adds warm-up sets: drop the ones programs put in plans (and an unstarted workout)
+  const strip = (e) => { if ((e.coach || e.prog) && e.sets?.some((s) => s.type === 'w') && e.sets.some((s) => s.type !== 'w')) e.sets = e.sets.filter((s) => s.type !== 'w' || s.done); };
+  for (const p of data.plans || []) for (const e of p.exercises || []) strip(e);
+  for (const e of data.active?.exercises || []) strip(e);
   return data;
 }
 

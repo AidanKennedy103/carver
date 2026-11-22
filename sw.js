@@ -2,7 +2,7 @@
 // have bad signal). Network first so updates arrive straight away; the saved copy
 // is used only when the network fails. Bump CACHE when you change the file list.
 
-const CACHE = 'carver-v122';
+const CACHE = 'carver-v123';
 const APP_FILES = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
   'js/app.js', 'js/ui.js', 'js/tabs.js', 'js/home.js', 'js/charts.js', 'js/onerm.js', 'js/foods.js', 'js/foods-more.js', 'js/foods-extra.js', 'js/foods-usda.js', 'js/foods-usda-fill.js', 'js/nutrition.js', 'js/goals.js', 'js/barcode.js', 'js/photos.js', 'js/body.js', 'js/fitness.js', 'js/progress.js', 'js/monthly.js', 'js/trends.js', 'js/store.js', 'js/exercises.js', 'js/picker.js', 'js/block.js', 'js/session.js', 'js/sound.js', 'js/workout.js', 'js/settings.js', 'js/cloud.js', 'js/account.js', 'js/groups.js', 'js/volume.js', 'js/cronometer.js', 'js/imports.js', 'js/program531.js', 'js/food-util.js', 'js/quickadd.js', 'js/foodpicker.js', 'js/recipes.js', 'js/copyfood.js', 'js/social.js', 'js/coach.js', 'js/share.js', 'js/health.js', 'js/widgets.js', 'js/howto.js', 'js/dietcoach.js', 'js/guided.js', 'js/gearbuilder.js', 'js/healthsync.js', 'js/recovery.js', 'js/bodycomp.js', 'js/nutrition-report.js', 'js/food-icons.js', 'js/about.js', 'js/config.js', 'js/habits.js', 'js/push.js',

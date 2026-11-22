@@ -239,16 +239,16 @@ export function mainSets(p, exId, w, slot = 0) {
   const info = blockWeek(p, w);
   const tm = p.tm[exId];
   const c = p.custom;
-  const warm = (kg) => [set('w', kg * 0.5, 5), set('w', kg * 0.75, 3)];
+  // No warm-up sets: Carver never adds them (warm up however you like)
   const work = (n, kg, reps, extra = '') => ({
-    sets: [...(kg ? warm(kg) : []), ...Array.from({ length: n }, () => set('n', kg, reps))],
+    sets: Array.from({ length: n }, () => set('n', kg, reps)),
     text: `${n} × ${reps}${extra}${kg ? ` · ${fmtW(plate(kg))}` : ''}`, reps, top: kg ? plate(kg) : null,
   });
   const base = c?.style === 'rpe' ? liveMax(p, exId) * 0.9 : tm;
   if (info.kind === 'deload') return { ...work(3, base ? base * 0.6 : null, 5), sets: Array.from({ length: 3 }, () => set('n', base ? base * 0.6 : null, 5)) };
   if (info.kind === 'test') {
     const kg = base ? base * 0.95 : null;
-    return { sets: kg ? [set('w', kg * 0.55, 5), set('w', kg * 0.75, 3), set('w', kg * 0.9, 1), set('n', kg, 1)] : [set('n', null, 1)], text: `1 × max reps${kg ? ` · ${fmtW(plate(kg))}` : ''}`, reps: 1, top: kg ? plate(kg) : null, test: true };
+    return { sets: [set('n', kg, 1)], text: `1 × max reps${kg ? ` · ${fmtW(plate(kg))}` : ''}`, reps: 1, top: kg ? plate(kg) : null, test: true };
   }
   if (!c) { const ph = info.phase; return work(ph.sets, tm ? tm * ph.pct[info.wk] : null, ph.reps); }
   const t = info.total > 1 ? info.idx / (info.total - 1) : 0;
