@@ -24,6 +24,7 @@ import { goalsButton } from './goals.js';
 import { startWorkout } from './session.js';
 import { planEditor, lastDone } from './workout.js';
 import { pickExercises } from './picker.js';
+import { openBuilder, weeklySets, MAJOR } from './blockbuilder.js';
 
 // [exId, sets, low reps, high reps]; M() marks a main lift (follows the block's plan)
 const E = (exId, sets, lo, hi = lo) => ({ exId, sets, lo, hi });
@@ -197,7 +198,8 @@ export function blockWeek(p, w) {
 export const coachProgram = () => (state.program?.kind === 'coach' ? state.program : null);
 const template = (id) => PROGRAMS.find((p) => p.id === id);
 /** The program as you started it (with your edits). */
-const progTemplate = (cp) => { const b = template(cp.id); return b && cp.tpl ? { ...b, plans: cp.tpl } : b; };
+const progTemplate = (cp) => { const b = template(cp.id) || (cp.meta ? { ...cp.meta } : null); return b && cp.tpl ? { ...b, plans: cp.tpl } : b; };
+const RIR_NOTE = { '0-1': 'Take each set to 0–1 reps left.', '1-2': 'Stop each set with 1–2 reps left.', '2-3': 'Stop each set with 2–3 reps left.' };
 export const currentWeek = (p) => Math.floor((weekStart() - p.start) / WEEK) + 1;
 
 /** Round to what you can load: 5 lb or 2.5 kg (stored in kg). */
@@ -281,7 +283,7 @@ function applyWeek(s, p) {
   if (p.custom) markLifts(plans, p.custom.lifts);
   for (const plan of plans) {
     for (const pe of plan.exercises) {
-      if (!pe.coach) continue;
+      if (!pe.coach || pe.manual) continue;   // manual lifts are yours
       if (pe.main) {
         const ms = mainSets(p, pe.exId, w, pe.slot || 0);
         pe.sets = ms.sets;
@@ -290,6 +292,18 @@ function applyWeek(s, p) {
             : p.custom?.style === 'rpe' ? `${ms.text.split(' · ')[0]}. The weight is a starting point: adjust it so the last rep feels like that effort.`
               : `${info.label}. Hit ${ms.reps} reps on every set.`;
         pe.rest = ms.reps <= 3 ? 210 : ms.reps <= 6 ? 180 : 120;
+      } else if (p.meta?.generated && exercise(pe.exId).type === 'wr' && pe.rng) {
+        // Built programs keep your rep ranges; deload weeks drop a set and 20%, then the weight comes back
+        const [lo, hi] = pe.rng;
+        const cur = pe.sets.find((x) => x.type !== 'w');
+        const deload = info.kind === 'deload';
+        const kg = deload ? (cur?.tWeight ?? null) : (pe.preDeload ?? cur?.tWeight ?? null);
+        if (deload && pe.preDeload == null) pe.preDeload = kg;
+        const back = !deload && pe.preDeload != null;   // first week after a deload: start the range again
+        if (!deload) delete pe.preDeload;
+        const n = info.kind === 'work' ? pe.base : Math.max(1, pe.base - 1);
+        pe.sets = Array.from({ length: n }, () => set('n', deload && kg ? plate(kg * 0.8) : kg, deload ? hi : back ? lo : (cur?.tReps ?? lo)));
+        pe.note = deload ? 'Deload: lighter and easy.' : `${lo}–${hi} reps. Hit ${hi} on every set and the weight goes up next time.${p.meta.rir ? ` ${RIR_NOTE[p.meta.rir]}` : ''}`;
       } else if (!p.custom && exercise(pe.exId).type === 'wr') {
         const [lo, hi] = info.phase.acc;
         const was = pe.rng?.[0];
@@ -333,9 +347,16 @@ function planFrom(t, pl, maxes) {
       const info = exercise(e.exId);
       const max = maxes[e.exId] || bestSet(e.exId)?.max || 0;
       const w = info.type === 'wr' && max ? plate((max / (1 + Math.min(e.hi + 2, 12) / 30)) * 0.95) : null;
+      const rir = e.rir && !e.main ? ` ${RIR_NOTE[e.rir] || ''}` : '';
+      if (e.manual) return {
+        exId: e.exId, coach: true, manual: true, main: false, base: e.sets, rng: null,
+        note: `${e.lo ? `${e.lo === e.hi ? e.lo : `${e.lo}–${e.hi}`} reps. ` : ''}You set the weights for this one.${rir}`,
+        rest: info.type === 'wr' ? (e.hi <= 6 ? 180 : 120) : 60,
+        sets: Array.from({ length: e.sets }, () => set('n', w, info.type === 'time' ? null : e.lo || null, { tSecs: info.type === 'time' ? 45 : null })),
+      };
       return {
         exId: e.exId, coach: true, main: !!e.main, base: e.sets,
-        note: e.lo !== e.hi ? `${e.lo}–${e.hi} reps. Hit ${e.hi} on every set and the weight goes up next time.` : e.lo ? `${e.lo} reps. Get them all and the weight goes up next time.` : '',
+        note: (e.lo !== e.hi ? `${e.lo}–${e.hi} reps. Hit ${e.hi} on every set and the weight goes up next time.` : e.lo ? `${e.lo} reps. Get them all and the weight goes up next time.` : '') + rir,
         rest: info.type === 'wr' ? (e.hi <= 6 ? 180 : 120) : 60, rng: e.lo ? [e.lo, e.hi] : null,
         sets: Array.from({ length: e.sets }, () => set('n', w, info.type === 'time' ? null : e.lo || null, { tSecs: info.type === 'time' ? 45 : null })),
       };
@@ -358,7 +379,8 @@ async function startProgram(t, length, maxes) {
   const tm = Object.fromEntries(Object.entries(maxes).filter(([, v]) => v > 0).map(([k, v]) => [k, v * 0.9]));
   commit((s) => {
     s.plans = [...(replace ? [] : s.plans.filter((p) => !p.coach)), ...plans];
-    s.program = { kind: 'coach', id: t.id, ...(JSON.stringify(t.plans) !== JSON.stringify(template(t.id)?.plans) ? { tpl: t.plans } : {}), mode: length === 'ongoing' ? 'ongoing' : 'block', weeks: length === 'ongoing' ? null : length, start: weekStart(), since: Date.now(),
+    const meta = t.generated ? Object.fromEntries(['id', 'bid', 'name', 'days', 'minutes', 'level', 'schedule', 'summary', 'pros', 'cons', 'bestFor', 'generated', 'perWeek', 'target', 'focusMuscles', 'rir'].map((k) => [k, t[k]])) : null;
+    s.program = { kind: 'coach', id: t.id, ...(meta ? { meta } : {}), ...(JSON.stringify(t.plans) !== JSON.stringify(template(t.id)?.plans) ? { tpl: t.plans } : {}), mode: length === 'ongoing' ? 'ongoing' : 'block', weeks: length === 'ongoing' ? null : length, start: weekStart(), since: Date.now(),
       tm, tm0: { ...tm }, miss: {}, result: {}, plans: plans.map((p) => p.id), log: [] };
     s.goals.workoutsPerWeek = t.days;
     s.settings.program = { ...(s.settings.program || {}), ...Object.fromEntries(plans.map((p) => [p.id, t.days / t.plans.length >= 2 ? 2 : 1])) };
@@ -651,6 +673,40 @@ function maxInputs(lifts, current = {}) {
 
 // ---------- Program detail ----------
 
+/** Who runs a lift: Main follows the block, Rep range goes up when you top it out, Manual is yours. */
+const role = (e) => (e.manual ? 'manual' : e.main ? 'main' : 'rng');
+function setRole(e, k) {
+  e.manual = k === 'manual' || undefined;
+  e.main = k === 'main' || undefined;
+  if (!e.manual) delete e.manual;
+  if (!e.main) delete e.main;
+}
+const ROLE_TEXT = {
+  main: 'Main lift: weights follow the block from your starting number, building to a new max.',
+  rng: 'Carver adds weight once you hit the top of the range on every set.',
+  manual: 'Carver leaves this one alone: you pick the weights and reps.',
+};
+
+/** Built programs: hard sets per muscle each week against your targets. */
+function volumePanel(t) {
+  const sets = weeklySets(t.plans, t.perWeek || t.days);
+  const tgt = t.target || {};
+  const focus = new Set(t.focusMuscles || []);
+  const max = Math.max(22, ...MAJOR.map((m) => sets[m].total), ...MAJOR.map((m) => tgt[m] || 0));
+  return [
+    h('div.section-head', h('h2.section-title', 'Weekly sets'), h('span.section-count', 'per muscle')),
+    h('section.card.bb-wk', MAJOR.map((m) => {
+      const n = Math.round(sets[m].total), g = tgt[m] || 10;
+      const st = n < g - 2 ? 'low' : n > Math.max(g + 6, Math.round(g * 1.75)) ? 'high' : 'ok';   // presses and rows add a lot of helper sets on paper
+      return h('div.bb-wk-row',
+        h('span.bb-wk-name', m, focus.has(m) ? h('span.coach-tag', 'focus') : null),
+        h('span.bb-wk-bar', h('i.' + st, { style: { width: `${Math.min(100, (n / max) * 100)}%` } }), h('b', { style: { left: `${(g / max) * 100}%` } })),
+        h('span.bb-wk-n.' + st, n));
+    }),
+    h('p.fine.bb-wk-note', 'Bar: sets you’ll do. Tick: your target. Compound lifts count half for helper muscles.')),
+  ];
+}
+
 function programScreen(t0) {
   const t = structuredClone(t0);   // your copy: edit the days before you start
   let length = t.ongoingOnly ? 'ongoing' : 12;
@@ -660,7 +716,7 @@ function programScreen(t0) {
   const canEdit = t.id !== '531';
   const el = h('div.page');
   const body = h('div.scroll-body');
-  const running = t.id === '531' ? !!program531() : coachProgram()?.id === t.id;
+  const running = t.id === '531' ? !!program531() : coachProgram()?.id === t.id && (!t.generated || coachProgram()?.meta?.bid === t.bid);
   function draw() {
     if (mainLifts(t).join() !== lifts.join()) { lifts = mainLifts(t); maxes = maxInputs(lifts); }
     const preview = length === 'ongoing' ? null : { tm: Object.fromEntries(Object.entries(maxes.read()).map(([k, v]) => [k, v * 0.9])), weeks: length };
@@ -668,7 +724,7 @@ function programScreen(t0) {
       programFigure(t.id, { wide: true }),
       h('div.coach-head',
         h('h1.coach-title', t.name),
-        h('div.coach-pills', [`${t.days} days a week`, `${t.minutes} min`, t.level].map((x) => h('span.coach-pill', x))),
+        h('div.coach-pills', [`${t.days} days a week`, t.minutes ? `${t.minutes} min` : null, t.level].filter(Boolean).map((x) => h('span.coach-pill', x))),
         h('p.coach-summary', t.summary)),
 
       h('div.coach-pc',
@@ -685,12 +741,13 @@ function programScreen(t0) {
       length !== 'ongoing' ? timeline({ weeks: length }) : null,
       h('p.fine', t.lengthText || lengthText(length)),
 
+      t.generated ? volumePanel(t) : null,
       h('div.section-head', h('h2.section-title', 'Each week'), h('span.section-count', t.schedule)),
       canEdit ? h('p.fine', edited() ? 'Edited. Your changes are used when you start.' : 'Tap Edit on a day to swap, add or remove exercises before you start.') : null,
       t.plans.map((pl, di) => h('section.card.coach-day',
         h('div.coach-day-top', h('div.coach-day-name', pl.name), canEdit && !running ? h('button.link.small-link', { onclick: () => editDay(di) }, 'Edit') : null),
         pl.ex.map((e) => h('div.coach-ex',
-          h('span', exercise(e.exId).name, e.tag || (e.main && length !== 'ongoing') ? h('span.coach-tag', 'main') : null),
+          h('span', exercise(e.exId).name, e.tag || (e.main && length !== 'ongoing') ? h('span.coach-tag', 'main') : null, e.manual ? h('span.coach-tag.dim', 'manual') : null),
           h('span.coach-ex-v', e.v ? e.v : e.main && preview ? mainSets(preview, e.exId, 1).text.split(' · ')[0] + ' in week 1'
             : exercise(e.exId).type === 'time' ? `${e.sets} sets` : `${e.sets} × ${e.lo === e.hi ? e.lo : `${e.lo}–${e.hi}`}`))))),
 
@@ -724,9 +781,12 @@ function programScreen(t0) {
             h('span.ed-sets', `${e.sets} set${e.sets === 1 ? '' : 's'}`),
             h('button.gd-pm.small', { onclick: () => { e.sets = Math.min(10, e.sets + 1); redraw(); }, 'aria-label': 'One more set' }, icon('plus', 14)),
             time ? null : [h('span.ed-x', '×'), num('lo', 'Fewest reps'), h('span.ed-x', '–'), num('hi', 'Most reps'), h('span.ed-x', 'reps')]),
-          e.main ? h('div.fine.ed-main', 'Main lift: its weights follow the block.') : null);
+          time ? null : h('div.segment.mini.ed-role', [
+            info.type === 'wr' ? ['main', 'Main'] : null, ['rng', info.type === 'wr' ? 'Rep range' : 'Auto reps'], ['manual', 'Manual'],
+          ].filter(Boolean).map(([k, l]) => h('button' + (role(e) === k ? '.on' : ''), { onclick: () => { setRole(e, k); redraw(); } }, l))),
+          time ? null : h('div.fine.ed-main', ROLE_TEXT[role(e)]));
       }),
-      h('button.btn.dark.wide', { onclick: () => pickExercises((ids) => { ids.forEach((id) => pl.ex.push(exercise(id).type === 'time' ? { exId: id, sets: 3, lo: 0, hi: 0 } : { exId: id, sets: 3, lo: 8, hi: 12 })); redraw(); }, { title: `Add to ${pl.name}` }) }, icon('plus', 16), 'Add exercise'));
+      h('button.btn.dark.wide', { onclick: () => pickExercises((ids) => { ids.forEach((id) => pl.ex.push(exercise(id).type === 'time' ? { exId: id, sets: 3, lo: 0, hi: 0 } : { exId: id, sets: 3, lo: 8, hi: 12, ...(t.rir ? { rir: t.rir } : {}) })); redraw(); }, { title: `Add to ${pl.name}` }) }, icon('plus', 16), 'Add exercise'));
     redraw();
     const s = sheet(h('div.form',
       h('div.sheet-head', h('span'), h('div.sheet-title', pl.name), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
@@ -735,12 +795,13 @@ function programScreen(t0) {
 
   async function go() {
     if (t.id === '531') { setup531(); return; }
+    if (t.generated && !t.plans.every((p) => p.ex.length)) { toast('Add exercises to every day first'); return; }
     const m = maxes.read();
     if (length !== 'ongoing') {
       const missing = lifts.filter((k) => !m[k]);
       if (missing.length && !(await confirmBox('Missing starting numbers', `Without a set for ${missing.map((k) => exercise(k).name).join(', ')}, Carver can’t work out those weights; you’d pick them yourself.`, { ok: 'Start anyway' }))) return;
     }
-    if (await startProgram(t, length, m)) pop();
+    if (await startProgram(t, length, m)) { pop(); if (t.generated) setTimeout(pop, 350); }   // built: past the builder too
   }
   draw();
   el.append(navBar({ title: t.name, backLabel: 'Programs' }), body);
@@ -822,7 +883,7 @@ export function coachPage({ view: startView = 'programs' } = {}) {
 
       h('div.section-head', h('h2.section-title', 'Build your own')),
       h('div.pgrid',
-        tile({ id: 'custom', name: 'Custom block', line: 'Periodized, your rules', tag: 'Advanced', onclick: () => push(() => customScreen(cp?.custom || null)) }),
+        tile({ id: 'custom', name: 'Custom program', line: 'PPL, Upper/Lower or your own', tag: 'Advanced', onclick: () => openBuilder((x) => push(() => programScreen(x)), () => push(() => customScreen(cp?.custom || null))) }),
         tile({ id: 'plan', name: 'Simple plan', line: 'Pick exercises, no block', tag: 'Any level', onclick: () => (state.plans.length >= MAX_PLANS ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor())) }),
         tile({ id: 'gear', name: 'My equipment', line: 'Built from the gear you have', tag: 'Any level', span: true, onclick: () => import('./gearbuilder.js').then((m) => push(m.gearScreen)) })),
 
