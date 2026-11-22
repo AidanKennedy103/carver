@@ -193,6 +193,13 @@ export function fromDisplay(v) {
 
 // ---------- Plans ----------
 
+/** Your current split: the saved workouts you're running now (all of them unless you've switched some off). */
+export const inSplit = (p) => p.split !== false;
+export const splitPlans = () => state.plans.filter(inSplit);
+export function setSplit(id, on) {
+  commit((s) => { const p = s.plans.find((x) => x.id === id); if (p) p.split = !!on; });
+}
+
 export function savePlan(plan) {
   commit((s) => {
     const i = s.plans.findIndex((p) => p.id === plan.id);

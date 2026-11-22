@@ -3,7 +3,7 @@
 // Also the plan editor and the workout detail screen.
 
 import { h, fill, icon, push, pop, navBar, actionSheet, confirmBox, promptBox, toast, fmtDate, fmtDurationWords, fmtNum, fmtSecs } from './ui.js';
-import { state, commit, save, uid, exercise, savePlan, deletePlan, workoutStats, toDisplay, unit, e1rm, MAX_PLANS, ymd, addDays, dayStart, weekStart, dayPlan, workoutDays, restNote, DAY_SHORT } from './store.js';
+import { state, commit, save, uid, exercise, savePlan, deletePlan, splitPlans, setSplit, workoutStats, toDisplay, unit, e1rm, MAX_PLANS, ymd, addDays, dayStart, weekStart, dayPlan, workoutDays, restNote, DAY_SHORT } from './store.js';
 import { startWorkout, repeatWorkout, saveAsPlan, openWorkout, logPastWorkout, editWorkout } from './session.js';
 import { exerciseCard, newSet } from './block.js';
 import { pickExercises } from './picker.js';
@@ -37,13 +37,15 @@ export function workoutPage() {
 
       // 2. Plans: routines you save for later. Making one doesn't log anything.
       h('div.section-head',
-        h('h2.section-title', 'Your plans', h('span.section-count', `${state.plans.length} of ${MAX_PLANS}`)),
+        h('h2.section-title', 'Your split', h('span.section-count', `${splitPlans().length}${state.plans.length > splitPlans().length ? ` of ${state.plans.length}` : ''}`)),
         h('span.head-links',
+          state.plans.length ? h('button.link', { onclick: () => push(() => coachPage({ view: 'mine' })) }, 'All workouts') : null,
           h('button.link' + (plansFull ? '.off' : ''), {
             onclick: () => plansFull ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor()),
-          }, icon('plus', 16), 'Make a plan'))),
-      state.plans.length ? h('section.card.list-card.plan-list', state.plans.map((p) => planRow(p, p === next)))
-        : h('button.card.empty-plan-row', { onclick: () => push(() => planEditor()) }, icon('plus', 18), h('span', 'Make your first plan')),
+          }, icon('plus', 16), 'New'))),
+      splitPlans().length ? h('section.card.list-card.plan-list', splitPlans().map((p) => planRow(p, p === next)))
+        : state.plans.length ? h('button.card.empty-plan-row', { onclick: () => push(() => coachPage({ view: 'mine' })) }, icon('plus', 18), h('span', 'Pick the workouts in your split'))
+          : h('button.card.empty-plan-row', { onclick: () => push(() => planEditor()) }, icon('plus', 18), h('span', 'Make your first plan')),
       state.plans.length || state.workouts.length ? volumeCard() : null,
 
       // 3. Build a program, then the other ways to work out
@@ -152,6 +154,7 @@ export function workoutPage() {
       { label: 'Start', onClick: () => startWorkout(p) },
       { label: 'Log it as a past workout', onClick: () => logPastWorkout(p) },
       { label: 'Edit plan', onClick: () => push(() => planEditor(p)) },
+      { label: 'Take out of my split', onClick: () => { setSplit(p.id, false); toast(`${p.name} is out of your split. It’s still in My workouts.`); } },
       { label: 'Share', onClick: () => shareWorkout(p) },
       { label: 'Rename', onClick: async () => { const n = await promptBox('Rename plan', p.name); if (n) savePlan({ ...p, name: n }); } },
       { label: 'Duplicate', onClick: () => {
@@ -174,8 +177,8 @@ export const lastDone = (p) => state.workouts.find((w) => w.planId === p.id || (
 
 /** The plan after the one you did most recently (plans rotate in order). */
 export function nextPlan() {
-  const plans = state.plans.filter((p) => p.exercises.length);
-  if (!plans.length) return state.plans[0] || null;
+  const plans = splitPlans().filter((p) => p.exercises.length);
+  if (!plans.length) return splitPlans()[0] || null;
   const lastW = state.workouts.find((w) => plans.some((p) => p.id === w.planId));
   if (!lastW) return plans[0];
   return plans[(plans.findIndex((p) => p.id === lastW.planId) + 1) % plans.length];

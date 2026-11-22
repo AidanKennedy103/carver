@@ -1912,3 +1912,8 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .ptile-tag { margin-top: auto !important; }
 .ptile-line { margin-bottom: 6px; }
 @media (max-width: 360px) { .ptile-name { font-size: 14px; } .ptile-line { font-size: 11px; } }
+
+/* My workouts: In split switch */
+.split-sw { flex: none; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 0 6px; }
+.split-sw .switch { transform: scale(.8); }
+.split-sw-k { font-size: 10px; font-weight: 600; color: var(--muted); }

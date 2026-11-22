@@ -3,7 +3,7 @@
 // (triceps on bench press, biceps on rows…) count half, a common way to tally it.
 
 import { h, fill, icon, push, navBar, swipeSegment } from './ui.js';
-import { state, commit, exercise, weekStart } from './store.js';
+import { state, commit, exercise, weekStart, splitPlans } from './store.js';
 
 export const MUSCLE_ORDER = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Forearms', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Core'];
 // Smaller muscles: shown, but without the 10–20 set target (they mostly get work from the big lifts)
@@ -42,7 +42,7 @@ export const timesPerWeek = (planId) => state.settings.program?.[planId] ?? 1;
 
 export function programTally() {
   const items = [];
-  for (const p of state.plans) {
+  for (const p of splitPlans()) {
     const n = timesPerWeek(p.id);
     for (const e of p.exercises) items.push({ exId: e.exId, sets: workSets(e.sets, false) * n });
   }
@@ -68,7 +68,7 @@ const status = (v) => (v < TARGET[0] ? 'low' : v > TARGET[1] ? 'high' : 'ok');
 // ---------- Workout page card ----------
 
 export function volumeCard() {
-  const usePlans = state.plans.length > 0;
+  const usePlans = splitPlans().length > 0;
   const t = usePlans ? programTally() : loggedTally(0);
   const vals = MUSCLE_ORDER.map((m) => [m, t[m].total]);
   return h('button.card.vol-card', { onclick: () => push(volumeScreen) },
@@ -85,7 +85,7 @@ let view = null;   // 'program' | 'week' | 'avg'
 export function volumeScreen() {
   const el = h('div.page');
   const body = swipeSegment(h('div.scroll-body'));
-  if (!view) view = state.plans.length ? 'program' : 'week';
+  if (!view) view = splitPlans().length ? 'program' : 'week';
 
   function draw() {
     const t = view === 'program' ? programTally() : view === 'week' ? loggedTally(0) : loggedTally(4);
@@ -131,11 +131,11 @@ function muscleRow(m, t, minor = false) {
 }
 
 function programEditor(redraw) {
-  if (!state.plans.length) return h('div.feed-empty.card', 'Make plans on the Workout tab, then set how often you run each one here.');
+  if (!splitPlans().length) return h('div.feed-empty.card', 'Add workouts to your split (Program builder → My workouts), then set how often you run each one here.');
   const set = (id, d) => { commit((s) => { s.settings.program = { ...(s.settings.program || {}), [id]: Math.max(0, Math.min(4, timesPerWeek(id) + d)) }; }); redraw(); };
   return h('section.card.list-card.prog',
-    h('div.prog-head', 'How often you run each plan'),
-    state.plans.map((p) => h('div.group-row',
+    h('div.prog-head', 'How often you run each workout in your split'),
+    splitPlans().map((p) => h('div.group-row',
       h('span', p.name),
       h('span.stepper',
         h('button', { 'aria-label': `Run ${p.name} less often`, onclick: () => set(p.id, -1) }, '−'),

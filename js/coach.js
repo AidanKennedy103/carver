@@ -18,7 +18,7 @@
 //   tm: { exId: kg }, tm0, applied, miss, result, plans: [ids], log: [] }
 
 import { h, fill, push, pop, sheet, toast, confirmBox, navBar, fmtDate, icon } from './ui.js';
-import { state, commit, uid, exercise, e1rm, e1rmHistory, toDisplay, fromDisplay, unit, LB_PER_KG, MAX_PLANS, weekStart } from './store.js';
+import { state, commit, uid, exercise, e1rm, e1rmHistory, toDisplay, fromDisplay, unit, LB_PER_KG, MAX_PLANS, weekStart, inSplit, setSplit } from './store.js';
 import { program as program531, programCard, setup531 } from './program531.js';
 import { goalsButton } from './goals.js';
 import { startWorkout } from './session.js';
@@ -770,10 +770,10 @@ function targetText(pe) {
 }
 
 /** Program builder. Opened from the Workout tab (it's a back-button page, not a tab). */
-export function coachPage() {
+export function coachPage({ view: startView = 'programs' } = {}) {
   const el = h('div.page');
   const body = h('div.scroll-body');
-  let viewWeek = null, view = 'programs';
+  let viewWeek = null, view = startView;
   function draw() {
     syncCoach();
     const cp = coachProgram(), t = cp && (cp.custom ? customTemplate(cp) : progTemplate(cp)), p531 = program531();
@@ -790,11 +790,11 @@ export function coachPage() {
     const plans = state.plans;
     const full = plans.length >= MAX_PLANS;
     return [
-      h('p.coach-intro', 'Your own workouts, no automatic progression.'),
+      h('p.coach-intro', 'Switch on the workouts you’re running now. Your split shows on the Workout page and counts toward weekly sets per muscle.'),
       h('div.btn-pair.pb-new',
         h('button.btn.gold', { onclick: () => (full ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor())) }, icon('plus', 16), 'New workout'),
         h('button.btn.dark', { onclick: () => startWorkout() }, icon('bolt', 16), 'Freestyle')),
-      h('div.section-head', h('h2.section-title', 'Your workouts', h('span.section-count', `${plans.length} of ${MAX_PLANS}`))),
+      h('div.section-head', h('h2.section-title', 'Your workouts', h('span.section-count', `${plans.filter(inSplit).length} in split · ${plans.length} of ${MAX_PLANS}`))),
       plans.length ? h('section.card.list-card', plans.map((p) => {
         const last = lastDone(p);
         const inProgram = coachProgram()?.plans.includes(p.id) || program531()?.plans && Object.values(program531().plans).includes(p.id);
@@ -802,6 +802,8 @@ export function coachPage() {
           h('button.pb-main', { onclick: () => push(() => planEditor(p)), 'aria-label': `Edit ${p.name}` },
             h('span.pb-name', p.name, inProgram ? h('span.coach-tag', 'Program') : null),
             h('span.pb-meta', [`${p.exercises.length} exercise${p.exercises.length === 1 ? '' : 's'}`, last ? `last ${fmtDate(last.start, { month: 'short', day: 'numeric' })}` : 'not done yet'].join(' · '))),
+          h('button.split-sw', { onclick: () => { setSplit(p.id, !inSplit(p)); draw(); }, 'aria-pressed': String(inSplit(p)), 'aria-label': `${p.name} in my split` },
+            h('span.switch' + (inSplit(p) ? '.on' : ''), h('i')), h('span.split-sw-k', 'Split')),
           h('button.play-btn', { 'aria-label': `Start ${p.name}`, onclick: () => startWorkout(p), disabled: !p.exercises.length }, icon('play', 16)));
       })) : h('div.feed-empty.card', 'No workouts yet. Tap New workout to build one, or Freestyle to make it up as you go.'),
     ];
