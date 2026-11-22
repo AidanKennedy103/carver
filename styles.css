@@ -1891,3 +1891,11 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .sync-steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; font-size: 14px; line-height: 1.45; color: var(--muted); }
 .sync-steps li { padding: 12px 14px; border-radius: 14px; background: var(--surface); }
 .sync-steps li b { color: var(--text); }
+
+/* Add to Home: one column, like edit mode */
+.add-list { margin-bottom: 14px; }
+.add-hs { cursor: pointer; border-style: dashed; }
+.add-hs:active { border-style: solid; border-color: var(--gold); background: rgba(227, 176, 75, .06); }
+.hs-plus { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: #17110a; display: grid; place-items: center; }
+.add-hs-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.add-hs-sub { font-size: 11px; color: var(--muted); }

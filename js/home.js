@@ -392,20 +392,20 @@ function addSheet() {
       h('span.add-own-ico', icon('sliders', 20)),
       h('span.add-card-text', h('span.add-card-name', 'Build your own widget'), h('span.add-card-sub', 'Any number Carver tracks: a lift, steps, sleep, protein, a streak…')),
       h('span.add-card-plus', icon('plus', 14))),
-    off.length ? h('div.add-grid', off.map((x) => {
+    // One column, each option looking like a widget in edit mode: name and a gold + on top, the real thing below
+    off.length ? h('div.hs-list.add-list', off.map((x) => {
       let content = null;
       try { content = [liveSections[x.id]?.()].flat(Infinity).filter(Boolean); } catch { content = null; }
-      return h('button.add-card', { onclick: () => { s0.close(); saveHome([...homeSections(), x.id]); toast(`Added ${x.name}`); } },
-        h('div.add-preview', content?.length ? h('div.add-preview-in', content) : h('div.add-preview-none', `${x.sub}. Shows when there’s something to show.`)),
-        h('div.add-card-text', h('span.add-card-name', x.name), h('span.add-card-sub', x.sub)),
-        h('span.add-card-plus', icon('plus', 14)));
+      const add = () => { s0.close(); saveHome([...homeSections(), x.id]); toast(`Added ${x.name}`); };
+      return h('div.hs.add-hs', { onclick: add, role: 'button', tabindex: 0, 'aria-label': `Add ${x.name}` },
+        h('div.hs-top',
+          h('span.hs-plus', icon('plus', 14)),
+          h('span.add-hs-text', h('span.hs-name', x.name), h('span.add-hs-sub', x.sub))),
+        h('div.hs-body', content?.length ? content : h('div.hs-empty', `${x.sub}. Shows when there’s something to show.`)));
     }))
       : h('p.fine', 'Everything is already on Home.'),
     h('button.link.home-edit', { onclick: async () => { s0.close(); if (await confirmBox('Reset Home?', 'Back to the standard sections and order.', { ok: 'Reset' })) saveHome(HOME_DEFAULT.slice()); } }, 'Reset to default')));
-  // Scale each preview so a full-width section fits its card
-  requestAnimationFrame(() => document.querySelectorAll('.add-preview-in').forEach((el) => { el.style.zoom = String(el.parentElement.clientWidth / PREVIEW_W); }));
 }
-const PREVIEW_W = 360;   // the width sections are laid out at in a preview
 
 // ---------- The page ----------
 
