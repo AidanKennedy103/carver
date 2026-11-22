@@ -484,7 +484,6 @@ export function homePage() {
         goals.length ? goalTiles(goals, view)
           : h('button.link', { onclick: editRings }, 'Pick your rings')),
       { left: view === 'day' ? setView('week') : null, right: view === 'week' ? setView('day') : null, target: () => body.querySelector('.rings-card') }),
-      view === 'day' ? goals.filter((g) => g.hit && (g.id === 'protein' || g.id === 'kcal')).map((g) => h('div.hit-banner', icon('trophy', 18), g.cheer)) : null,
     ],
       restday: () => tabOn('workout') && !state.active ? restBanner(() => goTab('workout')) : null,
       daily: () => habitsCard(openGoals),
