@@ -17,7 +17,7 @@
 // state.program = { kind: 'coach', id, mode: 'ongoing'|'block', weeks, start (Monday),
 //   tm: { exId: kg }, tm0, applied, miss, result, plans: [ids], log: [] }
 
-import { h, fill, push, pop, sheet, toast, confirmBox, navBar, fmtDate, icon } from './ui.js';
+import { h, fill, push, pop, sheet, toast, confirmBox, navBar, fmtDate, icon, swipeRow } from './ui.js';
 import { state, commit, uid, exercise, e1rm, e1rmHistory, toDisplay, fromDisplay, unit, LB_PER_KG, MAX_PLANS, weekStart, inSplit, setSplit } from './store.js';
 import { program as program531, programCard, setup531 } from './program531.js';
 import { goalsButton } from './goals.js';
@@ -856,18 +856,29 @@ export function coachPage({ view: startView = 'programs' } = {}) {
         h('button.btn.gold', { onclick: () => (full ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor())) }, icon('plus', 16), 'New workout'),
         h('button.btn.dark', { onclick: () => startWorkout() }, icon('bolt', 16), 'Freestyle')),
       h('div.section-head', h('h2.section-title', 'Your workouts', h('span.section-count', `${plans.filter(inSplit).length} in split · ${plans.length} of ${MAX_PLANS}`))),
-      plans.length ? h('section.card.list-card', plans.map((p) => {
+      plans.length ? h('p.fine.pb-hint', 'Swipe a workout left to delete it.') : null,
+      plans.length ? h('section.card.pb-list', plans.map((p) => {
         const last = lastDone(p);
         const inProgram = coachProgram()?.plans.includes(p.id) || program531()?.plans && Object.values(program531().plans).includes(p.id);
-        return h('div.pb-row',
+        return swipeRow(h('div.pb-row',
           h('button.pb-main', { onclick: () => push(() => planEditor(p)), 'aria-label': `Edit ${p.name}` },
             h('span.pb-name', p.name, inProgram ? h('span.coach-tag', 'Program') : null),
             h('span.pb-meta', [`${p.exercises.length} exercise${p.exercises.length === 1 ? '' : 's'}`, last ? `last ${fmtDate(last.start, { month: 'short', day: 'numeric' })}` : 'not done yet'].join(' · '))),
           h('button.split-sw', { onclick: () => { setSplit(p.id, !inSplit(p)); draw(); }, 'aria-pressed': String(inSplit(p)), 'aria-label': `${p.name} in my split` },
             h('span.switch' + (inSplit(p) ? '.on' : ''), h('i')), h('span.split-sw-k', 'Split')),
-          h('button.play-btn', { 'aria-label': `Start ${p.name}`, onclick: () => startWorkout(p), disabled: !p.exercises.length }, icon('play', 16)));
+          h('button.play-btn', { 'aria-label': `Start ${p.name}`, onclick: () => startWorkout(p), disabled: !p.exercises.length }, icon('play', 16))),
+        [{ label: 'Delete', danger: true, onClick: () => removePlan(p, inProgram) }]);
       })) : h('div.feed-empty.card', 'No workouts yet. Tap New workout to build one, or Freestyle to make it up as you go.'),
     ];
+  }
+
+  /** Delete from the list; Undo puts it back where it was. Program days ask first. */
+  async function removePlan(p, inProgram) {
+    if (inProgram && !(await confirmBox(`Delete “${p.name}”?`, 'It’s a day of your program, which will run without it. Your past workouts stay in History.', { ok: 'Delete', danger: true }))) return;
+    const at = state.plans.findIndex((x) => x.id === p.id);
+    commit((s) => { s.plans = s.plans.filter((x) => x.id !== p.id); });
+    draw();
+    toast(`Deleted ${p.name}`, { action: 'Undo', onAction: () => { commit((s) => { if (!s.plans.some((x) => x.id === p.id)) s.plans.splice(at, 0, p); }); draw(); } });
   }
 
   function programsView(cp, t, p531) {

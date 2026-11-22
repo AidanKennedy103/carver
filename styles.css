@@ -1982,3 +1982,18 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 
 /* Block lifts: the TARGET column reads in gold */
 .prev.tgt { color: var(--gold); font-weight: 600; }
+
+/* Swipe-to-reveal rows */
+.swipe-row { position: relative; overflow: hidden; }
+.swipe-row + .swipe-row { border-top: .5px solid var(--surface-3); }
+.swipe-tray { position: absolute; top: 0; right: 0; bottom: 0; display: flex; }
+.swipe-act { flex: 1; display: grid; place-items: center; font-size: 15px; font-weight: 600; color: #fff; background: #3a3a40; }
+.swipe-act.danger { background: var(--red); }
+.swipe-content { position: relative; background: var(--surface); touch-action: pan-y; }
+.pb-list { padding: 0; overflow: hidden; }
+.pb-list .pb-row + .pb-row { border-top: 0; }
+.pb-list .pb-row { padding: 12px 16px; }
+.pb-hint { margin: -4px 0 8px; }
+/* Toast with an action (Undo) */
+.toast.has-act { display: flex; align-items: center; gap: 14px; }
+.toast-act { color: var(--gold); font-weight: 700; font-size: 15px; padding: 2px 4px; }

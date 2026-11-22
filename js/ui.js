@@ -163,7 +163,7 @@ addEventListener('touchcancel', edgeEnd);
  * (target(), or the element itself) slides in from the side you swiped toward.
  * Vertical scrolling, charts, inputs and sideways-scrolling rows are left alone.
  */
-const NO_SWIPE = 'input, textarea, select, .chips, .photo-strip, .chart-svg, .no-swipe';
+const NO_SWIPE = 'input, textarea, select, .chips, .photo-strip, .chart-svg, .no-swipe, .swipe-row';
 export function swipe(el, { left, right, target, ignore } = {}) {
   let t = null;
   el.addEventListener('touchstart', (e) => {
@@ -332,13 +332,76 @@ export function promptBox(title, value = '', { placeholder = '', ok = 'Save', in
 }
 
 let toastTimer;
-export function toast(text) {
+export function toast(text, { action, onAction } = {}) {
   let t = document.querySelector('.toast');
   if (!t) { t = h('div.toast', { role: 'status', 'aria-live': 'polite' }); document.body.append(t); }
   t.textContent = text;
+  t.classList.toggle('has-act', !!action);
+  if (action) t.append(h('button.toast-act', { onclick: () => { t.classList.remove('show'); onAction?.(); } }, action));
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  toastTimer = setTimeout(() => t.classList.remove('show'), action ? 4500 : 2200);
+}
+
+// ---------- Swipe-to-reveal rows (iOS style) ----------
+
+let openRow = null;
+/**
+ * Wrap a list row so you can slide it left to reveal buttons.
+ * actions: [{ label, danger, onClick }]. Taps on an open row just close it.
+ */
+export function swipeRow(content, actions) {
+  const W = 88 * actions.length;
+  let x0 = 0, y0 = 0, dx = 0, base = 0, dir = null, swallow = false;
+  const set = (x, anim) => {
+    content.style.transition = anim ? 'transform .28s cubic-bezier(.2,.8,.2,1)' : 'none';
+    content.style.transform = x ? `translateX(${x}px)` : '';
+  };
+  const api = {
+    close() { base = 0; set(0, true); el.classList.remove('open'); if (openRow === api) openRow = null; },
+  };
+  const tray = h('div.swipe-tray', { style: { width: `${W}px` } }, actions.map((a) => h('button.swipe-act' + (a.danger ? '.danger' : ''), {
+    onclick: (e) => { e.stopPropagation(); api.close(); a.onClick(); },
+  }, a.label)));
+  content.classList.add('swipe-content');
+  const el = h('div.swipe-row', tray, content);
+
+  content.addEventListener('touchstart', (e) => {
+    if (openRow && openRow !== api) openRow.close();
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0;
+    dir = x0 < 28 ? 'no' : null;   // the screen edge is the back gesture
+  }, { passive: true });
+  content.addEventListener('touchmove', (e) => {
+    if (dir === 'no' || dir === 'y') return;
+    dx = e.touches[0].clientX - x0;
+    const dy = e.touches[0].clientY - y0;
+    if (!dir) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      dir = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      if (dir === 'y') return;
+    }
+    e.preventDefault();
+    let x = Math.min(0, base + dx);
+    if (x < -W) x = -W + (x + W) / 3;   // a little rubber band past the buttons
+    set(x);
+  }, { passive: false });
+  const end = () => {
+    if (dir !== 'x') return;
+    const x = base + dx;
+    base = x < -W / 2 ? -W : 0;
+    set(base, true);
+    el.classList.toggle('open', !!base);
+    if (base) openRow = api; else if (openRow === api) openRow = null;
+    swallow = true; setTimeout(() => { swallow = false; }, 60);
+    dir = null;
+  };
+  content.addEventListener('touchend', end);
+  content.addEventListener('touchcancel', end);
+  // A tap while open (or the click a swipe ends in) closes the row instead of opening anything
+  content.addEventListener('click', (e) => {
+    if (swallow || base) { e.preventDefault(); e.stopPropagation(); if (base) api.close(); }
+  }, true);
+  return el;
 }
 
 // ---------- Formatting ----------
