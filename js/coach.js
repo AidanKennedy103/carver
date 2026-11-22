@@ -460,9 +460,9 @@ const GRAPHICS = {
   ppl: { ring: [[0, 120, 0], [120, 240, 1], [240, 360, 2]], center: '6', sub: 'Push · Pull · Legs', week: [1, 1, 1, 1, 1, 1, 0] },
   bw3: { ring: [[0, 360, 1]], center: 'home', sub: 'No equipment', week: [1, 0, 1, 0, 1, 0, 0] },
   db3: { ring: [[180, 360, 0], [0, 180, 1]], center: 'db', sub: 'Dumbbells A · B', week: [1, 0, 1, 0, 1, 0, 0] },
-  min3: { ring: [[0, 180, 0]], center: '30', centerLabel: 'MIN', sub: '2 hard sets each', week: [1, 0, 1, 0, 1, 0, 0] },
+  min3: { ring: [[0, 360, 1]], center: '30', centerLabel: 'MIN', sub: '2 hard sets each', week: [1, 0, 1, 0, 1, 0, 0] },
   531: { bars: true, sub: '5s · 3s · 1s', week: [1, 1, 0, 1, 1, 0, 0] },
-  custom: { sliders: true, sub: 'Linear · DUP · Wave · RPE', week: null },
+  custom: { sliders: true, sub: 'Linear · Wave · RPE', week: null },
   plan: { list: true, sub: 'Your exercises', week: null },
   gear: { ring: [[0, 360, 2]], center: 'home', sub: 'What you have', week: [1, 0, 1, 0, 1, 0, 0] },
 };
@@ -487,7 +487,7 @@ function graphicSvg(g) {
       ? `<g transform="translate(36 43)" fill="#e3b04b"><rect x="0" y="2" width="4" height="10" rx="1.5"/><rect x="4.5" y="3.5" width="2.5" height="7" rx="1"/><rect x="7" y="6" width="14" height="2" rx="1"/><rect x="21" y="3.5" width="2.5" height="7" rx="1"/><rect x="24" y="2" width="4" height="10" rx="1.5"/></g>`
       : `<text x="50" y="52" text-anchor="middle" font-size="24" font-weight="800" fill="#f2e3bd">${g.center}</text><text x="50" y="64" text-anchor="middle" font-size="8" font-weight="600" fill="#8e8e93" letter-spacing=".5">${g.centerLabel || 'DAYS'}</text>`;
   } else if (g.bars) {
-    [[22, 0.42, 2], [44, 0.66, 1], [66, 0.9, 0]].forEach(([x, v, tone]) => {
+    [[28, 0.42, 2], [50, 0.66, 1], [72, 0.9, 0]].forEach(([x, v, tone]) => {   // centred on 50
       const hgt = 70 * v;
       out += `<rect x="${x - 8}" y="${86 - hgt}" width="16" height="${hgt}" rx="8" fill="${SHADES[tone]}"/>`;
     });
@@ -548,7 +548,7 @@ export const CHALLENGES = [
     ],
   },
   {
-    id: 'nickels', name: 'Nickels and Dimes', nums: '5 · 10', line: 'Pull-ups & push-ups', tag: 'Bodyweight',
+    id: 'nickels', name: 'Nickels and Dimes', short: 'Nickels & Dimes', nums: '5 · 10', line: 'Pull-ups & push-ups', tag: 'Bodyweight',
     about: '5 pull-ups then 10 push-ups, over and over. The pull-ups are the nickels, the push-ups the dimes.',
     how: ['Pick 20 or 30 minutes.', 'One round is 5 pull-ups then 10 push-ups. Tap Done after each, or Add round after both.', 'Rest as little as you can until time’s up.'],
     scale: 'Keep the 1-to-2 ratio with smaller numbers: 3 pull-ups and 6 push-ups.',
@@ -826,7 +826,7 @@ export function coachPage() {
 
       h('div.section-head', h('h2.section-title', 'Popular workouts')),
       h('p.fine.pw-note', 'Guided step by step. Post your score and challenge friends to beat it.'),
-      h('div.pgrid', CHALLENGES.map((c, i) => tile({ id: c.id, name: c.name, line: c.line, tag: c.tag, span: i === CHALLENGES.length - 1 && CHALLENGES.length % 2 === 1, onclick: () => challengeSheet(c) }))),
+      h('div.pgrid', CHALLENGES.map((c, i) => tile({ id: c.id, name: c.short || c.name, line: c.line, tag: c.tag, span: i === CHALLENGES.length - 1 && CHALLENGES.length % 2 === 1, onclick: () => challengeSheet(c) }))),
     ];
   }
 

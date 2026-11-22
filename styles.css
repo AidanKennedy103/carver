@@ -1899,3 +1899,16 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .hs-plus { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--gold); color: #17110a; display: grid; place-items: center; }
 .add-hs-text { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .add-hs-sub { font-size: 11px; color: var(--muted); }
+
+/* Program tiles, centred for good: every tile's picture box is the same height and its
+   caption stays on one line, so names, lines and tags sit at the same place in every tile. */
+.ptile { align-items: stretch; justify-content: flex-start; text-align: center; }
+.pgfx:not(.wide) { height: 122px; box-sizing: border-box; justify-content: center; align-items: center; }
+.pgfx:not(.wide) .pgfx-sub { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pgfx-art { margin: 0 auto; }
+.ptile-text { align-items: center; text-align: center; width: 100%; }
+.ptile-name, .ptile-line { max-width: 100%; }
+.ptile-text { flex: 1; }
+.ptile-tag { margin-top: auto !important; }
+.ptile-line { margin-bottom: 6px; }
+@media (max-width: 360px) { .ptile-name { font-size: 14px; } .ptile-line { font-size: 11px; } }
