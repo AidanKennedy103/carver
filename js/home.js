@@ -107,6 +107,49 @@ function nextPlanned() {
   return '';
 }
 
+// ---------- Goal tiles (Home's daily goals): gold when done, tap to act on them ----------
+
+const TILE_ICON = { gym: 'dumbbell', kcal: 'flame', protein: 'plate', water: 'drop', sleep: 'moon', weigh: 'scale' };
+const n0 = (v) => fmtNum(Math.round(v));
+
+/** The short line under a tile: what's left, or how the week is going. */
+function tileSub(g) {
+  if (g.view === 'week') return `${g.value} of ${g.goal} ${g.id === 'gym' ? 'workouts' : 'days'}`;
+  if (g.rest) return 'Rest day';
+  if (g.hit) return g.id === 'gym' ? g.text.replace(' today', '') : g.over ? 'Over goal' : 'Done';
+  const left = Math.max(0, g.goal - g.value);
+  if (g.id === 'kcal') return g.over ? `${n0(g.value - g.goal)} over` : `${n0(left)} left`;
+  if (g.id === 'protein') return `${n0(left)} g to go`;
+  if (g.id === 'water') return `${(left / 1000).toFixed(1)} L to go`;
+  if (g.id === 'sleep') return g.value ? `${g.value} of ${g.goal} h` : 'Not logged';
+  if (g.id === 'gym') return g.text.replace(' today', '');
+  return 'Not yet';
+}
+
+/** What tapping a tile does. */
+function tileTap(g) {
+  if (g.view === 'week') return () => (g.id === 'gym' ? goTab('workout') : null);
+  if (g.id === 'gym') return () => goTab('workout');
+  if (g.id === 'kcal' || g.id === 'protein') return () => goTab('nutrition');
+  if (g.id === 'water') return () => { addWater(ymd(), 250); toast('+250 ml water'); };
+  if (g.id === 'sleep') return () => (tabOn('recovery') ? goTab('recovery') : checkIn(ymd()));
+  if (g.id === 'weigh') return () => logWeightSheet();
+  if (g.custom) return () => import('./habits.js').then((m) => m.setDone(g.custom, ymd(), !g.hit));
+  return null;
+}
+
+function goalTiles(goals, view) {
+  return h('div.gtiles' + (goals.length === 1 ? '.one' : ''), goals.map((g, i) => {
+    const pct = g.goal ? Math.min(1, g.value / g.goal) : 0;
+    const span = goals.length % 2 === 1 && i === goals.length - 1 && goals.length > 1;
+    return h('button.gtile' + (g.hit ? '.done' : '') + (g.over ? '.over' : '') + (span ? '.wide' : ''), { onclick: tileTap(g), 'aria-label': `${g.label}: ${g.text}` },
+      h('span.gtile-top', h('span.gtile-ico', icon(g.hit ? 'check' : (TILE_ICON[g.id] || 'target'), 18)), g.id === 'water' && view === 'day' && !g.hit ? h('span.gtile-act', '+250') : null),
+      h('span.gtile-name', g.label),
+      h('span.gtile-sub', tileSub(g)),
+      g.hit ? null : h('span.gtile-bar', h('i', { style: { width: `${Math.round(pct * 100)}%` } })));
+  }));
+}
+
 /** Pick which goals are rings, and how many days a week each should be hit. */
 function editRings() {
   let picked = ringIds();
@@ -160,7 +203,7 @@ function celebrate() {
   const weekly = fresh.filter((g) => g.view === 'week');
   const shown = weekly.length ? weekly : fresh;
   const overlay = h('div.cheer', h('div.cheer-card',
-    h('div.cheer-ring', rings(shown.map((g) => ({ ...g, value: g.goal })), 96)),
+    h('div.cheer-ring.cheer-tile', icon('trophy', 44)),
     h('div.cheer-title', shown.length === 1 ? shown[0].cheer : `${shown.length} ${weekly.length ? 'weekly ' : ''}goals closed!`),
     shown.length > 1 ? h('div.cheer-sub', shown.map((g) => g.label).join(' · ')) : null));
   overlay.addEventListener('click', () => overlay.remove());
@@ -438,17 +481,7 @@ export function homePage() {
         h('div.rings-top',
           h('div.segment.ring-view', [['day', 'Today'], ['week', 'Week']].map(([v, l]) => h('button' + (view === v ? '.on' : ''), { onclick: () => commit((st) => { st.settings.ringView = v; }) }, l))),
           h('button.rings-edit', { onclick: editRings, 'aria-label': 'Choose rings' }, icon('edit', 16))),
-        goals.length ? h('div.rings-body',
-          h('div.rings-wrap', rings(goals, 132)),
-          h('div.ring-legend', goals.map((g) => {
-            const water = g.id === 'water';
-            const tap = view === 'day' && water;
-            const act = tap ? { onclick: () => addWater(ymd(), 250), 'aria-label': 'Add 250 ml of water' } : {};
-            return h(tap ? 'button.ring-row.tap' : 'div.ring-row', act,
-              h('i.ring-dot', { style: { background: g.color } }),
-              h('span.ring-text', h('span.ring-label', g.label, g.hit ? h('span.ring-check', ' ✓') : null), h('span.ring-val' + (g.over ? '.red-text' : ''), g.text)),
-              tap ? h('span.ring-plus', '+250') : null);
-          })))
+        goals.length ? goalTiles(goals, view)
           : h('button.link', { onclick: editRings }, 'Pick your rings')),
       { left: view === 'day' ? setView('week') : null, right: view === 'week' ? setView('day') : null, target: () => body.querySelector('.rings-card') }),
       view === 'day' ? goals.filter((g) => g.hit && (g.id === 'protein' || g.id === 'kcal')).map((g) => h('div.hit-banner', icon('trophy', 18), g.cheer)) : null,
