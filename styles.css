@@ -1917,3 +1917,16 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .split-sw { flex: none; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 0 6px; }
 .split-sw .switch { transform: scale(.8); }
 .split-sw-k { font-size: 10px; font-weight: 600; color: var(--muted); }
+
+/* Barcode scanner: a compact, centred window with the box to aim at */
+.scan .scan-view { width: min(100%, 300px); aspect-ratio: 4 / 3; margin: 4px auto 0; }
+.scan .scan-frame { left: 9%; right: 9%; top: 30%; bottom: 30%; border-color: rgba(227, 176, 75, .9); transition: border-color .15s, box-shadow .15s; }
+.scan-frame.got { border-color: #3ecf6e; box-shadow: 0 0 0 999px rgba(0, 0, 0, .45), 0 0 18px rgba(62, 207, 110, .6); }
+.scan-line { position: absolute; left: 6%; right: 6%; top: 50%; height: 2px; background: rgba(227, 176, 75, .85); box-shadow: 0 0 8px rgba(227, 176, 75, .8); opacity: 0; }
+.scan-frame.live .scan-line { opacity: 1; animation: scanline 1.6s ease-in-out infinite; }
+.scan-frame.got .scan-line { opacity: 0; }
+@keyframes scanline { 0%, 100% { top: 18%; } 50% { top: 82%; } }
+.scan-torch { position: absolute; top: 8px; right: 8px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgba(0, 0, 0, .55); color: #fff; }
+.scan-torch.on { background: var(--gold); color: #17110a; }
+.scan-tip { margin: 8px 0 10px; }
+.scan-torch[hidden] { display: none; }
