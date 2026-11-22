@@ -4,7 +4,7 @@
 // The Health Auto Export app can send to the same address.
 //
 // Formats accepted (anything else is ignored):
-//   Shortcut:           { date?, steps, active, sleep (hours, or minutes), rhr, hrv, weight, weightUnit?, fat, vo2 }
+//   Shortcut:           { date?, steps, active, sleep (hours, or minutes), rhr, hrv, weight, weightUnit?, fat, lean, vo2 }
 //   Health Auto Export: { data: { metrics: [{ name, units, data: [{ date, qty | asleep | totalSleep… }] }], workouts: [...] } }
 
 import { h, fill, navBar, toast, push } from './ui.js';
@@ -20,7 +20,7 @@ const toKg = (v, u) => (/lb/i.test(u || '') ? v / LB_PER_KG : v);
 
 /** One payload → { days, weights, fats, workouts } (what saveHealth takes). */
 export function parsePayload(p, receivedAt = Date.now()) {
-  const out = { days: {}, weights: [], fats: [], workouts: [] };
+  const out = { days: {}, weights: [], fats: [], leans: [], workouts: [] };
   const day = (k) => (out.days[k] ??= {});
   if (p?.data?.metrics || p?.data?.workouts) {   // Health Auto Export
     for (const m of p.data.metrics || []) {
@@ -37,6 +37,7 @@ export function parsePayload(p, receivedAt = Date.now()) {
           const hrs = num(d.asleep ?? d.totalSleep ?? d.qty);
           if (hrs) { day(k).sleep = Math.round(hrs * 10) / 10; if (num(d.deep)) day(k).deep = Math.round(num(d.deep) * 10) / 10; if (num(d.rem)) day(k).rem = Math.round(num(d.rem) * 10) / 10; }
         } else if ((name === 'weight_body_mass' || name === 'body_mass') && q) out.weights.push({ ts: Date.parse(String(d.date).replace(' ', 'T').replace(/ ([+-]\d\d)(\d\d)$/, '$1:$2')) || receivedAt, kg: toKg(q, m.units) });
+        else if (name === 'lean_body_mass' && q) out.leans.push({ ts: Date.parse(String(d.date).replace(' ', 'T').replace(/ ([+-]\d\d)(\d\d)$/, '$1:$2')) || receivedAt, kg: toKg(q, m.units) });
         else if (name === 'body_fat_percentage' && q) out.fats.push({ ts: Date.parse(String(d.date).replace(' ', 'T').replace(/ ([+-]\d\d)(\d\d)$/, '$1:$2')) || receivedAt, fat: q <= 1 ? q * 100 : q });
       }
     }
@@ -94,6 +95,8 @@ export function parsePayload(p, receivedAt = Date.now()) {
   if (wt) out.weights.push({ ts: receivedAt, kg: toKg(wt, p.weightUnit || bodyUnit()) });
   const fat = num(p.fat);
   if (fat) out.fats.push({ ts: receivedAt, fat: fat <= 1 ? fat * 100 : fat });
+  const lean = many(p.lean)[0] ?? null;
+  if (lean) out.leans.push({ ts: receivedAt, kg: toKg(lean, p.weightUnit || bodyUnit()) });
   return out;
 }
 
@@ -108,11 +111,11 @@ export async function pullHealth({ force = false } = {}) {
     const { data, error } = await db.from('carver_health_inbox').select('id, payload, created_at').order('id').limit(200);
     lastPullError = error ? error.message : null;
     if (error || !data?.length) return 0;
-    const all = { days: {}, weights: [], fats: [], workouts: [] };
+    const all = { days: {}, weights: [], fats: [], leans: [], workouts: [] };
     for (const r of data) {
       const got = parsePayload(r.payload, Date.parse(r.created_at));
       for (const [k, v] of Object.entries(got.days)) all.days[k] = { ...(all.days[k] || {}), ...v };
-      all.weights.push(...got.weights); all.fats.push(...got.fats); all.workouts.push(...got.workouts);
+      all.weights.push(...got.weights); all.fats.push(...got.fats); all.leans.push(...got.leans); all.workouts.push(...got.workouts);
     }
     // Merge with what each day already has (a day's sleep and steps can arrive separately)
     for (const [k, v] of Object.entries(all.days)) all.days[k] = { ...(state.health?.days?.[k] || {}), ...v };

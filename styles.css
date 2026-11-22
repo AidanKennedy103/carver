@@ -2003,3 +2003,6 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .pb-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 .pb-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pb-more { flex: none; color: var(--muted); }
+
+/* Body composition: BMI tile (tap to set height) */
+.bmi-tile { text-align: left; color: var(--text); }

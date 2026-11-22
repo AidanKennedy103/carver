@@ -6,7 +6,7 @@
 // (muscle and bone in kg). Measurements are off until you turn them on:
 // state.body.measures = [{ id, ts, waist, chest, … }] in cm.
 
-import { h, fill, sheet, toast, confirmBox, fmtDate, icon } from './ui.js';
+import { h, fill, sheet, toast, confirmBox, fmtDate, icon, promptBox } from './ui.js';
 import { state, commit, uid, bodyDisplay, bodyFromDisplay, bodyUnit } from './store.js';
 import { lineChart } from './charts.js';
 import { latestWeight } from './body.js';
@@ -20,16 +20,45 @@ const first30 = (list, key) => { const since = Date.now() - 30 * 864e5; return l
 
 const COMP = [
   { k: 'fat', label: 'Body fat', unit: '%', pct: true },
+  { k: 'lean', label: 'Lean mass', mass: true },
   { k: 'muscle', label: 'Muscle mass', mass: true },
   { k: 'water', label: 'Body water', unit: '%', pct: true },
   { k: 'bone', label: 'Bone mass', mass: true },
 ];
 const showComp = (c, v) => (c.mass ? `${bodyDisplay(v)} ${bodyUnit()}` : `${Math.round(v * 10) / 10}%`);
 
+// ---------- BMI ----------
+
+const heightM = () => (state.profile?.heightCm ? state.profile.heightCm / 100 : null);
+export const bmiOf = (kg) => (heightM() && kg ? kg / heightM() ** 2 : null);
+const BMI_BANDS = [[18.5, 'under'], [25, 'in the healthy range'], [30, 'over'], [Infinity, 'well over']];
+const bmiWord = (b) => BMI_BANDS.find(([top]) => b < top)[1];
+
+/** Ask for height once (it's also the diet coach's). Takes 5'10", 70 (inches) or 178 (cm). */
+async function askHeight() {
+  const cm = state.profile?.heightCm;
+  const was = cm ? (imperial() ? `${Math.floor(cm / 2.54 / 12)}'${Math.round(cm / 2.54) % 12}"` : String(cm)) : '';
+  const v = await promptBox('Your height', was, { placeholder: imperial() ? `5'10"` : '178 cm' });
+  if (v == null || v === '') return;
+  const ftIn = v.match(/^(\d)\s*(?:'|’|ft|\s)\s*(\d{1,2})?/);
+  const n = parseFloat(v);
+  const out = ftIn ? Math.round(((+ftIn[1]) * 12 + (+ftIn[2] || 0)) * 2.54) : n > 100 && n < 250 ? Math.round(n) : n >= 48 && n <= 90 ? Math.round(n * 2.54) : null;
+  if (!out) { toast('Try something like 5\'10" or 178'); return; }
+  commit((s) => { s.profile = { ...(s.profile || {}), heightCm: out }; });
+}
+
+function bmiTile(w) {
+  const b = bmiOf(w?.kg);
+  return h('button.tile.bmi-tile', { onclick: askHeight, 'aria-label': b ? `BMI ${b.toFixed(1)}. Tap to change your height.` : 'Add your height for BMI' },
+    h('div.tile-v', b ? b.toFixed(1) : '—'), h('div.tile-k', b ? 'BMI' : 'BMI: add height'));
+}
+
 export function compSection() {
   const list = comp();
   const fat = latest(list, 'fat');
   const w = latestWeight();
+  const lean = latest(list, 'lean');
+  const bmi = bmiOf(w?.kg);
   const goal = state.goals.bodyFat;
   const since = first30(list, 'fat');
   return [
@@ -37,10 +66,12 @@ export function compSection() {
     list.length ? h('section.card',
       fat ? h('div.energy-top',
         h('div', h('div.energy-v', `${Math.round(fat.fat * 10) / 10}`, h('span.orm-unit', '% fat')), h('div.energy-k', `${fmtDate(fat.ts, { month: 'short', day: 'numeric' })}${goal ? ` · goal ${goal}%` : ''}`)),
-        w ? h('div.energy-goal', h('div.weight-change', `${bodyDisplay(w.kg * (1 - fat.fat / 100))} ${bodyUnit()}`), h('div.energy-k', 'lean mass')) : null) : null,
+        lean && Math.abs(lean.ts - fat.ts) < 864e5 ? h('div.energy-goal', h('div.weight-change', `${bodyDisplay(lean.lean)} ${bodyUnit()}`), h('div.energy-k', 'lean mass'))
+          : w ? h('div.energy-goal', h('div.weight-change', `${bodyDisplay(w.kg * (1 - fat.fat / 100))} ${bodyUnit()}`), h('div.energy-k', 'lean mass')) : null) : null,
       since && fat && since !== fat ? h('p.fine', `${fat.fat - since.fat > 0 ? '+' : ''}${Math.round((fat.fat - since.fat) * 10) / 10}% body fat in the last 30 days.`) : null,
-      h('div.comp-grid', COMP.filter((c) => c.k !== 'fat').map((c) => { const x = latest(list, c.k); return x ? h('div.tile', h('div.tile-v', showComp(c, x[c.k])), h('div.tile-k', c.label)) : null; })))
-      : h('button.card.empty-plan-row', { onclick: logComp }, icon('chart', 18), h('span', 'Add your body fat or a smart-scale reading')),
+      h('div.comp-grid', w ? bmiTile(w) : null, COMP.filter((c) => c.k !== 'fat' && !(c.k === 'lean' && fat)).map((c) => { const x = latest(list, c.k); return x ? h('div.tile', h('div.tile-v', showComp(c, x[c.k])), h('div.tile-k', c.label)) : null; })),
+      bmi ? h('p.fine', `BMI ${bmi.toFixed(1)} is ${bmiWord(bmi)}${/range/.test(bmiWord(bmi)) ? '' : ' the 18.5–25 range'}. It only uses height and weight, so muscular lifters often read high; body fat and lean mass say more.`) : null)
+      : [w ? h('section.card', h('div.comp-grid', bmiTile(w))) : null, h('button.card.empty-plan-row', { onclick: logComp }, icon('chart', 18), h('span', 'Add your body fat or a smart-scale reading'))],
   ];
 }
 
@@ -73,12 +104,13 @@ function logComp() {
 /** Lean mass at each body-fat reading, using the weigh-in closest to it (within 3 days). */
 function leanPoints() {
   const ws = state.body.weights;
-  if (!ws.length) return [];
-  return comp().filter((c) => c.fat != null).map((c) => {
+  const measured = comp().filter((c) => c.lean != null).map((c) => ({ x: c.ts, y: c.lean }));
+  if (!ws.length) return measured;
+  return [...measured, ...comp().filter((c) => c.fat != null && c.lean == null && !measured.some((m) => Math.abs(m.x - c.ts) < 864e5)).map((c) => {
     let best = null;
     for (const w of ws) if (Math.abs(w.ts - c.ts) < 3 * 864e5 && (!best || Math.abs(w.ts - c.ts) < Math.abs(best.ts - c.ts))) best = w;
     return best ? { x: c.ts, y: best.kg * (1 - c.fat / 100) } : null;
-  }).filter(Boolean);
+  }).filter(Boolean)].sort((a, b) => a.x - b.x);
 }
 
 /** The metrics you have at least two readings of: { k, label, pts (kg/%/cm), show, fmt }. */
@@ -88,6 +120,7 @@ export function bodyMetrics(trendPts) {
     { k: 'weight', label: 'Weight', pts: trendPts, show: mass, unit: bodyUnit() },
     { k: 'fat', label: 'Body fat', pts: comp().filter((x) => x.fat != null).map((x) => ({ x: x.ts, y: x.fat })), show: pct, unit: '%' },
     { k: 'lean', label: 'Lean mass', pts: leanPoints(), show: mass, unit: bodyUnit() },
+    { k: 'bmi', label: 'BMI', pts: heightM() ? trendPts.map((p) => ({ x: p.x, y: p.y / heightM() ** 2 })) : [], show: pct, unit: '' },
     { k: 'muscle', label: 'Muscle', pts: comp().filter((x) => x.muscle != null).map((x) => ({ x: x.ts, y: x.muscle })), show: mass, unit: bodyUnit() },
     { k: 'water', label: 'Water', pts: comp().filter((x) => x.water != null).map((x) => ({ x: x.ts, y: x.water })), show: pct, unit: '%' },
   ];

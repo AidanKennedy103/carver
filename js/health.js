@@ -79,6 +79,7 @@ const WANT = {
   HKQuantityTypeIdentifierVO2Max: 'vo2',
   HKQuantityTypeIdentifierBodyMass: 'weight',
   HKQuantityTypeIdentifierBodyFatPercentage: 'fat',
+  HKQuantityTypeIdentifierLeanBodyMass: 'lean',
   HKCategoryTypeIdentifierSleepAnalysis: 'sleep',
 };
 
@@ -89,7 +90,7 @@ export async function readHealth(file, onProgress = () => {}) {
   // per day, per source: sums (steps, energy, sleep); Health keeps every device's copy, so the busiest source wins
   const sums = {};       // day -> key -> source -> value
   const avgs = {};       // day -> key -> [sum, n]
-  const weights = [], fats = [], workouts = [];
+  const weights = [], fats = [], leans = [], workouts = [];
   let wk = null, read = 0, buf = '';
   const add = (day, key, src, v) => { ((sums[day] ??= {})[key] ??= {})[src] = (sums[day][key][src] || 0) + v; };
   const avg = (day, key, v) => { const a = ((avgs[day] ??= {})[key] ??= [0, 0]); a[0] += v; a[1]++; };
@@ -104,6 +105,7 @@ export async function readHealth(file, onProgress = () => {}) {
       const start = when(a.startDate), end = when(a.endDate || a.startDate);
       if (key === 'weight') { const v = +a.value; if (v) weights.push({ ts: start, kg: /lb/i.test(a.unit) ? v / LB_PER_KG : /^g$/.test(a.unit) ? v / 1000 : v }); return; }
       if (key === 'fat') { const v = +a.value; if (v) fats.push({ ts: start, fat: v <= 1 ? v * 100 : v }); return; }
+      if (key === 'lean') { const v = +a.value; if (v) leans.push({ ts: start, kg: /lb/i.test(a.unit) ? v / LB_PER_KG : /^g$/.test(a.unit) ? v / 1000 : v }); return; }
       if (end < since) return;
       const src = a.sourceName || '?';
       if (key === 'sleep') {
@@ -165,12 +167,12 @@ export async function readHealth(file, onProgress = () => {}) {
     for (const k of ['sleep', 'deep', 'rem']) if (d[k] != null) d[k] = Math.round(d[k] * 10) / 10;
     if (d.vo2 != null) d.vo2 = Math.round(d.vo2 * 10) / 10;
   }
-  return { days, weights, fats, workouts };
+  return { days, weights, fats, leans, workouts };
 }
 
 /** Save what was read. Returns counts for the message. */
 export function saveHealth(got) {
-  const out = { days: Object.keys(got.days).length, weights: 0, fats: 0, workouts: 0 };
+  const out = { days: Object.keys(got.days).length, weights: 0, fats: 0, leans: 0, workouts: 0 };
   commit((s) => {
     s.health = s.health || { days: {} };
     Object.assign(s.health.days, got.days);
@@ -190,6 +192,14 @@ export function saveHealth(got) {
       if (s.body.comp.some((x) => x.fat != null && Math.abs(x.ts - f.ts) < 2 * 36e5)) continue;
       s.body.comp.push({ id: uid(), ts: f.ts, fat: Math.round(f.fat * 10) / 10, source: 'health' });
       out.fats++;
+    }
+    // lean mass: onto the reading from the same weigh-in when there is one
+    for (const l of got.leans || []) {
+      if (s.body.comp.some((x) => x.lean != null && Math.abs(x.ts - l.ts) < 2 * 36e5)) continue;
+      const kg = Math.round(l.kg * 100) / 100;
+      const near = s.body.comp.find((x) => x.lean == null && Math.abs(x.ts - l.ts) < 10 * 6e4);
+      if (near) near.lean = kg; else s.body.comp.push({ id: uid(), ts: l.ts, lean: kg, source: 'health' });
+      out.leans++;
     }
     s.body.comp.sort((a, b) => a.ts - b.ts);
   });
@@ -224,6 +234,7 @@ export function importHealth() {
         r.days ? `${r.days} days of steps, sleep and heart data` : null,
         r.weights ? `${r.weights} weigh-ins` : null,
         r.fats ? `${r.fats} body-fat readings` : null,
+        r.leans ? `${r.leans} lean-mass readings` : null,
         r.workouts ? `${r.workouts} cardio workouts` : null,
       ].filter(Boolean).join(', ') || 'Nothing new to bring in.';
       toast('Apple Health imported');
@@ -240,5 +251,5 @@ export function importHealth() {
 export function healthHowTo() {
   return h('div.health-how',
     h('button.btn.gold.wide', { onclick: importHealth }, 'Import Apple Health export'),
-    h('p.fine', 'In the Health app tap your picture → Export All Health Data, save it to Files, then pick it here. Brings in weight, body fat, steps, sleep, resting heart rate, HRV and cardio workouts from your iPhone, Apple Watch, Oura, Ultrahuman, Whoop or smart scale. Re-import any time; nothing is doubled.'));
+    h('p.fine', 'In the Health app tap your picture → Export All Health Data, save it to Files, then pick it here. Brings in weight, body fat, lean mass, steps, sleep, resting heart rate, HRV and cardio workouts from your iPhone, Apple Watch, Oura, Ultrahuman, Whoop or smart scale. Re-import any time; nothing is doubled.'));
 }
