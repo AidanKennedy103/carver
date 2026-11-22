@@ -1,19 +1,19 @@
 // Draws the Carver logo and saves the app icons and iPhone launch screens into icons/.
 //
-// The C is a blackletter capital drawn with a broad pen (see letter.mjs), in gold foil on black.
+// The carve mark: a heavy gold-foil C with one clean diagonal cut through it, like a blade, on black.
 //
 //   cd scripts && npm install && cd .. && node scripts/make-icons.mjs
 
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { Resvg } from '@resvg/resvg-js';
-import { letterC, carveC, polysToPath } from './letter.mjs';
 
 const OUT = new URL('../icons/', import.meta.url);
 mkdirSync(OUT, { recursive: true });
 
-const GOLD = polysToPath(letterC());
-const CARVE = polysToPath(carveC());
-const NUDGE = 'translate(-22 14)';   // centre the letter's visual weight
+// In a 1000 × 1000 box: the C opens to the right; the cut runs bottom-left to top-right
+const C_ARC = 'M716 316 A267 267 0 1 0 716 684';
+const CUT = { x1: 150, y1: 760, x2: 850, y2: 190 };
+const NUDGE = 'translate(18 0)';   // the open side makes the C look left-heavy: nudge it right
 
 function logoSVG(w, h, { size = 1, rounded = false } = {}) {
   const k = (Math.min(w, h) * size) / 1000;
@@ -26,18 +26,21 @@ function logoSVG(w, h, { size = 1, rounded = false } = {}) {
     <radialGradient id="glow" cx="500" cy="490" r="420" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#e3b04b" stop-opacity=".16"/><stop offset="1" stop-color="#e3b04b" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="foil" x1="360" y1="190" x2="660" y2="790" gradientUnits="userSpaceOnUse">
+    <linearGradient id="foil" x1="300" y1="200" x2="700" y2="800" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#fff2c0"/><stop offset=".25" stop-color="#f1c862"/><stop offset=".5" stop-color="#cf9533"/>
       <stop offset=".68" stop-color="#efc461"/><stop offset="1" stop-color="#9b6a1c"/>
     </linearGradient>
+    <mask id="onC" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000">
+      <path d="${C_ARC}" fill="none" stroke="#fff" stroke-width="150"/>
+    </mask>
   </defs>
   <rect width="${w}" height="${h}" ${rounded ? `rx="${w * 0.225}"` : ''} fill="url(#bg)"/>
   <g transform="translate(${tx} ${ty}) scale(${k})">
     <circle cx="500" cy="490" r="420" fill="url(#glow)"/>
     <g transform="${NUDGE}">
-      <path d="${GOLD}" fill="#3a2706" transform="translate(6 9)"/>
-      <path d="${GOLD}" fill="url(#foil)"/>
-      <path d="${CARVE}" fill="#0b0a08"/>
+      <path d="${C_ARC}" fill="none" stroke="#3a2706" stroke-width="150" transform="translate(6 9)"/>
+      <path d="${C_ARC}" fill="none" stroke="url(#foil)" stroke-width="150"/>
+      <line x1="${CUT.x1}" y1="${CUT.y1}" x2="${CUT.x2}" y2="${CUT.y2}" stroke="#080807" stroke-width="46" mask="url(#onC)"/>
     </g>
   </g>
 </svg>`;
@@ -46,8 +49,8 @@ function logoSVG(w, h, { size = 1, rounded = false } = {}) {
 const png = (svg, width) => new Resvg(svg, { fitTo: { mode: 'width', value: width } }).render().asPng();
 
 // Icon artwork at 1024 (iOS rounds the corners itself)
-writeFileSync(new URL('icon.svg', OUT), logoSVG(1024, 1024, { size: 1.18, rounded: true }));
-const icon = logoSVG(1024, 1024, { size: 1.18 });
+writeFileSync(new URL('icon.svg', OUT), logoSVG(1024, 1024, { size: 1, rounded: true }));
+const icon = logoSVG(1024, 1024, { size: 1 });
 for (const s of [180, 192, 512, 1024]) writeFileSync(new URL(`icon-${s}.png`, OUT), png(icon, s));
 
 // Launch screens: black with the C in the middle
