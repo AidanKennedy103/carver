@@ -43,7 +43,26 @@ function upgrade(data) {
   };
   for (const p of data.plans || []) for (const e of p.exercises || []) strip(e);
   for (const e of data.active?.exercises || []) strip(e);
+  loadedBodyweight(data);
   return data;
+}
+
+// Imports used to put "Pull Up (Weighted)" and the like on the bodyweight move, hiding the weight:
+// move any imported bodyweight sets that carry weight onto the weighted version.
+const LOADED = { pullup: 'weighted-pullup', dips: 'weighted-dips', 'back-ext': 'weighted-back-ext', chinup: ['Weighted Chin-up', 'Back', 'Biceps,Forearms'], pushup: ['Weighted Push-up', 'Chest', 'Triceps,Shoulders,Core'] };
+function loadedBodyweight(data) {
+  for (const w of data.workouts || []) {
+    if (!w.imported) continue;
+    for (const e of w.exercises || []) {
+      const to = LOADED[e.exId];
+      if (!to || !e.sets?.some((s) => s.weight > 0)) continue;
+      if (typeof to === 'string') { e.exId = to; continue; }
+      const [name, muscle, helps] = to;
+      let c = (data.customExercises || []).find((x) => x.name.toLowerCase() === name.toLowerCase());
+      if (!c) { c = { id: 'c-' + Math.random().toString(36).slice(2, 12), custom: true, name, muscle, helps: helps.split(','), equipment: 'Bodyweight', type: 'wr' }; (data.customExercises ||= []).unshift(c); }
+      e.exId = c.id;
+    }
+  }
 }
 
 function load() {
