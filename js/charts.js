@@ -36,7 +36,7 @@ function niceTicks(min, max, count = 4) {
 }
 
 /** Attach a tooltip that follows the finger/mouse to the nearest point. */
-function addTooltip(wrap, svg, pts, W, render) {
+function addTooltip(wrap, svg, pts, W, render, onSelect = null) {
   const tip = h('div.chart-tip');
   const cross = s('line', { class: 'chart-cross', y1: 0, y2: '100%' });
   const dot = s('circle', { r: 5, class: 'chart-hover-dot' });
@@ -51,12 +51,13 @@ function addTooltip(wrap, svg, pts, W, render) {
     cross.setAttribute('x1', best.px); cross.setAttribute('x2', best.px);
     dot.setAttribute('cx', best.px); dot.setAttribute('cy', best.py);
     cross.style.display = dot.style.display = '';
+    if (onSelect) { onSelect(best); return; }   // the page shows the point itself
     tip.innerHTML = render(best);
     tip.classList.add('show');
     const left = (best.px / W) * r.width;
     tip.style.left = Math.max(4, Math.min(r.width - tip.offsetWidth - 4, left - tip.offsetWidth / 2)) + 'px';
   };
-  const hide = () => { tip.classList.remove('show'); cross.style.display = dot.style.display = 'none'; };
+  const hide = () => { tip.classList.remove('show'); cross.style.display = dot.style.display = 'none'; onSelect?.(null); };
   svg.addEventListener('pointerdown', (e) => show(e.clientX));
   svg.addEventListener('pointermove', (e) => show(e.clientX));
   svg.addEventListener('pointerleave', hide);
@@ -130,8 +131,10 @@ export function lineChart(data, opts = {}) {
   }
   svg.append(s('path', { d: path, fill: 'none', stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
   if (dots && pts.length <= 40) for (const p of pts) svg.append(s('circle', { cx: p.px, cy: p.py, r: 3.5, fill: color, stroke: '#111113', 'stroke-width': 2 }));
+  const mk = opts.mark != null ? pts.find((p) => p.x === opts.mark) : null;   // a point to ring (a PR)
+  if (mk) svg.append(s('circle', { cx: mk.px, cy: mk.py, r: 7, fill: 'none', stroke: color, 'stroke-width': 2 }), s('circle', { cx: mk.px, cy: mk.py, r: 3.5, fill: color }));
   wrap.append(svg);
-  addTooltip(wrap, svg, pts, W, opts.tip || ((p) => `<b>${fmtY(p.y)}</b><span>${fmtX(p.x)}</span>`));
+  addTooltip(wrap, svg, pts, W, opts.tip || ((p) => `<b>${fmtY(p.y)}</b><span>${fmtX(p.x)}</span>`), opts.onSelect || null);
   return wrap;
 }
 

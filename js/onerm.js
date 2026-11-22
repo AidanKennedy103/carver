@@ -1,8 +1,8 @@
 // One-rep max tracker: up to 4 lifts, graphed by estimated 1RM (Epley) so
 // every set you log, at any rep count, shows your strength trend.
 
-import { h, icon, push, navBar, fmtDate } from './ui.js';
-import { commit, exercise, e1rmHistory, oneRmExercises, toDisplay, unit } from './store.js';
+import { h, fill, icon, push, navBar, fmtDate } from './ui.js';
+import { state, commit, exercise, e1rmHistory, oneRmExercises, toDisplay, unit } from './store.js';
 import { lineChart, sparkline } from './charts.js';
 import { pickExercises } from './picker.js';
 
@@ -43,32 +43,81 @@ export function oneRmSection() {
   }))];
 }
 
+// ---------- One lift, up close ----------
+
+const PERIODS = [['1M', 30], ['3M', 91], ['6M', 182], ['1Y', 365], ['All', 0]];
+const MEASURES = [
+  ['orm', 'Est. 1RM', 'Estimated from your best set each workout (Epley formula)'],
+  ['top', 'Heaviest', 'The most weight you lifted for at least one rep each workout'],
+  ['vol', 'Volume', 'Weight × reps over all your sets of it each workout'],
+];
+
+/** One point per workout for a measure: { x, y (kg or kg·reps), weight, reps, sets }. */
+function series(id, m) {
+  if (m === 'orm') return e1rmHistory(id);
+  const out = [];
+  for (let i = state.workouts.length - 1; i >= 0; i--) {
+    const w = state.workouts[i];
+    const sets = w.exercises.filter((e) => e.exId === id).flatMap((e) => e.sets.filter((x) => x.done && x.type !== 'w' && x.weight > 0 && x.reps > 0));
+    if (!sets.length) continue;
+    const top = sets.reduce((a, b) => (b.weight > a.weight || (b.weight === a.weight && b.reps > a.reps) ? b : a));
+    out.push({ x: w.start, y: m === 'top' ? top.weight : sets.reduce((n, x) => n + x.weight * x.reps, 0), weight: top.weight, reps: top.reps, sets: sets.length });
+  }
+  return out;
+}
+
 function oneRmDetail(id) {
   const info = exercise(id);
-  const hist = e1rmHistory(id);
-  const fmt = (kg) => `${Math.round(+toDisplay(kg))} ${unit()}`;
-  const best = hist.reduce((m, p) => (p.y > (m?.y || 0) ? p : m), null);
-  const el = h('div.page',
-    navBar({ title: 'Strength Tracking', backLabel: 'Home' }),
-    h('div.scroll-body',
+  const el = h('div.page');
+  const body = h('div.scroll-body');
+  const big = (kg) => Math.round(+toDisplay(kg)).toLocaleString();
+  const dateLong = (t) => fmtDate(t, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+  function draw() {
+    const m = MEASURES.some(([k]) => k === state.settings.ormMeasure) ? state.settings.ormMeasure : 'orm';
+    const days = PERIODS.some(([, d]) => d === state.settings.ormPeriod) ? state.settings.ormPeriod : 182;
+    const all = series(id, m);
+    const since = days ? Date.now() - days * 864e5 : 0;
+    const pts = all.filter((p) => p.x >= since);
+    const allBest = all.reduce((b, p) => (p.y > (b?.y || 0) ? p : b), null);
+    const best = pts.reduce((b, p) => (p.y > (b?.y || 0) ? p : b), null);
+    const last = pts[pts.length - 1], first = pts[0];
+    const change = pts.length > 1 ? last.y - first.y : 0;
+    const word = PERIODS.find(([, d]) => d === days)[0];
+    const periodText = days ? { '1M': 'this month', '3M': 'in 3 months', '6M': 'in 6 months', '1Y': 'this year' }[word] : 'all time';
+    const setText = (p) => (m === 'vol' ? `${p.sets} set${p.sets === 1 ? '' : 's'} · top ${toDisplay(p.weight)} × ${p.reps}` : `${toDisplay(p.weight)} ${unit()} × ${p.reps}`);
+
+    // The readout: the latest workout, or the point under your finger
+    const rv = h('div.lx-val'), rs = h('div.lx-sub');
+    const readout = (p) => {
+      const q = p || last;
+      if (!q) { fill(rv, '—'); fill(rs, 'No workouts in this period'); return; }
+      fill(rv, big(q.y), h('span.lx-unit', ` ${unit()}`), q === allBest || (p && allBest && p.x === allBest.x) ? h('span.lx-pr', icon('trophy', 13), 'PR') : null);
+      fill(rs, `${p ? '' : 'Latest · '}${dateLong(q.x)} · ${setText(q)}`);
+    };
+    readout(null);
+
+    fill(body,
       h('h2.detail-title', info.name),
-      h('div.detail-date', 'Estimated from your best set each workout (Epley formula)'),
-      h('div.stats-inline',
-        h('div.stat', h('span.stat-k', 'Current'), h('span.stat-v', hist.length ? fmt(hist[hist.length - 1].y) : '—')),
-        h('div.stat', h('span.stat-k', 'Best'), h('span.stat-v', best ? fmt(best.y) : '—')),
-        h('div.stat', h('span.stat-k', 'Workouts'), h('span.stat-v', hist.length))),
-      // Charted in the units you see, so the axis lands on round numbers
-      h('section.card.chart-card', lineChart(hist.map((p) => ({ ...p, kg: p.y, y: +toDisplay(p.y) })), {
-        height: 200, fmtY: (v) => Math.round(v), label: `${info.name} estimated one-rep max`,
-        tip: (p) => `<b>${fmt(p.kg)}</b><span>${toDisplay(p.weight)} × ${p.reps} · ${fmtDate(p.x, { month: 'short', day: 'numeric' })}</span>`,
-        empty: 'Log this lift to see your graph',
+      h('div.segment.lx-measure', MEASURES.map(([k, l]) => h('button' + (k === m ? '.on' : ''), { onclick: () => { state.settings.ormMeasure = k; commit(); draw(); } }, l))),
+      h('div.lx-readout', rv, rs),
+      h('section.card.chart-card.lx-chart', lineChart(pts.map((p) => ({ ...p, kg: p.y, y: +toDisplay(p.y) })), {
+        height: 220, fmtY: (v) => (v >= 10000 ? `${Math.round(v / 1000)}k` : Math.round(v)), label: `${info.name}: ${MEASURES.find(([k]) => k === m)[1]}`,
+        fmtX: (t) => new Date(t).toLocaleDateString(undefined, days && days <= 182 ? { month: 'short', day: 'numeric' } : { month: 'short', year: '2-digit' }),
+        dots: pts.length <= 30, mark: best?.x,
+        onSelect: (p) => readout(p ? pts.find((x) => x.x === p.x) : null),
+        empty: all.length ? 'Nothing in this period. Try a longer one.' : 'Log this lift to see your graph',
       })),
-      hist.length ? h('div.section-head', h('h2.section-title', 'Every workout')) : null,
-      hist.length ? h('section.card.list-card', hist.slice().reverse().map((p) => h('div.pr-line',
-        h('span.pr-line-text', h('span.pr-line-name', fmtDate(p.x, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })), h('span.pr-line-kind', `Best set ${toDisplay(p.weight)} ${unit()} × ${p.reps}`)),
-        h('span.pr-line-val' + (p === best ? '.gold-text' : '.plain'), p === best ? [icon('trophy', 14), ' ', fmt(p.y)] : fmt(p.y))))) : null,
-      h('div.bottom-space'),
-    ),
-  );
-  return { el };
+      h('div.segment.range.lx-period', PERIODS.map(([l, d]) => h('button' + (d === days ? '.on' : ''), { onclick: () => { state.settings.ormPeriod = d; commit(); draw(); } }, l))),
+      pts.length ? h('div.lx-stats',
+        h('div.lx-stat', h('span.lx-k', `Best ${days ? word : ''}`.trim()), h('span.lx-v', `${big(best.y)} ${unit()}`), h('span.lx-d', fmtDate(best.x, { month: 'short', day: 'numeric' }))),
+        h('div.lx-stat', h('span.lx-k', 'Change'), h('span.lx-v' + (change > 0 ? '.up' : change < 0 ? '.down' : ''), pts.length > 1 ? `${change > 0 ? '+' : change < 0 ? '−' : ''}${big(Math.abs(change))} ${unit()}` : '—'), h('span.lx-d', periodText)),
+        h('div.lx-stat', h('span.lx-k', 'Sessions'), h('span.lx-v', pts.length), h('span.lx-d', periodText))) : null,
+      allBest ? h('div.lx-pr-row', icon('trophy', 16), h('span', h('b', `All-time best ${big(allBest.y)} ${unit()}`), ` · ${setText(allBest)} · ${fmtDate(allBest.x, { month: 'short', day: 'numeric', year: 'numeric' })}`)) : null,
+      h('p.fine.lx-note', `${MEASURES.find(([k]) => k === m)[2]}. Drag across the chart to see any workout.`),
+      h('div.bottom-space'));
+  }
+  draw();
+  el.append(navBar({ title: 'Strength Tracking', backLabel: 'Home' }), body);
+  return { el, refresh: draw };
 }
