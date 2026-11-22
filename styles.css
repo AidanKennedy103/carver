@@ -1997,3 +1997,9 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 /* Toast with an action (Undo) */
 .toast.has-act { display: flex; align-items: center; gap: 14px; }
 .toast-act { color: var(--gold); font-weight: 700; font-size: 15px; padding: 2px 4px; }
+
+/* My workouts rows: room for the options button */
+.pb-list .pb-row { gap: 6px; }
+.pb-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.pb-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-more { flex: none; color: var(--muted); }

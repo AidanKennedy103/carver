@@ -22,7 +22,7 @@ import { state, commit, uid, exercise, e1rm, e1rmHistory, toDisplay, fromDisplay
 import { program as program531, programCard, setup531 } from './program531.js';
 import { goalsButton } from './goals.js';
 import { startWorkout } from './session.js';
-import { planEditor, lastDone } from './workout.js';
+import { planEditor, lastDone, planMenu } from './workout.js';
 import { pickExercises } from './picker.js';
 import { openBuilder, weeklySets, MAJOR } from './blockbuilder.js';
 
@@ -866,6 +866,7 @@ export function coachPage({ view: startView = 'programs' } = {}) {
             h('span.pb-meta', [`${p.exercises.length} exercise${p.exercises.length === 1 ? '' : 's'}`, last ? `last ${fmtDate(last.start, { month: 'short', day: 'numeric' })}` : 'not done yet'].join(' · '))),
           h('button.split-sw', { onclick: () => { setSplit(p.id, !inSplit(p)); draw(); }, 'aria-pressed': String(inSplit(p)), 'aria-label': `${p.name} in my split` },
             h('span.switch' + (inSplit(p) ? '.on' : ''), h('i')), h('span.split-sw-k', 'Split')),
+          h('button.icon-btn.pb-more', { 'aria-label': `${p.name} options`, onclick: () => planMenu(p, draw) }, icon('more')),
           h('button.play-btn', { 'aria-label': `Start ${p.name}`, onclick: () => startWorkout(p), disabled: !p.exercises.length }, icon('play', 16))),
         [{ label: 'Delete', danger: true, onClick: () => removePlan(p, inProgram) }]);
       })) : h('div.feed-empty.card', 'No workouts yet. Tap New workout to build one, or Freestyle to make it up as you go.'),

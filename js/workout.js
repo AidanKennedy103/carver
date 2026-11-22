@@ -3,7 +3,7 @@
 // Also the plan editor and the workout detail screen.
 
 import { h, fill, icon, push, pop, navBar, actionSheet, confirmBox, promptBox, toast, fmtDate, fmtDurationWords, fmtNum, fmtSecs } from './ui.js';
-import { state, commit, save, uid, exercise, savePlan, deletePlan, splitPlans, setSplit, workoutStats, toDisplay, unit, e1rm, MAX_PLANS, ymd, addDays, dayStart, weekStart, dayPlan, workoutDays, restNote, DAY_SHORT } from './store.js';
+import { state, commit, save, uid, exercise, savePlan, deletePlan, splitPlans, setSplit, inSplit, workoutStats, toDisplay, unit, e1rm, MAX_PLANS, ymd, addDays, dayStart, weekStart, dayPlan, workoutDays, restNote, DAY_SHORT } from './store.js';
 import { startWorkout, repeatWorkout, saveAsPlan, openWorkout, logPastWorkout, editWorkout } from './session.js';
 import { exerciseCard, newSet } from './block.js';
 import { pickExercises } from './picker.js';
@@ -149,27 +149,30 @@ export function workoutPage() {
       h('button.play-btn', { 'aria-label': `Start ${p.name}`, onclick: () => startWorkout(p), disabled: !p.exercises.length }, icon('play', 16)));
   }
 
-  function planMenu(p) {
-    actionSheet(p.name, [
-      { label: 'Start', onClick: () => startWorkout(p) },
-      { label: 'Log it as a past workout', onClick: () => logPastWorkout(p) },
-      { label: 'Edit plan', onClick: () => push(() => planEditor(p)) },
-      { label: 'Take out of my split', onClick: () => { setSplit(p.id, false); toast(`${p.name} is out of your split. It’s still in My workouts.`); } },
-      { label: 'Share', onClick: () => shareWorkout(p) },
-      { label: 'Rename', onClick: async () => { const n = await promptBox('Rename plan', p.name); if (n) savePlan({ ...p, name: n }); } },
-      { label: 'Duplicate', onClick: () => {
-        if (state.plans.length >= MAX_PLANS) { toast(`You can keep ${MAX_PLANS} plans.`); return; }
-        savePlan({ ...structuredClone(p), id: uid(), name: p.name + ' copy', created: Date.now() });
-      } },
-      { label: 'Delete plan', danger: true, onClick: async () => { if (await confirmBox(`Delete “${p.name}”?`, 'Your past workouts stay in History.', { ok: 'Delete', danger: true })) deletePlan(p.id); } },
-    ]);
-  }
-
   draw();
   return {
     el: (el.append(body), el),
     refresh: draw,
   };
+}
+
+/** A workout's options (the ⋯ button), on the Workout tab and in My workouts. after() redraws the list. */
+export function planMenu(p, after = () => {}) {
+  const on = inSplit(p);
+  actionSheet(p.name, [
+    { label: 'Start', onClick: () => startWorkout(p) },
+    { label: 'Log it as a past workout', onClick: () => logPastWorkout(p) },
+    { label: 'Edit plan', onClick: () => push(() => planEditor(p)) },
+    { label: on ? 'Take out of my split' : 'Put in my split', onClick: () => { setSplit(p.id, !on); toast(on ? `${p.name} is out of your split. It’s still in My workouts.` : `${p.name} is in your split`); after(); } },
+    { label: 'Share', onClick: () => shareWorkout(p) },
+    { label: 'Rename', onClick: async () => { const n = await promptBox('Rename plan', p.name); if (n) { savePlan({ ...p, name: n }); after(); } } },
+    { label: 'Duplicate', onClick: () => {
+      if (state.plans.length >= MAX_PLANS) { toast(`You can keep ${MAX_PLANS} plans.`); return; }
+      savePlan({ ...structuredClone(p), id: uid(), name: p.name + ' copy', created: Date.now() });
+      after();
+    } },
+    { label: 'Delete plan', danger: true, onClick: async () => { if (await confirmBox(`Delete “${p.name}”?`, 'Your past workouts stay in History.', { ok: 'Delete', danger: true })) { deletePlan(p.id); after(); } } },
+  ]);
 }
 
 /** The last finished workout from a plan. */
