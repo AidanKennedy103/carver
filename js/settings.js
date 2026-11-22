@@ -91,7 +91,7 @@ export function openSettings() {
       let found = readWorkouts(text);
       if (found.needsUnit) { const u = await askUnit('weights'); if (!u) return; found = readWorkouts(text, u); }
       const r = saveWorkouts(found);
-      if (!r.added) { toast(r.total ? 'Those workouts are already in Carver' : 'No workouts found in that file'); return; }
+      if (!r.added) { toast(r.fixed ? `Updated ${r.fixed} workout${r.fixed === 1 ? '' : 's'} you imported before` : r.total ? 'Those workouts are already in Carver' : 'No workouts found in that file'); return; }
       toast(`Imported ${r.added} workout${r.added === 1 ? '' : 's'}${r.newExercises ? `, ${r.newExercises} new exercise${r.newExercises === 1 ? '' : 's'}` : ''}`);
       // Workouts you repeat by name can become plans, set from the last time you did each
       const room = MAX_PLANS - state.plans.length, list = routines(found.workouts).slice(0, room);

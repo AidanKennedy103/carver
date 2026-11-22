@@ -98,8 +98,29 @@ function matcher() {
   const lib = allExercises().map((e) => ({ e, key: keyOf(e.name), loose: keyOf(e.name.toLowerCase().replace(LOOSE, ' ')) }));
   const made = new Map();
   /** The exercise for a name like "Bench Press (Dumbbell)"; adds a custom one if nothing fits. */
+  /** "Pull Up (Weighted)", "Weighted Chin Up", "Pull Up (Assisted)": the loaded or assisted version, tracked as weight × reps. */
+  const variant = (name, mod) => {
+    const plain = name.replace(/\(([^)]*)\)/g, (m, x) => (/weighted|assisted/i.test(x) ? ' ' : m)).replace(/\b(weighted|assisted)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+    const tries = [plain, plain.replace(/\s*\([^)]*\)\s*/g, ' ').trim()];
+    const ks = (k) => k.replace(/s$/, '');   // "Dip" and "Dips" are the same move
+    for (const p of tries) {
+      const k = ks(keyOf(`${mod} ${p}`));
+      const hit = lib.find((x) => x.e.type !== 'bw' && (ks(x.key) === k || ks(x.loose) === ks(keyOf(`${mod} ${p}`.toLowerCase().replace(LOOSE, ' ')))));
+      if (hit) return hit.e.id;
+    }
+    const base = tries.map((p) => lib.find((x) => x.key === keyOf(p)) || lib.find((x) => x.loose === keyOf(p.toLowerCase().replace(LOOSE, ' ')))).find(Boolean)?.e;
+    const Mod = mod[0].toUpperCase() + mod.slice(1);
+    const label = `${Mod} ${base ? base.name : plain}`.slice(0, 50);
+    const id = label.toLowerCase();
+    if (!made.has(id)) made.set(id, { id: 'c-' + uid(), custom: true, name: label, muscle: base?.muscle || muscleOf(plain), ...(base?.helps ? { helps: base.helps } : {}), equipment: mod === 'assisted' ? 'Machine' : 'Bodyweight', type: 'wr' });
+    return made.get(id).id;
+  };
+
   const match = (raw, type) => {
     const name = raw.trim();
+    const mod = /\bweighted\b/i.test(name) ? 'weighted' : /\bassisted\b/i.test(name) ? 'assisted' : null;
+    if (mod) return variant(name, mod);
+    if (/^(triceps |chest )?dips?$/i.test(name)) return 'dips';   // Hevy's "Triceps Dip" is the bodyweight dip, not the machine
     const inParens = (name.match(/\(([^)]*)\)/) || [])[1]?.toLowerCase() || '';
     const equip = equipOf(inParens) || equipOf(name.toLowerCase());
     const base = equipOf(inParens) ? name.replace(/\s*\([^)]*\)\s*/, ' ') : name;
@@ -188,17 +209,25 @@ export function readWorkouts(text, unitHint) {
 
 /** Save what readWorkouts found, skipping workouts already imported. Returns counts. */
 export function saveWorkouts(found) {
-  const have = new Set(state.workouts.map((w) => w.id));
+  const have = new Map(state.workouts.map((w) => [w.id, w]));
+  // Custom exercises: reuse one you already have with the same name
+  const mine = new Map(state.customExercises.map((e) => [e.name.toLowerCase(), e.id]));
+  const swap = new Map(found.custom.filter((e) => mine.has(e.name.toLowerCase())).map((e) => [e.id, mine.get(e.name.toLowerCase())]));
+  for (const w of found.workouts) for (const e of w.exercises) if (swap.has(e.exId)) e.exId = swap.get(e.exId);
   const fresh = found.workouts.filter((w) => !have.has(w.id));
-  const used = new Set(fresh.flatMap((w) => w.exercises.map((e) => e.exId)));
+  // Importing the same file again fixes workouts it brought in before (better exercise matching)
+  const sig = (w) => JSON.stringify(w.exercises.map((e) => [e.exId, e.sets.map((x) => [x.weight, x.reps, x.secs])]));
+  const redo = found.workouts.filter((w) => have.get(w.id)?.imported && sig(have.get(w.id)) !== sig(w));
+  const used = new Set([...fresh, ...redo].flatMap((w) => w.exercises.map((e) => e.exId)));
   const known = new Set(allExercises().map((e) => e.id));
   const custom = found.custom.filter((e) => used.has(e.id) && !known.has(e.id));
-  if (fresh.length) commit((s) => {
+  if (fresh.length || redo.length) commit((s) => {
     s.customExercises.unshift(...custom);
+    for (const w of redo) { const i = s.workouts.findIndex((x) => x.id === w.id); if (i >= 0) s.workouts[i] = { ...s.workouts[i], exercises: w.exercises }; }
     s.workouts.push(...fresh);
     s.workouts.sort((a, b) => b.start - a.start);
   });
-  return { added: fresh.length, total: found.workouts.length, newExercises: custom.length };
+  return { added: fresh.length, fixed: redo.length, total: found.workouts.length, newExercises: custom.length };
 }
 
 /** Workouts you did at least twice by the same name, most often first: candidates for plans. */
