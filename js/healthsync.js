@@ -104,7 +104,7 @@ let pulling = false, lastPull = 0;
 export let lastPullError = null;
 /** Collect what the Shortcut sent, merge it in, and clear the inbox. */
 export async function pullHealth({ force = false } = {}) {
-  if (!account() || pulling || (!force && Date.now() - lastPull < 5 * 6e4)) return 0;
+  if (!account() || pulling || (!force && Date.now() - lastPull < 6e4)) return 0;
   pulling = true; lastPull = Date.now();
   try {
     const db = await client();
