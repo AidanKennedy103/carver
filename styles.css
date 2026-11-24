@@ -2084,3 +2084,30 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .dg-item.dragging { position: relative; z-index: 5; transition: none; background: var(--surface-2, #1c1c1f); border-radius: 14px; box-shadow: 0 12px 30px rgba(0, 0, 0, .6); opacity: .97; }
 .drag-on > .dg-item:not(.dragging) { transition: transform .15s; }
 .drag-hint { margin: 10px 0 4px; }
+
+/* Superset / circuit: one card, round by round */
+.ex-group { padding: 8px 12px 12px; }
+.grp-who { display: flex; flex-direction: column; gap: 2px; margin: 8px 0 4px; }
+.grp-ex { display: flex; align-items: center; gap: 8px; }
+.grp-ex-name { flex: 1; min-width: 0; text-align: left; font-size: 16px; font-weight: 700; color: var(--gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ex-group.circuit .grp-ex-name { color: #64d2ff; }
+.grp-ex .ex-badge-g { margin-right: 0; }
+.grp-rest { margin: 4px 0 8px; }
+.grid-g .set-row { grid-template-columns: minmax(0, 1fr) 60px 50px 40px; min-height: 48px; }
+.set-namecell { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.set-namecell .set-name { height: 24px; }
+.set-namecell .prev { height: auto; padding: 0 0 2px 28px; font-size: 12px; line-height: 1.2; text-align: left; }
+.set-namecell .prev:empty, .grp-sets .set-namecell .prev { min-height: 0; }
+.grid-gp .set-row { grid-template-columns: minmax(0, 1fr) 70px 58px 34px; }
+.grp-round { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 10px 0 2px; }
+.grp-sets .set-row.head { margin-bottom: -4px; }
+.grp-sets .set-row.head .c0 { text-align: left; }
+.set-name { display: flex; align-items: center; gap: 6px; min-width: 0; height: 30px; text-align: left; font-size: 14px; font-weight: 600; color: var(--text); }
+.set-name-t { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.set-name-k { flex: none; font-size: 11px; font-weight: 800; color: #ffb340; }
+.set-name.t-d .set-name-k { color: #64d2ff; }
+.set-name.t-f .set-name-k { color: var(--red); }
+.ex-badge-g.small { min-width: 22px; height: 18px; font-size: 11px; margin-right: 0; flex: none; }
+.set-blank { display: grid; place-items: center; font-size: 11px; font-weight: 600; color: var(--faint); }
+.grp-sets .prev { font-size: 13px; }
+.ex-group.complete { opacity: .85; }

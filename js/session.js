@@ -227,7 +227,7 @@ function workoutScreen() {
         h('div.empty-title', w.past ? 'What did you do?' : 'Freestyle workout'),
         h('div.empty-text', w.past ? 'Add the exercises you did, then type in your sets.'
           : 'Add exercises as you go. Save it as a plan when you finish.')),
-      exerciseList(w.exercises, (ex, i, extra) => exerciseCard({
+      exerciseList(w.exercises, (ex, i, extra) => ({
         ex, index: i, count: w.exercises.length, mode: 'live', current: ex === currentEx(), ...extra,
         prev: previousSets(ex.exId, w.id),
         redraw: () => { save(); draw(); },
@@ -237,7 +237,6 @@ function workoutScreen() {
           updateStats();
           const restAfter = endsRound(w.exercises, e) ? (w.exercises.filter((x) => x.grp && x.grp === e.grp).pop() || e).rest : 0;
           if (restAfter && !w.past && state.settings.restOn !== false) startRest(restAfter, exercise(e.exId).name);
-          else if (e.grp && !w.past) { const nx = nextInGroup(w.exercises, e); if (nx !== e) toast(`Next: ${exercise(nx.exId).name}`); }
         },
         onMove: (d) => { const [m] = w.exercises.splice(i, 1); w.exercises.splice(i + d, 0, m); save(); draw(); },
         onRemove: async () => {

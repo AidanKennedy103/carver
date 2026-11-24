@@ -358,7 +358,7 @@ export function planEditor(existing = null) {
         h('div.empty-icon', icon('dumbbell', 40)),
         h('div.empty-title', 'Add exercises'),
         h('div.empty-text', 'Add exercises and set the weight and reps you’re aiming for.')),
-      exerciseList(plan.exercises, (ex, i, extra) => exerciseCard({
+      exerciseList(plan.exercises, (ex, i, extra) => ({
         ex, index: i, count: plan.exercises.length, mode: 'plan', prev: previousSets(ex.exId), ...extra,
         redraw: () => { touch(); draw(); },
         save: touch,
