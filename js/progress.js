@@ -52,8 +52,8 @@ export function progressPage({ tab = false } = {}) {
           c30 != null ? h('div.energy-goal', h('div.weight-change', signed(c30)), h('div.energy-k', 'last 30 days')) : null)
           : h('div.empty-text.left', 'Log your weight to see your trend. Weighing in most mornings gives the clearest picture.'),
         weightGoalText() ? h('div.weight-goal', icon('target', 15), weightGoalText()) : null,
-        metricChart(trend(), { pins: () => photos().map((p) => ({ x: p.ts, label: `Progress photo, ${fmtDate(p.ts, { month: 'short', day: 'numeric' })}`, el: loadInto(h('img', { alt: '' }), p.id), onClick: () => push(() => photoScreen(p.id)) })) }),
-        photos().length ? h('p.fine.pin-note', 'Your progress photos sit on the line at the day you took them. Tap one to open it.') : null,
+        metricChart(trend(), { pins: () => photos().map((p) => ({ x: p.ts, label: `Progress photo, ${fmtDate(p.ts, { month: 'short', day: 'numeric' })}`, el: icon('camera', 13), onClick: () => push(() => photoScreen(p.id)) })) }),
+        photos().length ? h('p.fine.pin-note', 'The camera marks above the chart are your progress photos. Tap one to open it.') : null,
         h('div.btn-pair',
           h('button.btn.gold', { onclick: logWeightSheet }, icon('plus', 18), 'Log weight'),
           h('button.btn.dark', { onclick: importSheet }, icon('scale', 18), 'Scale & Health'))),

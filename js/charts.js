@@ -134,15 +134,9 @@ export function lineChart(data, opts = {}) {
   const mk = opts.mark != null ? pts.find((p) => p.x === opts.mark) : null;   // a point to ring (a PR)
   if (mk) svg.append(s('circle', { cx: mk.px, cy: mk.py, r: 7, fill: 'none', stroke: color, 'stroke-width': 2 }), s('circle', { cx: mk.px, cy: mk.py, r: 3.5, fill: color }));
   wrap.append(svg);
-  // Pins: [{ x, el, onClick, label }] sit on the line at their date (between the nearest points)
-  for (const pin of opts.pins || []) {
-    if (pin.x < x0 || pin.x > x1 || !pts.length) continue;
-    const after = pts.findIndex((p) => p.x >= pin.x);
-    const a = pts[Math.max(0, after < 0 ? pts.length - 1 : after - 1)], b = pts[after < 0 ? pts.length - 1 : after];
-    const t = b.x === a.x ? 0 : (pin.x - a.x) / (b.x - a.x);
-    const yy = a.py + (b.py - a.py) * Math.max(0, Math.min(1, t));
-    wrap.append(h('button.chart-pin', { style: { left: `${(px(pin.x) / W) * 100}%`, top: `${(yy / H) * 100}%` }, onclick: pin.onClick, 'aria-label': pin.label || 'Pinned item' }, pin.el));
-  }
+  // Pins: [{ x, el, onClick, label }] as small markers in a lane above the plot, at their date
+  const pins = (opts.pins || []).filter((p) => p.x >= x0 && p.x <= x1);
+  if (pins.length) wrap.insertBefore(h('div.chart-pins', pins.map((pin) => h('button.chart-pin', { style: { left: `${(px(pin.x) / W) * 100}%` }, onclick: pin.onClick, 'aria-label': pin.label || 'Pinned item' }, pin.el))), svg);
   addTooltip(wrap, svg, pts, W, opts.tip || ((p) => `<b>${fmtY(p.y)}</b><span>${fmtX(p.x)}</span>`), opts.onSelect || null);
   return wrap;
 }
