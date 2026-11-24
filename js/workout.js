@@ -316,6 +316,17 @@ export function workoutDetail(w) {
 
 export function planEditor(existing = null) {
   const plan = existing ? structuredClone(existing) : { id: uid(), name: '', created: Date.now(), exercises: [] };
+  // Empty sets start from what you did last time (real numbers you can keep or change)
+  const fromLast = (ex) => {
+    const prev = previousSets(ex.exId);
+    if (!prev.length) return;
+    ex.sets.forEach((s, i) => {
+      if (s.tWeight != null || s.tReps != null || s.tSecs != null) return;
+      const p = prev[i] || prev[prev.length - 1];
+      s.tWeight = p.weight ?? null; s.tReps = p.reps ?? null; s.tSecs = p.secs ?? null;
+    });
+  };
+  plan.exercises.forEach(fromLast);
   const el = h('div.page');
   const body = h('div.scroll-body');
   let dirty = false;
@@ -369,7 +380,9 @@ export function planEditor(existing = null) {
       plan.exercises.length > 1 ? h('p.fine.center.drag-hint', 'Hold an exercise to drag it.') : null,
       h('button.btn.gold.wide', {
         onclick: () => pickExercises((ids, kind) => {
-          plan.exercises.push(...groupNew(ids.map((exId) => ({ exId, note: '', rest: state.settings.restDefault ?? 90, sets: [newSet(), newSet(), newSet()] })), kind));
+          const added = ids.map((exId) => ({ exId, note: '', rest: state.settings.restDefault ?? 90, sets: [newSet(), newSet(), newSet()] }));
+          added.forEach(fromLast);
+          plan.exercises.push(...groupNew(added, kind));
           touch(); draw();
           setTimeout(() => body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' }), 50);
         }, { groups: true }),
