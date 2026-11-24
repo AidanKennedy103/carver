@@ -22,7 +22,7 @@ import { state, commit, uid, exercise, e1rm, e1rmHistory, toDisplay, fromDisplay
 import { program as program531, programCard, setup531 } from './program531.js';
 import { goalsButton } from './goals.js';
 import { startWorkout } from './session.js';
-import { planEditor, lastDone, planMenu } from './workout.js';
+import { planEditor, lastDone, planMenu, removePlan as removePlanUndo } from './workout.js';
 import { pickExercises } from './picker.js';
 import { openBuilder, weeklySets, MAJOR } from './blockbuilder.js';
 
@@ -874,13 +874,7 @@ export function coachPage({ view: startView = 'programs' } = {}) {
   }
 
   /** Delete from the list; Undo puts it back where it was. Program days ask first. */
-  async function removePlan(p, inProgram) {
-    if (inProgram && !(await confirmBox(`Delete “${p.name}”?`, 'It’s a day of your program, which will run without it. Your past workouts stay in History.', { ok: 'Delete', danger: true }))) return;
-    const at = state.plans.findIndex((x) => x.id === p.id);
-    commit((s) => { s.plans = s.plans.filter((x) => x.id !== p.id); });
-    draw();
-    toast(`Deleted ${p.name}`, { action: 'Undo', onAction: () => { commit((s) => { if (!s.plans.some((x) => x.id === p.id)) s.plans.splice(at, 0, p); }); draw(); } });
-  }
+  const removePlan = (p) => removePlanUndo(p, draw);
 
   function programsView(cp, t, p531) {
     return [

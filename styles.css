@@ -2111,3 +2111,8 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .set-blank { display: grid; place-items: center; font-size: 11px; font-weight: 600; color: var(--faint); }
 .grp-sets .prev { font-size: 13px; }
 .ex-group.complete { opacity: .85; }
+
+/* Workout tab: swipe a plan to delete it */
+.plan-list.swipey { padding: 4px 0; overflow: hidden; }
+.plan-list.swipey .plan-row { padding-left: 30px; padding-right: 26px; }
+.plan-list.swipey .swipe-row + .swipe-row { border-top: .5px solid var(--line); }

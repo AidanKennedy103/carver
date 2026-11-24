@@ -2,7 +2,7 @@
 // your plans (up to 10), and History by week.
 // Also the plan editor and the workout detail screen.
 
-import { h, fill, icon, push, pop, navBar, actionSheet, confirmBox, promptBox, toast, fmtDate, fmtDurationWords, fmtNum, fmtSecs, holdToDrag } from './ui.js';
+import { h, fill, icon, push, pop, navBar, actionSheet, confirmBox, promptBox, toast, fmtDate, fmtDurationWords, fmtNum, fmtSecs, holdToDrag, swipeRow } from './ui.js';
 import { state, commit, save, uid, exercise, savePlan, deletePlan, splitPlans, setSplit, inSplit, workoutStats, toDisplay, unit, e1rm, MAX_PLANS, ymd, addDays, dayStart, weekStart, dayPlan, workoutDays, restNote, DAY_SHORT, previousSets } from './store.js';
 import { startWorkout, repeatWorkout, saveAsPlan, openWorkout, logPastWorkout, editWorkout } from './session.js';
 import { exerciseCard, newSet, exerciseList, groupNew } from './block.js';
@@ -43,7 +43,7 @@ export function workoutPage() {
           h('button.link' + (plansFull ? '.off' : ''), {
             onclick: () => plansFull ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor()),
           }, icon('plus', 16), 'New'))),
-      splitPlans().length ? holdToDrag(h('section.card.list-card.plan-list', splitPlans().map((p) => { const r = planRow(p, p === next); r.classList.add('dg-item'); r.dataset.id = p.id; return r; })), { onDrop: reorderSplit })
+      splitPlans().length ? holdToDrag(h('section.card.list-card.plan-list.swipey', splitPlans().map((p) => { const r = swipeRow(planRow(p, p === next), [{ label: 'Delete', danger: true, onClick: () => removePlan(p, draw) }]); r.classList.add('dg-item'); r.dataset.id = p.id; return r; })), { onDrop: reorderSplit })
         : state.plans.length ? h('button.card.empty-plan-row', { onclick: () => push(() => coachPage({ view: 'mine' })) }, icon('plus', 18), h('span', 'Pick the workouts in your split'))
           : h('button.card.empty-plan-row', { onclick: () => push(() => planEditor()) }, icon('plus', 18), h('span', 'Make your first plan')),
       state.plans.length || state.workouts.length ? volumeCard() : null,
@@ -182,6 +182,16 @@ export function planMenu(p, after = () => {}) {
     } },
     { label: 'Delete plan', danger: true, onClick: async () => { if (await confirmBox(`Delete “${p.name}”?`, 'Your past workouts stay in History.', { ok: 'Delete', danger: true })) { deletePlan(p.id); after(); } } },
   ]);
+}
+
+/** Delete a plan; Undo puts it back where it was. A day of your running program asks first. */
+export async function removePlan(p, after = () => {}) {
+  const inProgram = coachProgram()?.plans.includes(p.id) || Object.values(program()?.plans || {}).includes(p.id);
+  if (inProgram && !(await confirmBox(`Delete “${p.name}”?`, 'It’s a day of your program, which will run without it. Your past workouts stay in History.', { ok: 'Delete', danger: true }))) return;
+  const at = state.plans.findIndex((x) => x.id === p.id);
+  commit((s) => { s.plans = s.plans.filter((x) => x.id !== p.id); });
+  after();
+  toast(`Deleted ${p.name}`, { action: 'Undo', onAction: () => { commit((s) => { if (!s.plans.some((x) => x.id === p.id)) s.plans.splice(at, 0, p); }); after(); } });
 }
 
 /** The last finished workout from a plan. */
