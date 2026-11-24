@@ -16,7 +16,7 @@ import { aboutScreen } from './about.js';
 import { clearPhotos } from './photos.js';
 import { importCronometer } from './cronometer.js';
 import { account } from './cloud.js';
-import { readFiles, readWorkouts, saveWorkouts, routines, planFrom, readMFP, saveMFP } from './imports.js';
+import { readFiles, readWorkouts, saveWorkouts, routines, planFrom, readMFP, saveMFP, workoutTemplate } from './imports.js';
 
 export function openSettings() {
   // Units: lifting, body weight and distance are each their own choice
@@ -153,9 +153,11 @@ export function openSettings() {
       h('button.group-row', { onclick: () => { s.close(); import('./healthsync.js').then((m) => m.openHealthSync()); } }, h('span', 'Apple Health sync (automatic, daily)'), h('span.row-val', '›')),
       h('button.group-row', { onclick: () => import('./health.js').then((m) => m.importHealth()) }, h('span', 'Apple Health export (everything, once)'), h('span.row-val', 'ZIP')),
       h('button.group-row', { onclick: () => workIn.click() }, h('span', 'Workouts from Hevy, Strong, 5/3/1 apps…'), h('span.row-val', 'CSV')),
+      h('button.group-row', { onclick: downloadTemplate }, h('span', 'Workouts from a spreadsheet or paper: get the template'), h('span.row-val', 'CSV')),
       h('button.group-row', { onclick: () => mfpIn.click() }, h('span', 'Food and weight from MyFitnessPal'), h('span.row-val', 'ZIP')),
       h('button.group-row', { onclick: () => cronIn.click() }, h('span', 'Food from Cronometer'), h('span.row-val', 'CSV'))),
     fileIn, cronIn, workIn, mfpIn,
+    h('p.fine', 'Spreadsheet or paper: get the template, put one set per row (date, workout name, exercise, weight, reps), replace the example rows with yours, save it as CSV and import it with the row above. Importing the same file again won’t add workouts twice.'),
     h('p.fine', 'Hevy: Settings → Export & Import Data → Export Workouts. Strong: Settings → Export Strong Data. Other apps: export a CSV. Unknown exercises become your own; repeated workouts can become plans.'),
     h('p.fine', 'MyFitnessPal: Settings → Export Data (emails you a zip; may need Premium). You get each meal’s totals per day and your weigh-ins, not the single foods.'),
     h('p.fine', 'Cronometer: on cronometer.com go to More → Account → Export Data, export “Food & Recipe Entries”. Anything already imported is skipped.'),
@@ -169,6 +171,20 @@ export function openSettings() {
     h('div.group', h('button.group-row', { onclick: () => { s.close(); push(aboutScreen); } }, h('span', 'About & privacy'), h('span.row-val', '›'))),
     h('p.fine.center', 'Carver beta · v0.5'),
   ));
+}
+
+/** The workout template: fill it in (Numbers, Excel, Google Sheets), then import it like any CSV. */
+async function downloadTemplate() {
+  const name = 'carver-workout-template.csv';
+  const file = new File([workoutTemplate(state.settings.unit)], name, { type: 'text/csv' });
+  if (navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: 'Carver workout template' }); return; }
+    catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const a = h('a', { href: URL.createObjectURL(file), download: name });
+  document.body.append(a);
+  a.click();
+  a.remove();
 }
 
 async function exportData() {

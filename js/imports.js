@@ -207,6 +207,28 @@ export function readWorkouts(text, unitHint) {
   return { workouts, custom: [...match.made.values()], source };
 }
 
+/**
+ * A blank workout log for spreadsheets or paper: one row per set. readWorkouts reads it back.
+ * Weights are in your unit (the column name says which).
+ */
+export function workoutTemplate(unit = 'lb') {
+  const kg = unit === 'kg';
+  const w = (lb) => (kg ? Math.round(lb / 2.2 / 2.5) * 2.5 : lb);
+  const rows = [
+    ['date', 'workout', 'exercise', 'set_type', `weight_${kg ? 'kg' : 'lb'}`, 'reps', 'seconds', 'notes'],
+    ['2026-11-20', 'Push', 'Bench Press', 'warmup', w(95), 10, '', 'Warm-ups are optional'],
+    ['2026-11-20', 'Push', 'Bench Press', 'normal', w(185), 5, '', ''],
+    ['2026-11-20', 'Push', 'Bench Press', 'normal', w(185), 5, '', ''],
+    ['2026-11-20', 'Push', 'Overhead Press', 'normal', w(115), 8, '', ''],
+    ['2026-11-20', 'Push', 'Push-up', 'normal', '', 20, '', 'Bodyweight: leave weight empty'],
+    ['2026-11-22', 'Legs', 'Squat', 'normal', w(225), 5, '', ''],
+    ['2026-11-22', 'Legs', 'Squat', 'drop', w(185), 8, '', 'Set types: normal, warmup, drop, failure'],
+    ['2026-11-22', 'Legs', 'Plank', 'normal', '', '', 60, 'Timed moves: seconds'],
+  ];
+  const cell = (v) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+  return rows.map((r) => r.map(cell).join(',')).join('\r\n') + '\r\n';
+}
+
 /** Save what readWorkouts found, skipping workouts already imported. Returns counts. */
 export function saveWorkouts(found) {
   const have = new Map(state.workouts.map((w) => [w.id, w]));
