@@ -2116,3 +2116,8 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .plan-list.swipey { padding: 4px 0; overflow: hidden; }
 .plan-list.swipey .plan-row { padding-left: 30px; padding-right: 26px; }
 .plan-list.swipey .swipe-row + .swipe-row { border-top: .5px solid var(--line); }
+
+/* Supersets in red (circuits blue), so the two read apart at a glance */
+.ex-group.superset { border-color: rgba(255, 105, 97, .45); background: linear-gradient(180deg, rgba(255, 105, 97, .07), rgba(0, 0, 0, 0) 60px); }
+.ex-group.superset .ex-group-tag, .ex-group.superset .grp-ex-name { color: #ff6961; }
+.ex-group.superset .ex-badge-g { background: #ff6961; color: #1a0b0a; }
