@@ -226,7 +226,7 @@ export function workoutTemplate(unit = 'lb') {
     ['2026-11-22', 'Legs', 'Plank', 'normal', '', '', 60, 'Timed moves: seconds'],
   ];
   const cell = (v) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
-  return rows.map((r) => r.map(cell).join(',')).join('\r\n') + '\r\n';
+  return rows.map((r) => r.map(cell).join(',')).join('\n') + '\n';   // plain new lines: some apps show CR LF as blank rows
 }
 
 /** Save what readWorkouts found, skipping workouts already imported. Returns counts. */
