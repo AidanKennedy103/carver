@@ -2121,3 +2121,16 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .ex-group.superset { border-color: rgba(255, 105, 97, .45); background: linear-gradient(180deg, rgba(255, 105, 97, .07), rgba(0, 0, 0, 0) 60px); }
 .ex-group.superset .ex-group-tag, .ex-group.superset .grp-ex-name { color: #ff6961; }
 .ex-group.superset .ex-badge-g { background: #ff6961; color: #1a0b0a; }
+
+/* Set numbers look like the buttons they are (they open warm-up / drop / failure) */
+.set-num { position: relative; border: 1px solid #3a3a40; background: var(--surface-2, #1c1c1f); }
+.set-num::after { content: ''; position: absolute; right: 3px; bottom: 3px; border: 3px solid transparent; border-right-color: #6a6a70; border-bottom-color: #6a6a70; border-radius: 1px; }
+.set-row.done .set-num { border-color: rgba(227, 176, 75, .35); }
+.set-num.t-w { border-color: rgba(255, 179, 64, .5); }
+.set-num.t-d { border-color: rgba(100, 210, 255, .5); }
+.set-num.t-f { border-color: rgba(255, 69, 58, .5); }
+.set-name { padding: 0 4px; border-radius: 8px; border: 1px solid transparent; }
+.set-name:active, .set-num:active { background: var(--gold-bg); }
+.set-tip { display: flex; align-items: flex-start; gap: 6px; margin: 2px 0 8px; font-size: 13px; color: var(--muted); }
+.set-tip .icon { flex: none; margin-top: 1px; color: var(--gold); }
+.set-tip .t-w { color: #ffb340; } .set-tip .t-d { color: #64d2ff; } .set-tip .t-f { color: var(--red); }

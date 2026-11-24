@@ -2,7 +2,7 @@
 // and the plan editor ('plan').
 
 import { h, icon, actionSheet, fmtSecs, parseSecs, toast, swipeRow } from './ui.js';
-import { exercise, toDisplay, fromDisplay, unit, uid } from './store.js';
+import { exercise, toDisplay, fromDisplay, unit, uid, state, save } from './store.js';
 import { holdToDrag } from './ui.js';
 import { pickExercises } from './picker.js';
 import { musclesText } from './exercises.js';
@@ -99,7 +99,9 @@ export function exerciseCard(opts) {
     },
   }, icon('plus', 14), 'Warm-up');
 
-  return h('section.ex-card' + (live ? '.live' : '') + (complete ? '.complete' : ''), head, note, table, h('div.add-row', addSet, addWarm));
+  const tip = !state.settings.seenSetTypes && opts.index === 0 && ex.sets.length
+    ? h('div.set-tip', icon('edit', 14), h('span', 'Tap a set number to make it a ', h('b.t-w', 'warm-up'), ', ', h('b.t-d', 'drop'), ' or ', h('b.t-f', 'failure'), ' set.')) : null;
+  return h('section.ex-card' + (live ? '.live' : '') + (complete ? '.complete' : ''), head, note, tip, table, h('div.add-row', addSet, addWarm));
 }
 
 /**
@@ -118,7 +120,7 @@ function setRow({ ex, set, si, type, live, tgt, prev = [], opts, label, isNext, 
 
   const row = h('div.set-row' + (set.done ? '.done' : isNext ? '.next' : '') + (set.type === 'w' ? '.warm' : ''));
   const menu = () => actionSheet(name ? `${name.text} · set ${label}` : 'Set ' + label, [
-    ...Object.entries(SET_TYPES).map(([k, v]) => ({ label: (set.type === k ? '✓ ' : '') + v, onClick: () => { set.type = k; opts.redraw(); } })),
+    ...Object.entries(SET_TYPES).map(([k, v]) => ({ label: (set.type === k ? '✓ ' : '') + v, onClick: () => { set.type = k; state.settings.seenSetTypes = true; save(); opts.redraw(); } })),
     { label: 'Delete set', danger: true, onClick: () => { ex.sets.splice(si, 1); opts.redraw(); } },
   ]);
   const num = name
