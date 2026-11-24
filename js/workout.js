@@ -2,10 +2,10 @@
 // your plans (up to 10), and History by week.
 // Also the plan editor and the workout detail screen.
 
-import { h, fill, icon, push, pop, navBar, actionSheet, confirmBox, promptBox, toast, fmtDate, fmtDurationWords, fmtNum, fmtSecs } from './ui.js';
-import { state, commit, save, uid, exercise, savePlan, deletePlan, splitPlans, setSplit, inSplit, workoutStats, toDisplay, unit, e1rm, MAX_PLANS, ymd, addDays, dayStart, weekStart, dayPlan, workoutDays, restNote, DAY_SHORT } from './store.js';
+import { h, fill, icon, push, pop, navBar, actionSheet, confirmBox, promptBox, toast, fmtDate, fmtDurationWords, fmtNum, fmtSecs, holdToDrag } from './ui.js';
+import { state, commit, save, uid, exercise, savePlan, deletePlan, splitPlans, setSplit, inSplit, workoutStats, toDisplay, unit, e1rm, MAX_PLANS, ymd, addDays, dayStart, weekStart, dayPlan, workoutDays, restNote, DAY_SHORT, previousSets } from './store.js';
 import { startWorkout, repeatWorkout, saveAsPlan, openWorkout, logPastWorkout, editWorkout } from './session.js';
-import { exerciseCard, newSet } from './block.js';
+import { exerciseCard, newSet, exerciseList, groupNew } from './block.js';
 import { pickExercises } from './picker.js';
 import { openSettings } from './settings.js';
 import { volumeCard, tally, MUSCLE_ORDER, ALL_MUSCLES } from './volume.js';
@@ -43,7 +43,7 @@ export function workoutPage() {
           h('button.link' + (plansFull ? '.off' : ''), {
             onclick: () => plansFull ? toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`) : push(() => planEditor()),
           }, icon('plus', 16), 'New'))),
-      splitPlans().length ? h('section.card.list-card.plan-list', splitPlans().map((p) => planRow(p, p === next)))
+      splitPlans().length ? holdToDrag(h('section.card.list-card.plan-list', splitPlans().map((p) => { const r = planRow(p, p === next); r.classList.add('dg-item'); r.dataset.id = p.id; return r; })), { onDrop: reorderSplit })
         : state.plans.length ? h('button.card.empty-plan-row', { onclick: () => push(() => coachPage({ view: 'mine' })) }, icon('plus', 18), h('span', 'Pick the workouts in your split'))
           : h('button.card.empty-plan-row', { onclick: () => push(() => planEditor()) }, icon('plus', 18), h('span', 'Make your first plan')),
       state.plans.length || state.workouts.length ? volumeCard() : null,
@@ -135,6 +135,15 @@ export function workoutPage() {
         return h('div.wk-col' + cls + (k === today ? '.today' : ''), h('span.wk-d', d[0]), h('span.wk-dot', did.has(k) ? icon('check', 14) : null));
       })),
       h('div.wk-sum', h('b', `${n} of ${goal}`), n >= goal ? ' this week · goal hit' : ' workouts this week'));
+  }
+
+  /** Your split in a new order: the plans swap places in your list (others stay put). */
+  function reorderSplit(els) {
+    const ids = els.map((x) => x.dataset.id);
+    commit((s) => {
+      const queue = ids.map((id) => s.plans.find((p) => p.id === id)).filter(Boolean);
+      s.plans = s.plans.map((p) => (ids.includes(p.id) ? queue.shift() : p));
+    });
   }
 
   function planRow(p, isNext) {
@@ -349,20 +358,21 @@ export function planEditor(existing = null) {
         h('div.empty-icon', icon('dumbbell', 40)),
         h('div.empty-title', 'Add exercises'),
         h('div.empty-text', 'Add exercises and set the weight and reps you’re aiming for.')),
-      plan.exercises.map((ex, i) => exerciseCard({
-        ex, index: i, count: plan.exercises.length, mode: 'plan',
+      exerciseList(plan.exercises, (ex, i, extra) => exerciseCard({
+        ex, index: i, count: plan.exercises.length, mode: 'plan', prev: previousSets(ex.exId), ...extra,
         redraw: () => { touch(); draw(); },
         save: touch,
         onMove: (d) => { const [m] = plan.exercises.splice(i, 1); plan.exercises.splice(i + d, 0, m); touch(); draw(); },
         onRemove: () => { plan.exercises.splice(i, 1); touch(); draw(); },
         onReplace: (id) => { ex.exId = id; touch(); draw(); },
-      })),
+      }), (order) => { plan.exercises.splice(0, plan.exercises.length, ...order); touch(); draw(); }),
+      plan.exercises.length > 1 ? h('p.fine.center.drag-hint', 'Hold an exercise to drag it.') : null,
       h('button.btn.gold.wide', {
-        onclick: () => pickExercises((ids) => {
-          ids.forEach((exId) => plan.exercises.push({ exId, note: '', rest: state.settings.restDefault ?? 90, sets: [newSet(), newSet(), newSet()] }));
+        onclick: () => pickExercises((ids, kind) => {
+          plan.exercises.push(...groupNew(ids.map((exId) => ({ exId, note: '', rest: state.settings.restDefault ?? 90, sets: [newSet(), newSet(), newSet()] })), kind));
           touch(); draw();
           setTimeout(() => body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' }), 50);
-        }),
+        }, { groups: true }),
       }, icon('plus', 18), 'Add exercise'),
       planMuscles(plan),
       h('div.bottom-space'),

@@ -4,7 +4,7 @@
 // quick add, recipes and reports live in their own files.
 
 import { h, fill, icon, push, toast, actionSheet, confirmBox, promptBox, navBar, swipe } from './ui.js';
-import { state, commit, uid, ymd, addDays, dayLog, dayTotals, food, logFood, deleteLog, waterOn, addWater, foodAim, dayGoals, kcalLook } from './store.js';
+import { state, commit, uid, ymd, addDays, dayLog, dayTotals, food, logFood, deleteLog, waterOn, addWater, foodAim, dayGoals, kcalLook, setDayCheck } from './store.js';
 import { MACROS, MICROS } from './foods.js';
 import { goalsButton } from './goals.js';
 import { scanBarcode } from './barcode.js';
@@ -79,6 +79,7 @@ export function nutritionPage() {
             h('span.food-kcal', r0(e.n.kcal)))),
           h('button.meal-add', { onclick: () => addFood({ date: viewDate, meal: meal.id }) }, icon('plus', 16), `Add to ${meal.name.toLowerCase()}`));
       }),
+      dayDone(viewDate, entries.length, draw),
       h('div.bottom-space'),
     );
   }
@@ -86,6 +87,21 @@ export function nutritionPage() {
   draw();
   el.append(body);
   return { el, refresh: draw, onShow: draw };
+}
+
+// ---------- "I logged everything" ----------
+
+/** Mark a day fully tracked: the diet coach and trends trust it, even if it looks unusual. */
+function dayDone(k, n, redraw) {
+  if (k > ymd()) return null;
+  const on = !!state.food.keep?.[k];
+  if (!n && !on) return null;
+  return h('div.day-done-wrap',
+    h('button.day-done' + (on ? '.on' : ''), {
+      'aria-pressed': String(on),
+      onclick: () => { setDayCheck(k, on ? null : 'keep'); if (!on) { navigator.vibrate?.(15); toast('Marked as fully tracked'); } redraw(); },
+    }, h('span.day-done-box', on ? icon('check', 16) : null), h('span', on ? `${k === ymd() ? 'Today' : 'This day'} is fully tracked` : `I logged everything ${k === ymd() ? 'today' : 'this day'}`)),
+    h('p.fine.day-done-note', on ? 'The diet coach counts this day as complete.' : 'Tick it once the day’s food is all in. The diet coach trusts days you tick.'));
 }
 
 // ---------- The week ----------
@@ -96,7 +112,7 @@ function weekDots(key, go) {
   return h('div.wdots', Array.from({ length: 7 }, (_, i) => {
     const k = addDays(mon, i), t = dayTotals(k);
     const look = k > today ? 'future' : !t.entries ? 'none' : kcalLook(t.kcal, dayGoals(k).kcal, k) || 'short';
-    return h('button.wdot' + (k === key ? '.on' : ''), { onclick: () => go(k), 'aria-label': `${dayLabel(k)}: ${look === 'hit' ? 'goal hit' : look === 'over' ? 'over' : look === 'short' ? `${r0(t.kcal)} kcal` : 'nothing logged'}` },
+    return h('button.wdot' + (k === key ? '.on' : '') + (state.food.keep?.[k] && t.entries ? '.full' : ''), { onclick: () => go(k), 'aria-label': `${dayLabel(k)}: ${look === 'hit' ? 'goal hit' : look === 'over' ? 'over' : look === 'short' ? `${r0(t.kcal)} kcal` : 'nothing logged'}` },
       h('span', 'MTWTFSS'[i]), h('i.' + look));
   }));
 }

@@ -1,7 +1,7 @@
 // Goals: calories and macros, workouts per week, and your own daily goals
 // (water, steps, anything). These drive the rings on Home.
 
-import { h, fill, icon, sheet, toast, promptBox, confirmBox } from './ui.js';
+import { h, fill, icon, sheet, toast, promptBox, confirmBox, push } from './ui.js';
 import { state, commit, uid, ymd, bodyDisplay, bodyFromDisplay, bodyUnit, distUnit, tabOn, DAY_SHORT, foodAim } from './store.js';
 import { num } from './food-util.js';
 import { habits, MAX_HABITS } from './habits.js';
@@ -134,7 +134,8 @@ export function openGoals(section = 'all') {
       hintEl,
       h('div.group', field('Extra on training days', 'trainBoost', 'kcal', 25)),
       h('p.fine', 'Added as carbs on days you train or plan to. Leave at 0 to eat the same every day.'),
-      h('div.group', field('Water', 'water', 'ml', 50))],
+      h('div.group', field('Water', 'water', 'ml', 50)),
+      h('button.btn.dark.wide.dc-goals', { onclick: () => { s.close(); commit((st) => { delete st.settings.dietCoachHidden; }); import('./dietcoach.js').then((m) => push(m.dietCoachScreen)); } }, 'Diet coach: weekly targets from your trend')],
     fitness: () => [
       h('div.goal-section', 'Fitness'),
       h('label.form-label', 'Each week'),

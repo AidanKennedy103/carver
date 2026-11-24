@@ -2027,3 +2027,60 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .lx-pr-row svg { color: var(--gold); flex: none; }
 .lx-pr-row b { color: var(--text); }
 .lx-note { margin-top: 12px; }
+
+/* Diet coach line: hide button */
+.dc-wrap { position: relative; }
+.dc-wrap .dc-line { padding-right: 40px; }
+.dc-x { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); width: 28px; height: 28px; margin-top: 4px; display: grid; place-items: center; border-radius: 50%; color: var(--muted); }
+.dc-goals { margin-top: 14px; }
+/* Nutrition: fully tracked day */
+.day-done-wrap { margin: 14px 0 0; }
+.day-done { display: flex; align-items: center; gap: 12px; width: 100%; padding: 13px 14px; border-radius: 14px; background: var(--surface); border: 1px dashed #3a3a40; font-size: 15px; font-weight: 600; color: var(--text); text-align: left; }
+.day-done-box { flex: none; width: 24px; height: 24px; border-radius: 7px; border: 2px solid #55555c; display: grid; place-items: center; }
+.day-done.on { border: 1px solid rgba(227, 176, 75, .55); background: radial-gradient(120% 160% at 0% 0%, rgba(227, 176, 75, .16), rgba(0, 0, 0, 0) 70%), var(--surface); color: var(--gold); }
+.day-done.on .day-done-box { background: var(--gold); border-color: var(--gold); color: #17110a; }
+.day-done-note { margin: 6px 2px 0; }
+.wdot.full i { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--gold); }
+
+/* Progress photos pinned on the body chart */
+.chart-pin { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; padding: 0; border-radius: 50%; overflow: hidden; border: 2px solid var(--gold); background: #222; box-shadow: 0 2px 8px rgba(0, 0, 0, .6); z-index: 1; }
+.chart-pin img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.chart-pin:active { transform: scale(1.15); }
+.pin-note { margin: 4px 0 8px; }
+
+/* Warm-up sets: you add them; they look lighter so they read as warm-ups */
+.sets .set-row.warm .set-input, .ex-card .set-row.warm .set-input { background: transparent; border: 1px dashed rgba(255, 179, 64, .45); color: #ffc46b; font-weight: 500; }
+.sets .set-row.warm .set-input::placeholder { color: rgba(255, 196, 107, .45); }
+.set-row.warm .set-num { font-size: 13px; letter-spacing: .02em; }
+.set-row.warm .prev { color: #6f6656; }
+.set-row.warm.done { background: rgba(255, 179, 64, .08); }
+.add-row { display: flex; gap: 8px; align-items: stretch; }
+.add-row .add-set { flex: 1; }
+.add-warm { flex: none; display: inline-flex; align-items: center; gap: 4px; padding: 0 12px; margin-top: 8px; border-radius: 10px; font-size: 13px; font-weight: 600; color: #ffb340; border: 1px dashed rgba(255, 179, 64, .45); }
+/* Swipeable set rows */
+.sets .swipe-row { margin: 0 -4px; border-radius: 10px; }
+.sets .swipe-row + .swipe-row { border-top: 0; }
+.sets .swipe-content { background: var(--bg); }
+.sets .swipe-content.done { background: linear-gradient(var(--gold-bg), var(--gold-bg)), var(--bg); }
+.sets .swipe-content.warm.done { background: linear-gradient(rgba(255, 179, 64, .08), rgba(255, 179, 64, .08)), var(--bg); }
+.sets .swipe-content.set-row { margin: 0; }
+
+/* Supersets and circuits */
+.ex-group { margin: 14px 0 6px; padding: 6px 12px 4px; border-radius: 16px; border: 1px solid rgba(227, 176, 75, .4); background: linear-gradient(180deg, rgba(227, 176, 75, .06), rgba(0, 0, 0, 0) 60px); }
+.ex-group.circuit { border-color: rgba(100, 210, 255, .4); background: linear-gradient(180deg, rgba(100, 210, 255, .06), rgba(0, 0, 0, 0) 60px); }
+.ex-group-head { display: flex; align-items: center; gap: 8px; padding: 6px 0 0; }
+.ex-group-tag { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); }
+.ex-group.circuit .ex-group-tag { color: #64d2ff; }
+.ex-group-sub { flex: 1; font-size: 12px; color: var(--muted); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ex-group .ex-card:last-child { border-bottom: 0; }
+.ex-badge-g { display: inline-grid; place-items: center; min-width: 26px; height: 20px; padding: 0 5px; margin-right: 8px; border-radius: 6px; font-size: 12px; font-weight: 800; color: #17110a; background: var(--gold); vertical-align: 2px; }
+.ex-group.circuit .ex-badge-g { background: #64d2ff; }
+.pick-group:empty { display: none; }
+.pick-group { margin-bottom: 10px; }
+.pick-hint { margin: 6px 2px 0; }
+/* Hold to drag */
+.dg-item { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.dg-item input, .dg-item textarea { -webkit-user-select: text; user-select: text; }
+.dg-item.dragging { position: relative; z-index: 5; transition: none; background: var(--surface-2, #1c1c1f); border-radius: 14px; box-shadow: 0 12px 30px rgba(0, 0, 0, .6); opacity: .97; }
+.drag-on > .dg-item:not(.dragging) { transition: transform .15s; }
+.drag-hint { margin: 10px 0 4px; }

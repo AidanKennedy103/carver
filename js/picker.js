@@ -2,21 +2,31 @@
 
 import { h, fill, icon, sheet, toast } from './ui.js';
 import { MUSCLES, EQUIPMENT, musclesText, searchExercises } from './exercises.js';
-import { allExercises, addCustomExercise, state } from './store.js';
+import { allExercises, addCustomExercise, state, exercise } from './store.js';
 
 const TYPE_LABEL = { wr: 'Weight & reps', bw: 'Reps only', time: 'Duration' };
 
 /** Opens the picker. onPick(ids[]) is called with the chosen exercise ids. */
-export function pickExercises(onPick, { single = false, title = 'Add exercises', filter = null, max = 99, initial = [], addLabel = 'Add' } = {}) {
+export function pickExercises(onPick, { single = false, title = 'Add exercises', filter = null, max = 99, initial = [], addLabel = 'Add', groups = false } = {}) {
   const chosen = initial.slice();
+  let kind = null;   // null (separate), 'superset' or 'circuit': done in the order you tapped them
   let muscle = 'All', query = '';
 
   const list = h('div.ex-list');
-  const addBtn = h('button.btn.gold.wide', { disabled: !initial.length && addLabel === 'Add', onclick: () => { s.close(); onPick(chosen.slice()); } }, addLabel);
+  const addBtn = h('button.btn.gold.wide', { disabled: !initial.length && addLabel === 'Add', onclick: () => { s.close(); onPick(chosen.slice(), chosen.length > 1 ? kind : null); } }, addLabel);
+  const groupBox = h('div.pick-group');
+  const drawGroup = () => {
+    if (!groups || chosen.length < 2) { fill(groupBox); kind = null; return; }
+    if (kind === 'superset' && chosen.length > 2) kind = 'circuit';
+    const opts = [[null, 'Separate'], ...(chosen.length === 2 ? [['superset', 'Superset']] : []), ['circuit', 'Circuit']];
+    fill(groupBox,
+      h('div.segment.pick-seg', opts.map(([k, l]) => h('button' + (kind === k ? '.on' : ''), { onclick: () => { kind = k; drawGroup(); label(); } }, l))),
+      kind ? h('p.fine.pick-hint', `${kind === 'superset' ? 'Superset' : 'Circuit'}: one set of each, in the order you tapped them (${chosen.map((id) => exercise(id).name).join(' → ')}), then rest.`) : null);
+  };
   const label = () => {
     if (addLabel !== 'Add') { addBtn.textContent = `${addLabel} (${chosen.length})`; addBtn.disabled = false; return; }
     addBtn.disabled = !chosen.length;
-    addBtn.textContent = chosen.length ? `Add ${chosen.length} exercise${chosen.length > 1 ? 's' : ''}` : 'Add';
+    addBtn.textContent = !chosen.length ? 'Add' : kind ? `Add as ${kind}` : `Add ${chosen.length} exercise${chosen.length > 1 ? 's' : ''}`;
   };
   const search = h('input.search-input', {
     type: 'search', placeholder: 'Search exercises', autocomplete: 'off', enterkeyhint: 'search',
@@ -50,6 +60,7 @@ export function pickExercises(onPick, { single = false, title = 'Add exercises',
             if (i >= 0) chosen.splice(i, 1);
             else if (chosen.length >= max) { toast(`Pick up to ${max}`); return; }
             else chosen.push(e.id);
+            drawGroup();
             label();
             draw();
           },
@@ -68,7 +79,7 @@ export function pickExercises(onPick, { single = false, title = 'Add exercises',
     h('div.search-wrap', icon('search', 18), search),
     chips,
     list,
-    single ? null : h('div.sheet-foot', addBtn),
+    single ? null : h('div.sheet-foot', groupBox, addBtn),
   ), { full: true });
   label();
   draw();

@@ -133,7 +133,8 @@ export function bodyMetrics(trendPts) {
 
 const RANGES = [['3M', 90], ['1Y', 365], ['All', 1e5]];
 /** The chart with a chip for each metric and a time range. Remembers your pick. */
-export function metricChart(trendPts) {
+/** opts.pins(): progress photos (or anything) to pin on the line at their dates. */
+export function metricChart(trendPts, { pins = null } = {}) {
   const list = bodyMetrics(trendPts);
   if (!list.length) return null;
   const wrap = h('div.metric-chart');
@@ -147,7 +148,7 @@ export function metricChart(trendPts) {
     fill(wrap,
       list.length > 1 ? h('div.chips.tight.metric-chips', list.map((x) => h('button.chip' + (x.k === k ? '.on' : ''), { onclick: () => { state.settings.bodyMetric = x.k; commit(); } }, x.label))) : null,
       h('div.metric-now', h('b', `${last}`), h('span', ` ${m.unit}`), shown.length > 1 ? h('span.metric-d' + (d === 0 ? '' : ''), ` ${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d)} ${m.unit} ${pts.length > 1 ? `in ${RANGES.find((r) => r[1] === days)?.[0] === 'All' ? 'all time' : RANGES.find((r) => r[1] === days)?.[0] === '1Y' ? 'a year' : '3 months'}` : 'overall'}`) : null),
-      lineChart(shown, { height: 150, dots: shown.length < 30, fmtY: (v) => (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10), label: `${m.label} over time`,
+      lineChart(shown, { height: 150, dots: shown.length < 30, fmtY: (v) => (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10), label: `${m.label} over time`, pins: pins ? pins() : [],
         tip: (p) => `<b>${p.y} ${m.unit}</b><span>${fmtDate(p.x, { month: 'short', day: 'numeric', year: 'numeric' })}</span>` }),
       h('div.segment.metric-range', RANGES.map(([l, v]) => h('button' + (v === days ? '.on' : ''), { onclick: () => { state.settings.bodyRange = v; commit(); } }, l))));
   }

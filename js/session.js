@@ -4,7 +4,7 @@
 
 import { h, fill, icon, push, pop, navBar, confirmBox, promptBox, actionSheet, sheet, toast, fmtDuration, fmtDurationWords, fmtNum, fmtSecs } from './ui.js';
 import { state, commit, save, uid, exercise, previousSets, workoutStats, findPRs, toDisplay, unit, MAX_PLANS, savePlan } from './store.js';
-import { exerciseCard, newSet } from './block.js';
+import { exerciseCard, newSet, exerciseList, groupOf, groupNew, nextInGroup, endsRound } from './block.js';
 import { pickExercises } from './picker.js';
 import { progressAfter, coachProgram } from './coach.js';
 import { program as program531 } from './program531.js';
@@ -20,8 +20,8 @@ function blockRun(plan, pe) {
 import { beep, unlockAudio } from './sound.js';
 
 const defaultRest = () => state.settings.restDefault ?? 90;
-/** Carver never brings warm-up sets into a workout or plan. */
-const noWarm = (sets) => { const k = sets.filter((s) => s.type !== 'w'); return k.length ? k : sets.length ? [{ ...sets[sets.length - 1], type: 'n' }] : sets; };
+/** Sets carried into a workout or plan as they are: warm-ups only exist if you added them. */
+const noWarm = (sets) => sets;
 
 function greeting(ts = Date.now()) {
   const hr = new Date(ts).getHours();
@@ -38,7 +38,7 @@ export async function startWorkout(plan = null) {
   const w = {
     id: uid(), name: plan ? plan.name : greeting(), planId: plan?.id || null, start: Date.now(), end: null, rest: null,
     exercises: plan ? plan.exercises.map((pe) => ({
-      exId: pe.exId, note: pe.note || '', rest: pe.rest ?? defaultRest(), ...(blockRun(plan, pe) ? { tgt: true } : {}),
+      exId: pe.exId, ...groupOf(pe), note: pe.note || '', rest: pe.rest ?? defaultRest(), ...(blockRun(plan, pe) ? { tgt: true } : {}),
       sets: (pe.sets.length ? noWarm(pe.sets) : [{}]).map((ps) => newSet(ps)),
     })) : [],
     ...(plan?.timer ? { timer: { ...plan.timer, started: null, result: null } } : {}),
@@ -51,7 +51,7 @@ export async function startWorkout(plan = null) {
 export function repeatWorkout(old) {
   startWorkout({
     id: null, name: old.name,
-    exercises: old.exercises.map((e) => ({ exId: e.exId, note: '', rest: e.rest, sets: noWarm(e.sets.filter((s) => s.done)).map((s) => ({ type: s.type, tWeight: s.weight, tReps: s.reps, tSecs: s.secs })) })),
+    exercises: old.exercises.map((e) => ({ exId: e.exId, ...groupOf(e), note: '', rest: e.rest, sets: noWarm(e.sets.filter((s) => s.done)).map((s) => ({ type: s.type, tWeight: s.weight, tReps: s.reps, tSecs: s.secs })) })),
   });
 }
 
@@ -103,8 +103,8 @@ export function logPastWorkout(plan = null) {
   whenSheet({ start: y.getTime(), dur: 60 * 6e4, title: 'Log a past workout', choose: !plan }, ({ start, dur, from }) => {
     const p = plan || from.plan, old = from.workout;
     const exercises = old
-      ? old.exercises.map((e) => ({ exId: e.exId, note: '', rest: e.rest, sets: noWarm(e.sets).map((x) => newSet({ type: x.type, tWeight: x.weight, tReps: x.reps, tSecs: x.secs })) }))
-      : p ? p.exercises.map((pe) => ({ exId: pe.exId, note: pe.note || '', rest: pe.rest ?? defaultRest(), ...(blockRun(p, pe) ? { tgt: true } : {}), sets: (pe.sets.length ? noWarm(pe.sets) : [{}]).map((ps) => newSet(ps)) }))
+      ? old.exercises.map((e) => ({ exId: e.exId, ...groupOf(e), note: '', rest: e.rest, sets: noWarm(e.sets).map((x) => newSet({ type: x.type, tWeight: x.weight, tReps: x.reps, tSecs: x.secs })) }))
+      : p ? p.exercises.map((pe) => ({ exId: pe.exId, ...groupOf(pe), note: pe.note || '', rest: pe.rest ?? defaultRest(), ...(blockRun(p, pe) ? { tgt: true } : {}), sets: (pe.sets.length ? noWarm(pe.sets) : [{}]).map((ps) => newSet(ps)) }))
         : [];
     commit((s) => {
       s.active = { id: uid(), name: (p || old)?.name || greeting(start), planId: p?.id || old?.planId || null, start, end: null, rest: null, past: { dur }, exercises };
@@ -208,6 +208,9 @@ function workoutScreen() {
     progress.style.width = (total ? (st.sets / total) * 100 : 0) + '%';
   }
 
+  /** The exercise to do next: the first with sets left, and in a group, whichever's turn it is. */
+  const currentEx = () => { const f = w.exercises.find((e) => e.sets.some((x) => !x.done)); return f ? nextInGroup(w.exercises, f) : null; };
+
   function draw() {
     const y = body.scrollTop;
     fill(body,
@@ -224,19 +227,26 @@ function workoutScreen() {
         h('div.empty-title', w.past ? 'What did you do?' : 'Freestyle workout'),
         h('div.empty-text', w.past ? 'Add the exercises you did, then type in your sets.'
           : 'Add exercises as you go. Save it as a plan when you finish.')),
-      w.exercises.map((ex, i) => exerciseCard({
-        ex, index: i, count: w.exercises.length, mode: 'live', current: i === w.exercises.findIndex((e) => e.sets.some((x) => !x.done)),
+      exerciseList(w.exercises, (ex, i, extra) => exerciseCard({
+        ex, index: i, count: w.exercises.length, mode: 'live', current: ex === currentEx(), ...extra,
         prev: previousSets(ex.exId, w.id),
         redraw: () => { save(); draw(); },
         save: () => { save(); updateStats(); },
-        onSetDone: (e) => { updateStats(); if (e.rest && !w.past && state.settings.restOn !== false) startRest(e.rest, exercise(e.exId).name); },
+        // In a superset or circuit, rest comes after the round's last exercise
+        onSetDone: (e) => {
+          updateStats();
+          const restAfter = endsRound(w.exercises, e) ? (w.exercises.filter((x) => x.grp && x.grp === e.grp).pop() || e).rest : 0;
+          if (restAfter && !w.past && state.settings.restOn !== false) startRest(restAfter, exercise(e.exId).name);
+          else if (e.grp && !w.past) { const nx = nextInGroup(w.exercises, e); if (nx !== e) toast(`Next: ${exercise(nx.exId).name}`); }
+        },
         onMove: (d) => { const [m] = w.exercises.splice(i, 1); w.exercises.splice(i + d, 0, m); save(); draw(); },
         onRemove: async () => {
           if (ex.sets.some((s) => s.done) && !(await confirmBox('Remove ' + exercise(ex.exId).name + '?', 'Its logged sets will be removed too.', { ok: 'Remove', danger: true }))) return;
           w.exercises.splice(i, 1); save(); draw();
         },
         onReplace: (id) => { ex.exId = id; delete ex.tgt; ex.sets.forEach((s) => { s.tWeight = s.tReps = s.tSecs = null; }); save(); draw(); },
-      })),
+      }), (order) => { w.exercises.splice(0, w.exercises.length, ...order); save(); draw(); }),
+      w.exercises.length > 1 ? h('p.fine.center.drag-hint', 'Hold an exercise to drag it.') : null,
       h('button.btn.gold.wide', { onclick: addExercises }, icon('plus', 18), 'Add exercise'),
       h('div.text-actions',
         h('button.link.plain', { onclick: workoutMenu }, 'Workout options'),
@@ -248,15 +258,16 @@ function workoutScreen() {
   }
 
   function addExercises() {
-    pickExercises((ids) => {
-      ids.forEach((exId) => {
+    pickExercises((ids, kind) => {
+      const added = ids.map((exId) => {
         const prev = previousSets(exId, w.id);
-        const n = Math.max(prev.length, 1);
-        w.exercises.push({ exId, note: '', rest: defaultRest(), sets: Array.from({ length: Math.min(n, 6) }, () => newSet()) });
+        const n = Math.max(prev.length, kind ? 3 : 1);
+        return { exId, note: '', rest: defaultRest(), sets: Array.from({ length: Math.min(n, 6) }, () => newSet()) };
       });
+      w.exercises.push(...groupNew(added, kind));
       save(); draw();
       setTimeout(() => body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' }), 50);
-    });
+    }, { groups: true });
   }
 
   function workoutMenu() {
@@ -294,7 +305,7 @@ function workoutScreen() {
     const done = {
       ...w, end: Date.now(), rest: undefined,
       name: ((w.name || '').trim() || greeting()) + (tr ? ` · ${tr}` : ''),
-      exercises: w.exercises.map((e) => ({ exId: e.exId, note: e.note, rest: e.rest, sets: e.sets.filter((s) => s.done).map(({ tWeight, tReps, tSecs, ...s }) => s) }))
+      exercises: w.exercises.map((e) => ({ exId: e.exId, ...groupOf(e), note: e.note, rest: e.rest, sets: e.sets.filter((s) => s.done).map(({ tWeight, tReps, tSecs, ...s }) => s) }))
         .filter((e) => e.sets.length),
     };
     const prs = findPRs(done);
@@ -311,7 +322,7 @@ function workoutScreen() {
     const exercises = w.exercises.map((e) => {
       const info = exercise(e.exId);
       return {
-        exId: e.exId, note: e.note, rest: e.rest,
+        exId: e.exId, ...groupOf(e), note: e.note, rest: e.rest,
         sets: e.sets.filter((x) => x.done || filled(info, x)).map(({ tWeight, tReps, tSecs, ...x }) => ({ ...x, weight: info.type === 'wr' ? x.weight ?? 0 : x.weight, done: true })),
       };
     }).filter((e) => e.sets.length);
@@ -392,7 +403,7 @@ export async function saveAsPlan(w) {
   savePlan({
     id: uid(), name, created: Date.now(),
     exercises: w.exercises.map((e) => ({
-      exId: e.exId, note: '', rest: e.rest ?? defaultRest(),
+      exId: e.exId, ...groupOf(e), note: '', rest: e.rest ?? defaultRest(),
       sets: noWarm(e.sets.filter((s) => s.done).length ? e.sets.filter((s) => s.done) : e.sets).map((s) => ({ id: uid(), type: s.type, tWeight: s.weight ?? s.tWeight, tReps: s.reps ?? s.tReps, tSecs: s.secs ?? s.tSecs })),
     })),
   });

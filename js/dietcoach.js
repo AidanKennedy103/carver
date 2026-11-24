@@ -15,7 +15,7 @@
 //
 // state.goals.coach = { on, pace, last (YYYY-MM-DD of the last check-in) }
 
-import { h, fill, navBar, toast, fmtNum, push, fmtDate } from './ui.js';
+import { h, fill, navBar, toast, fmtNum, push, fmtDate, icon } from './ui.js';
 import { state, commit, ymd, addDays, foodAim, bodyDisplay, bodyFromDisplay, bodyUnit, daySkipped } from './store.js';
 import { metabolism, foodDays } from './trends.js';
 import { latestWeight, trend } from './body.js';
@@ -243,8 +243,13 @@ export function dietCoachScreen() {
 /** The one-line prompt on Nutrition: check-in due, or a way in. */
 export function coachLine() {
   const due = checkInDue();
-  return h('button.dc-line' + (due ? '.due' : ''), { onclick: () => push(dietCoachScreen) },
+  if (!coach().on && state.settings.dietCoachHidden) return null;
+  const close = coach().on ? null : h('button.dc-x', {
+    'aria-label': 'Hide the diet coach',
+    onclick: (e) => { e.stopPropagation(); commit((s) => { s.settings.dietCoachHidden = true; }); toast('Hidden. It’s in Nutrition goals if you want it.'); },
+  }, icon('close', 14));
+  return h('div.dc-wrap', h('button.dc-line' + (due ? '.due' : ''), { onclick: () => push(dietCoachScreen) },
     h('span', due ? 'Weekly check-in ready' : coach().on ? 'Diet coach' : 'Try the diet coach'),
-    h('span.muted', due ? ' · see this week’s targets' : coach().on ? ` · next check-in ${addDays(coach().last || ymd(), 7) <= ymd() ? 'now' : 'in ' + Math.max(1, Math.round((new Date(addDays(coach().last, 7)) - new Date(ymd())) / 864e5)) + ' days'}` : ' · loose weekly targets'));
+    h('span.muted', due ? ' · see this week’s targets' : coach().on ? ` · next check-in ${addDays(coach().last || ymd(), 7) <= ymd() ? 'now' : 'in ' + Math.max(1, Math.round((new Date(addDays(coach().last, 7)) - new Date(ymd())) / 864e5)) + ' days'}` : ' · loose weekly targets')), close);
 }
 

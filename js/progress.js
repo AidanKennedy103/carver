@@ -1,6 +1,7 @@
 // Progress: body weight, progress photos, and your monthly goals and recaps.
 
-import { h, fill, icon, push, pop, navBar, toast, actionSheet, confirmBox, fmtDate, swipe, swipeSegment } from './ui.js';
+import { h, fill, icon, push, pop, navBar, toast, actionSheet, confirmBox, fmtDate, swipe, swipeSegment, sheet } from './ui.js';
+import { commit } from './store.js';
 import { bodyDisplay as toDisplay, bodyUnit as unit } from './store.js';
 import { lineChart } from './charts.js';
 import { weights, latestWeight, trend, change, logWeightSheet, importSheet, weightRow } from './body.js';
@@ -51,7 +52,8 @@ export function progressPage({ tab = false } = {}) {
           c30 != null ? h('div.energy-goal', h('div.weight-change', signed(c30)), h('div.energy-k', 'last 30 days')) : null)
           : h('div.empty-text.left', 'Log your weight to see your trend. Weighing in most mornings gives the clearest picture.'),
         weightGoalText() ? h('div.weight-goal', icon('target', 15), weightGoalText()) : null,
-        metricChart(trend()),
+        metricChart(trend(), { pins: () => photos().map((p) => ({ x: p.ts, label: `Progress photo, ${fmtDate(p.ts, { month: 'short', day: 'numeric' })}`, el: loadInto(h('img', { alt: '' }), p.id), onClick: () => push(() => photoScreen(p.id)) })) }),
+        photos().length ? h('p.fine.pin-note', 'Your progress photos sit on the line at the day you took them. Tap one to open it.') : null,
         h('div.btn-pair',
           h('button.btn.gold', { onclick: logWeightSheet }, icon('plus', 18), 'Log weight'),
           h('button.btn.dark', { onclick: importSheet }, icon('scale', 18), 'Scale & Health'))),
@@ -134,6 +136,7 @@ function photoScreen(id) {
         'aria-label': 'Photo options',
         onclick: () => actionSheet('Progress photo', [
           { label: 'Compare with another', onClick: () => pickCompare(id) },
+          { label: 'Change date', onClick: () => redate(p) },
           ...(cloudOn() ? [{ label: 'Share with a group', onClick: () => sharePhoto(p) }] : []),
           { label: 'Delete photo', danger: true, onClick: async () => { if (await confirmBox('Delete this photo?', 'This cannot be undone.', { ok: 'Delete', danger: true })) { await deletePhoto(id); pop(); } } },
         ]),
@@ -155,6 +158,23 @@ function photoScreen(id) {
   };
   swipe(el, { left: show(1), right: show(-1) });
   return { el };
+}
+
+/** Move a photo to another day: it moves on the chart and in the strip too. */
+function redate(p) {
+  const d = new Date(p.ts);
+  const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const input = h('input.field', { type: 'date', value: val, max: new Date().toISOString().slice(0, 10) });
+  const s = sheet(h('div.form',
+    h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', 'Photo date'),
+      h('button.link.strong', { onclick: () => {
+        if (!input.value) return;
+        const ts = new Date(input.value + 'T12:00').getTime();
+        commit((st) => { const x = st.body.photos.find((y) => y.id === p.id); if (x) x.ts = ts; st.body.photos.sort((a, b) => b.ts - a.ts); });
+        s.close(); toast('Date changed'); pop();
+      } }, 'Save')),
+    h('p.fine', 'The day this photo shows. It’s pinned to your weight and body numbers from around then.'),
+    input));
 }
 
 function pickCompare(id) {

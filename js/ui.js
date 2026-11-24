@@ -343,6 +343,86 @@ export function toast(text, { action, onAction } = {}) {
   toastTimer = setTimeout(() => t.classList.remove('show'), action ? 4500 : 2200);
 }
 
+// ---------- Hold and drag to reorder ----------
+
+/**
+ * Hold a list item (class .dg-item, a direct child of list) for a moment, then drag it.
+ * onDrop(items) gets the list's items in their new order. Nested lists work: an item
+ * only belongs to the list it sits directly in.
+ */
+export function holdToDrag(list, { onDrop, hold = 380 } = {}) {
+  let st = null;
+  const own = () => [...list.children].filter((x) => x.classList.contains('dg-item'));
+  const scroller = () => list.closest('.scroll-body') || document.scrollingElement;
+  const stopClick = (e) => { e.preventDefault(); e.stopPropagation(); };
+  function start() {
+    const { el } = st;
+    st.on = true;
+    navigator.vibrate?.(18);
+    const sc = scroller();
+    st.sc = sc; st.scroll0 = sc.scrollTop; st.top0 = el.offsetTop;
+    el.classList.add('dragging');
+    list.classList.add('drag-on');
+    const tick = () => {
+      if (!st?.on) return;
+      const vh = window.innerHeight;
+      if (st.y < 110) sc.scrollTop -= 12; else if (st.y > vh - 140) sc.scrollTop += 12;
+      place();
+      st.raf = requestAnimationFrame(tick);
+    };
+    st.raf = requestAnimationFrame(tick);
+  }
+  function place() {
+    const { el } = st;
+    el.style.transform = `translateY(${st.y - st.y0 - (el.offsetTop - st.top0) + (st.sc.scrollTop - st.scroll0)}px)`;
+  }
+  function reorder() {
+    const { el } = st;
+    for (const sib of own()) {
+      if (sib === el) continue;
+      const r = sib.getBoundingClientRect(), mid = r.top + r.height / 2;
+      const after = el.compareDocumentPosition(sib) & Node.DOCUMENT_POSITION_FOLLOWING;
+      if (after && st.y > mid) list.insertBefore(el, sib.nextSibling);
+      else if (!after && st.y < mid) { list.insertBefore(el, sib); break; }
+    }
+    place();
+  }
+  function end(drop) {
+    if (!st) return;
+    clearTimeout(st.timer);
+    if (st.on) {
+      cancelAnimationFrame(st.raf);
+      st.el.classList.remove('dragging'); st.el.style.transform = '';
+      list.classList.remove('drag-on');
+      window.addEventListener('click', stopClick, { capture: true, once: true });
+      setTimeout(() => window.removeEventListener('click', stopClick, { capture: true }), 80);
+      if (drop) onDrop?.(own());
+    }
+    st = null;
+  }
+  list.addEventListener('touchstart', (e) => {
+    if (e.touches.length > 1 || st) return;
+    const el = e.target.closest('.dg-item');
+    if (!el || el.parentElement !== list || e.target.closest('input, textarea, select, .no-drag')) return;
+    const t = e.touches[0];
+    st = { el, x0: t.clientX, y0: t.clientY, y: t.clientY, on: false };
+    st.timer = setTimeout(() => st && start(), hold);
+  }, { passive: true });
+  list.addEventListener('touchmove', (e) => {
+    if (!st) return;
+    const t = e.touches[0];
+    if (!st.on) { if (Math.hypot(t.clientX - st.x0, t.clientY - st.y0) > 8) end(false); return; }
+    e.preventDefault();
+    e.stopPropagation();
+    st.y = t.clientY;
+    reorder();
+  }, { passive: false });
+  list.addEventListener('touchend', () => end(true));
+  list.addEventListener('touchcancel', () => end(true));
+  list.addEventListener('contextmenu', (e) => { if (st) e.preventDefault(); });
+  return list;
+}
+
 // ---------- Swipe-to-reveal rows (iOS style) ----------
 
 let openRow = null;

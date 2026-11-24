@@ -1,13 +1,14 @@
 // One exercise card with its sets table. Used by the live workout ('live')
 // and the plan editor ('plan').
 
-import { h, icon, actionSheet, fmtSecs, parseSecs, toast } from './ui.js';
+import { h, icon, actionSheet, fmtSecs, parseSecs, toast, swipeRow } from './ui.js';
 import { exercise, toDisplay, fromDisplay, unit, uid } from './store.js';
+import { holdToDrag } from './ui.js';
 import { pickExercises } from './picker.js';
 import { musclesText } from './exercises.js';
 
 export const REST_CHOICES = [0, 30, 45, 60, 90, 120, 150, 180, 240, 300];
-const SET_TYPES = { n: 'Normal set', d: 'Drop set', f: 'Failure set' };   // no warm-up sets in Carver
+const SET_TYPES = { w: 'Warm-up set', n: 'Normal set', d: 'Drop set', f: 'Failure set' };   // warm-ups only when you add them; they don't count toward volume or PRs
 
 export const newSet = (from = {}) => ({ id: uid(), type: from.type || 'n', weight: null, reps: null, secs: null, done: false,
   tWeight: from.weight ?? from.tWeight ?? null, tReps: from.reps ?? from.tReps ?? null, tSecs: from.secs ?? from.tSecs ?? null });
@@ -35,7 +36,7 @@ export function exerciseCard(opts) {
   const complete = live && ex.sets.length > 0 && doneN === ex.sets.length;
   const head = h('div.card-head',
     h('div.card-title-wrap',
-      h('button.ex-title.ex-title-btn', { onclick: () => import('./howto.js').then((m) => m.howTo(ex.exId)), 'aria-label': `How to do ${info.name}` }, info.name, h('span.ex-howto', '?')),
+      h('button.ex-title.ex-title-btn', { onclick: () => import('./howto.js').then((m) => m.howTo(ex.exId)), 'aria-label': `How to do ${info.name}` }, opts.badge ? h('span.ex-badge-g', opts.badge) : null, info.name, h('span.ex-howto', '?')),
       h('div.ex-meta', h('span.ex-helps', musclesText(info, 2) + (info.uni ? ' · each side' : '')), restBtn)),
     live && ex.sets.length ? h('span.ex-count' + (complete ? '.all' : ''), complete ? icon('check', 14) : null, `${doneN}/${ex.sets.length}`) : null,
     h('button.icon-btn', {
@@ -45,6 +46,7 @@ export function exerciseCard(opts) {
         opts.index > 0 && { label: 'Move up', onClick: () => opts.onMove(-1) },
         opts.index < opts.count - 1 && { label: 'Move down', onClick: () => opts.onMove(1) },
         { label: 'Replace exercise', onClick: () => pickExercises(([id]) => opts.onReplace(id), { single: true, title: 'Replace with' }) },
+        ...(opts.menu || []),
         { label: 'Remove exercise', danger: true, onClick: () => opts.onRemove() },
       ].filter(Boolean)),
     }, icon('more')),
@@ -78,7 +80,7 @@ export function exerciseCard(opts) {
     const phR = p?.reps != null ? String(p.reps) : set.tReps != null ? String(set.tReps) : '';
     const phS = p?.secs != null ? fmtSecs(p.secs) : set.tSecs != null ? fmtSecs(set.tSecs) : '';
 
-    const row = h('div.set-row' + (set.done ? '.done' : si === nextIdx ? '.next' : ''));
+    const row = h('div.set-row' + (set.done ? '.done' : si === nextIdx ? '.next' : '') + (set.type === 'w' ? '.warm' : ''));
     const num = h('button.set-num.t-' + set.type, {
       'aria-label': `Set ${label}: change set type`,
       onclick: () => actionSheet('Set ' + label, [
@@ -150,7 +152,8 @@ export function exerciseCard(opts) {
     }
     cells.forEach((c, i) => c.classList.add('c' + i));
     row.append(...cells);
-    table.append(row);
+    // Live: swipe a set left to delete it (one you're not doing)
+    table.append(live ? swipeRow(row, [{ label: 'Delete', danger: true, onClick: () => { ex.sets.splice(si, 1); opts.redraw(); } }]) : row);
   });
 
   const addSet = h('button.add-set', {
@@ -166,7 +169,109 @@ export function exerciseCard(opts) {
     },
   }, icon('plus', 16), 'Add set');
 
-  return h('section.ex-card' + (live ? '.live' : '') + (complete ? '.complete' : ''), head, note, table, addSet);
+  // A warm-up goes before your work sets, at about half the weight of the first one
+  const addWarm = h('button.add-warm', {
+    onclick: () => {
+      const at = ex.sets.findIndex((x) => x.type !== 'w');
+      const first = at >= 0 ? ex.sets[at] : null;
+      const w = first ? (first.weight ?? first.tWeight) : null;
+      const half = w ? Math.round((w * 0.5) / 2.5) * 2.5 || null : null;
+      ex.sets.splice(at < 0 ? ex.sets.length : at, 0, newSet({ type: 'w', weight: half, reps: type === 'time' ? null : (first?.reps ?? first?.tReps ?? 8), secs: first?.secs ?? first?.tSecs }));
+      opts.redraw();
+    },
+  }, icon('plus', 14), 'Warm-up');
+
+  return h('section.ex-card' + (live ? '.live' : '') + (complete ? '.complete' : ''), head, note, table, h('div.add-row', addSet, addWarm));
+}
+
+// ---------- The list of exercises: supersets and circuits, hold to drag ----------
+
+const GROUP = { superset: 'Superset', circuit: 'Circuit' };
+export const groupOf = (e) => (e.grp ? { grp: e.grp, gkind: e.gkind } : {});
+
+/** Give new exercises a group of their own (from the picker's Superset / Circuit choice). */
+export function groupNew(list, kind) {
+  if (!kind || list.length < 2) return list;
+  const grp = 'g' + uid();
+  for (const e of list) { e.grp = grp; e.gkind = kind; }
+  return list;
+}
+
+/** In a group, the exercise whose set comes next: fewest done, in order. */
+export function nextInGroup(exs, e) {
+  if (!e.grp) return e;
+  const mem = exs.filter((x) => x.grp === e.grp && x.sets.some((s) => !s.done));
+  return mem.sort((a, b) => a.sets.filter((s) => s.done).length - b.sets.filter((s) => s.done).length || exs.indexOf(a) - exs.indexOf(b))[0] || e;
+}
+/** True if this exercise ends a round of its group (rest after it). */
+export const endsRound = (exs, e) => !e.grp || exs.filter((x) => x.grp === e.grp).pop() === e;
+
+/**
+ * Every exercise as cards, supersets and circuits boxed together.
+ * card(ex, index, { badge, menu }) makes one card; onChange(newOrder) saves a reorder or regroup.
+ * Hold a card (or a group's header) to drag it.
+ */
+export function exerciseList(exs, card, onChange) {
+  // tidy: a group needs 2+ exercises next to each other
+  for (let i = 0; i < exs.length; i++) {
+    const g = exs[i].grp;
+    if (!g) continue;
+    const mem = exs.filter((x) => x.grp === g);
+    if (mem.length < 2) { delete exs[i].grp; delete exs[i].gkind; continue; }
+    const first = exs.findIndex((x) => x.grp === g);
+    const rest = exs.filter((x) => x.grp !== g);
+    rest.splice(Math.min(first, rest.length), 0, ...mem);
+    if (rest.some((x, k) => x !== exs[k])) exs.splice(0, exs.length, ...rest);
+  }
+  const outer = h('div.ex-stack');
+  let letter = 0;
+  for (let i = 0; i < exs.length;) {
+    const g = exs[i].grp;
+    let j = i + 1;
+    while (g && j < exs.length && exs[j].grp === g) j++;
+    const members = exs.slice(i, j);
+    if (g && members.length >= 2) {
+      const L = 'ABCDEFGHIJ'[letter++] || '';
+      const kind = members[0].gkind || 'superset';
+      const inner = h('div.ex-group-list');
+      members.forEach((e, k) => {
+        const ungroup = { label: `Take out of ${GROUP[kind].toLowerCase()}`, onClick: () => {
+          const rest = exs.filter((x) => x !== e); delete e.grp; delete e.gkind;
+          const after = rest.map((x) => x.grp).lastIndexOf(g);
+          rest.splice(after + 1, 0, e); onChange(rest);
+        } };
+        const c = card(e, exs.indexOf(e), { badge: `${L}${k + 1}`, menu: [ungroup] });
+        c.classList.add('dg-item'); c._exs = [e];
+        inner.append(c);
+      });
+      holdToDrag(inner, { onDrop: (els) => { const order = els.flatMap((x) => x._exs); const out = exs.slice(); out.splice(i, members.length, ...order); onChange(out); } });
+      const menu = () => import('./ui.js').then(({ actionSheet }) => actionSheet(GROUP[kind], [
+        { label: kind === 'superset' ? 'Make it a circuit' : 'Make it a superset', onClick: () => { members.forEach((e) => { e.gkind = kind === 'superset' ? 'circuit' : 'superset'; }); onChange(exs.slice()); } },
+        { label: 'Ungroup', onClick: () => { members.forEach((e) => { delete e.grp; delete e.gkind; }); onChange(exs.slice()); } },
+      ]));
+      const box = h('section.ex-group.dg-item.' + kind,
+        h('div.ex-group-head',
+          h('span.ex-group-tag', `${L} · ${GROUP[kind]}`),
+          h('span.ex-group-sub', `${members.length} exercises · one set of each, then rest`),
+          h('button.icon-btn.no-drag', { onclick: menu, 'aria-label': `${GROUP[kind]} options` }, icon('more', 18))),
+        inner);
+      box._exs = members;
+      outer.append(box);
+    } else {
+      const e = exs[i];
+      const next = exs[i + 1];
+      const menu = next ? [{ label: next.grp ? `Add to the ${GROUP[next.gkind || 'superset'].toLowerCase()} below` : 'Superset with the next exercise', onClick: () => {
+        if (next.grp) { e.grp = next.grp; e.gkind = next.gkind; } else { const grp = 'g' + uid(); e.grp = next.grp = grp; e.gkind = next.gkind = 'superset'; }
+        onChange(exs.slice());
+      } }] : [];
+      const c = card(e, i, { menu });
+      c.classList.add('dg-item'); c._exs = [e];
+      outer.append(c);
+    }
+    i = j;
+  }
+  holdToDrag(outer, { onDrop: (els) => onChange(els.flatMap((x) => x._exs)) });
+  return outer;
 }
 
 function autoGrow(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px'; }
