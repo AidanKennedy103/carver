@@ -350,7 +350,7 @@ export function seriesChart(data, opts = {}) {
     svg.append(s('line', { x1: 0, x2: W, y1: H - padB, y2: H - padB, class: 'schart-base' }));
     const g = s('g', { 'clip-path': `url(#${cid})` });   // points off this scale (scrolled away) are cut at the edge
     if (goal != null && goal > bot && goal < top) g.append(s('line', { x1: 0, x2: W, y1: py(goal), y2: py(goal), class: 'schart-goal' }));
-    const line = monotonePath(pts);
+    const line = opts.curve ? monotonePath(pts) : pts.map((p, i) => `${i ? 'L' : 'M'}${p.px.toFixed(1)} ${p.py.toFixed(1)}`).join(' ');   // straight lines between points unless opts.curve
     g.append(s('path', { d: `${line} L${pts[n - 1].px} ${H - padB} L${pts[0].px} ${H - padB} Z`, fill: `url(#${id})` }));
     g.append(s('path', { d: line, fill: 'none', stroke: color, 'stroke-width': 2.25, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
     const dots = pts.map((p) => { const c = s('circle', { cx: p.px, cy: p.py, r: 4.5, class: 'schart-dot' + (p.i === picked ? ' on' : '') }); g.append(c); return c; });
