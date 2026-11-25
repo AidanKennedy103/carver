@@ -7,7 +7,7 @@
 // target ({ target, unit }) count as done once that amount was logged.
 
 import { h, fill, icon, actionSheet, navBar, sheet, toast, promptBox, confirmBox, fmtDate } from './ui.js';
-import { state, commit, ymd, addDays, uid } from './store.js';
+import { state, commit, ymd, addDays, uid, waterOn } from './store.js';
 import { goalsButton } from './goals.js';
 
 export const MAX_HABITS = 10;
@@ -17,7 +17,11 @@ const need = (g) => g.target || 1;
 /** The first day a daily goal counts: when you added it, or when you joined Carver if that's later. */
 export const habitStart = (g) => { const j = ymd(state.profile.joined || Date.now()); return g.since && g.since > j ? g.since : j; };
 
-export const isDone = (g, date = ymd()) => (state.checks[date]?.[g.id] || 0) >= need(g);
+/** A daily goal about water ticks itself once you've drunk your water goal that day. */
+export const autoWater = (g) => /water|hydrat/i.test(g.name || '');
+const waterGoal = () => state.goals.water || 2500;
+const autoDone = (g, date) => autoWater(g) && waterOn(date) >= waterGoal();
+export const isDone = (g, date = ymd()) => (state.checks[date]?.[g.id] || 0) >= need(g) || autoDone(g, date);
 
 export function setDone(g, date, done) {
   commit((s) => {
@@ -31,11 +35,12 @@ export function habitSlider(g, date = ymd(), { tag } = {}) {
   const done = isDone(g, date);
   const knob = h('span.slide-knob', icon(done ? 'check' : 'back', 22));
   const fillBar = h('span.slide-fill');
-  const label = h('span.slide-label', h('b', g.name), tag ? h('span.slide-tag', tag) : null, h('span.slide-hint', done ? 'Done' : 'Slide when done'));
+  const auto = autoWater(g), L = (ml) => (ml / 1000).toFixed(1).replace(/\.0$/, '') + ' L';
+  const label = h('span.slide-label', h('b', g.name), tag ? h('span.slide-tag', tag) : null, h('span.slide-hint', done ? (autoDone(g, date) ? `Done · ${L(waterOn(date))} logged` : 'Done') : auto ? `Slide when done, or ticks itself at ${L(waterGoal())}` : 'Slide when done'));
   const el = h('div.slide.no-swipe' + (done ? '.done' : ''), { role: 'button', 'aria-label': done ? `${g.name}: done. Tap to undo.` : `${g.name}: slide to mark done`, tabindex: 0 }, fillBar, label, knob);
 
   if (done) {
-    el.onclick = () => actionSheet(g.name, [{ label: 'Mark as not done', danger: true, onClick: () => setDone(g, date, false) }]);
+    el.onclick = () => autoDone(g, date) ? toast('Ticked itself: you hit your water goal') : actionSheet(g.name, [{ label: 'Mark as not done', danger: true, onClick: () => setDone(g, date, false) }]);
     return el;
   }
   // Keyboard and screen readers: Enter marks it done
