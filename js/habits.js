@@ -94,7 +94,6 @@ export function habitsCard(onEdit) {
     const early = isToday && new Date().getHours() < 8;
     const late = early ? list.filter((g) => habitStart(g) <= yesterday && !isDone(g, yesterday)) : [];
     const shown = list.filter((g) => habitStart(g) <= day);
-    const missed = isToday ? list.filter((g) => habitStart(g) <= yesterday && !isDone(g, yesterday)).length : 0;
     fill(box,
       h('div.section-head', h('h2.section-title', 'Daily goals'), h('button.link.small', { onclick: onEdit }, 'Edit')),
       h('div.hday',
@@ -105,7 +104,7 @@ export function habitsCard(onEdit) {
         late.map((g) => habitSlider(g, yesterday, { tag: 'yesterday' })),
         shown.map((g) => habitSlider(g, day))),
       late.length ? h('p.fine', 'Finish yesterday’s before 8 am, or your groups see it as missed.')
-        : isToday ? h('p.fine.hday-tip', missed ? `Forgot to tick something off yesterday? Tap ‹ to go back and mark earlier days.` : 'Forgot a day? Tap ‹ to go back and tick off earlier days.')
+        : isToday ? null
           : h('p.fine.hday-tip', `Ticking off ${dayWord(day).toLowerCase() === 'yesterday' ? 'yesterday' : dayWord(day)}. Slide any you did that day.`),
     );
   }
