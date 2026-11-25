@@ -2421,3 +2421,4 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 /* Light mode: an on slider is gold too (the light .switch rule above used to win and keep it grey) */
 :root[data-theme="light"] .switch.on { background: var(--gold); box-shadow: none; }
 :root[data-theme="light"] .switch:not(.on) i { background: #fff; }
+.setup-food-label { margin-top: 18px; }

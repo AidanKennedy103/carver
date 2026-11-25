@@ -55,6 +55,7 @@ export function openSetup({ replay = false } = {}) {
     perWeek: state.goals.workoutsPerWeek || 3,
     kcal: replay ? state.goals.kcal : null,      // optional: left alone unless you set them here
     protein: replay ? state.goals.p : null,
+    foodGoals: false,   // calories and protein: "Not sure yet" until you choose to set them
     home: replay ? homeSections() : null,   // worked out from the tabs once you get there
   };
   const STEPS = ['welcome', 'tabs', 'goals', 'home', 'tour'];
@@ -80,8 +81,8 @@ export function openSetup({ replay = false } = {}) {
       s.settings.home = d.home;
       s.goals.aim = d.aim;
       s.goals.workoutsPerWeek = d.perWeek;
-      if (d.kcal) s.goals.kcal = d.kcal;
-      if (d.protein) s.goals.p = d.protein;
+      if (d.foodGoals && d.kcal) s.goals.kcal = d.kcal;
+      if (d.foodGoals && d.protein) s.goals.p = d.protein;
       delete s.settings.needsSetup;
     });
     close();
@@ -141,11 +142,16 @@ export function openSetup({ replay = false } = {}) {
       h('p.setup-sub', 'Rough is fine. These drive the goal tiles on Home.'),
       h('label.form-label', 'Right now I want to'),
       seg(AIMS, d.aim, (v) => { d.aim = v; }),
-      h('div.group.setup-goals',
-        d.tabs.includes('workout') ? h('div.group-row', h('span', 'Workouts a week'), stepper(d.perWeek, (v) => { d.perWeek = v; }, { min: 1, max: 7, step: 1, label: 'Workouts a week' })) : null,
-        d.tabs.includes('nutrition') ? h('div.group-row', h('span', 'Calories a day', h('span.setup-optional', 'optional')), optional(d.kcal, (v) => { d.kcal = v; }, { min: 1000, max: 6000, label: 'Calories a day' })) : null,
-        d.tabs.includes('nutrition') ? h('div.group-row', h('span', 'Protein a day', h('span.setup-optional', 'optional')), optional(d.protein, (v) => { d.protein = v; }, { min: 30, max: 400, suffix: ' g', label: 'Protein a day (g)' })) : null),
-      d.tabs.includes('nutrition') ? h('p.fine', 'Skip these if you’re not sure. You can set them any time in Nutrition → Goals, or let the diet coach work them out from your weigh-ins.') : null,
+      d.tabs.includes('workout') ? h('div.group.setup-goals',
+        h('div.group-row', h('span', 'Workouts a week'), stepper(d.perWeek, (v) => { d.perWeek = v; }, { min: 1, max: 7, step: 1, label: 'Workouts a week' }))) : null,
+      d.tabs.includes('nutrition') ? [
+        h('label.form-label.setup-food-label', 'Calories and protein'),
+        seg([[false, 'Not sure yet'], [true, 'Set them now']], d.foodGoals, (v) => { d.foodGoals = v; }),
+        d.foodGoals ? h('div.group.setup-goals',
+          h('div.group-row', h('span', 'Calories a day'), optional(d.kcal, (v) => { d.kcal = v; }, { min: 1000, max: 6000, label: 'Calories a day' })),
+          h('div.group-row', h('span', 'Protein a day'), optional(d.protein, (v) => { d.protein = v; }, { min: 30, max: 400, suffix: ' g', label: 'Protein a day (g)' })))
+          : h('p.fine', 'No problem. Set them any time in Nutrition → Goals, or let the diet coach work them out from your weigh-ins.'),
+      ] : null,
     ],
     home: () => {
       if (!d.home) d.home = homeFor();
