@@ -128,6 +128,8 @@ export function openSettings() {
           if (n != null) { commit((st) => { st.profile.name = n; }); nameVal.textContent = n || 'Add'; }
         },
       }, h('span', 'Your name'), nameVal)),
+    h('div.group', h('button.group-row', { onclick: () => { s.close(); import('./setup.js').then((m) => m.openSetup({ replay: true })); } }, h('span', 'Replay setup walkthrough'), h('span.card-go', '›'))),
+    h('p.fine', 'The screens a new person sees on first open. Nothing changes unless you finish it.'),
     h('label.form-label', 'Appearance'), themeSeg,
     h('label.form-label', 'Home'),
     h('div.group', h('button.group-row', { onclick: () => { s.close(); Promise.all([import('./home.js'), import('./tabs.js')]).then(([m, tb]) => { tb.goTab('home'); m.startHomeEdit(); }); } }, h('span', 'Edit Home page'), h('span.card-go', '›'))),

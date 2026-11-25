@@ -38,6 +38,9 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // Came back to an unfinished workout? Open it straight away.
 if (state.active) openWorkout();
 
+// First open: the setup walkthrough. Add ?setup to the address to try it again.
+if (state.settings.needsSetup || /[?&]setup\b/.test(location.search)) import('./setup.js').then((m) => m.openSetup({ replay: !state.settings.needsSetup }));
+
 // Opened a shared workout link
 openShared();
 addEventListener('hashchange', openShared);

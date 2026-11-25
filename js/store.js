@@ -62,7 +62,9 @@ function load() {
     const raw = localStorage.getItem(KEY);
     if (raw) return upgrade(JSON.parse(raw));
   } catch { /* private mode or broken data: start fresh */ }
-  return fresh();
+  const s = fresh();
+  s.settings.needsSetup = true;   // first open: the setup walkthrough (js/setup.js)
+  return s;
 }
 
 export const state = load();
