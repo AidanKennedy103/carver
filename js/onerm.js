@@ -126,7 +126,7 @@ function oneRmDetail(id) {
       h('div.segment.lx-measure', MEASURES.map(([k, l]) => h('button' + (k === m ? '.on' : ''), { onclick: () => { state.settings.ormMeasure = k; commit(); draw(); } }, l))),
       h('div.lx-readout', rv, rs),
       h('section.card.chart-card.lx-chart', lineChart(plotted.map((p) => ({ ...p, kg: p.y, y: +toDisplay(p.y) })), {
-        smooth: true, area: true, ring: true, labels: plotted.length <= 12, gap: { day: 45, week: 45, month: 100 }[gran],
+        area: true, gap: { day: 45, week: 45, month: 100 }[gran],   // straight lines between workouts, as before
         height: 220, fmtY: (v) => (v >= 10000 ? `${Math.round(v / 1000)}k` : Math.round(v)), label: `${info.name}: ${MEASURES.find(([k]) => k === m)[1]}`,
         fmtX: (t) => new Date(t).toLocaleDateString(undefined, days && days <= 182 ? { month: 'short', day: 'numeric' } : { month: 'short', year: '2-digit' }),
         dots: plotted.length <= 40, mark: best?.x, sticky: true,
