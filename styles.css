@@ -2291,3 +2291,13 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .photo-gate-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .photo-gate-text .muted { font-size: 13px; }
 .photo-gate-go { color: var(--faint); font-size: 22px; }
+
+/* Daily goals: step back to a day you forgot */
+.hday { display: flex; align-items: center; gap: 6px; margin: -2px 0 8px; }
+.hday-arrow { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--surface-2); color: var(--gold); flex: none; }
+.hday-arrow.fwd svg { transform: scaleX(-1); }
+.hday-arrow:disabled { color: var(--faint); opacity: .5; }
+.hday-label { flex: 1; height: 34px; border-radius: 10px; background: var(--surface-2); font-weight: 700; font-size: 14px; color: var(--text); display: flex; align-items: center; justify-content: center; gap: 8px; }
+.hday-label.past { background: var(--gold-bg); color: var(--gold); }
+.hday-back { font-size: 11px; font-weight: 600; opacity: .8; }
+.hday-tip { margin-top: 6px; }
