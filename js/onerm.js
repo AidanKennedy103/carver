@@ -66,6 +66,19 @@ function series(id, m) {
   return out;
 }
 
+/** Long ranges show your best workout per week or month (not every session), so the chart stays readable. */
+function bestPer(list, gran) {
+  if (gran === 'day') return list.map((p) => ({ ...p, gran }));
+  const keyOf = (t) => {
+    const d = new Date(t);
+    if (gran === 'month') return d.getFullYear() * 12 + d.getMonth();
+    d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime();
+  };
+  const groups = new Map();
+  for (const p of list) { const k = keyOf(p.x); (groups.get(k) || groups.set(k, []).get(k)).push(p); }
+  return [...groups.values()].map((g) => ({ ...g.reduce((b, p) => (p.y > b.y ? p : b)), gran, n: g.length, start: g[0].x }));
+}
+
 function oneRmDetail(id) {
   const info = exercise(id);
   const el = h('div.page');
@@ -79,6 +92,8 @@ function oneRmDetail(id) {
     const all = series(id, m);
     const since = days ? Date.now() - days * 864e5 : 0;
     const pts = all.filter((p) => p.x >= since);
+    const gran = !days || days >= 365 ? 'month' : days >= 182 ? 'week' : 'day';
+    const plotted = bestPer(pts, gran);
     const allBest = all.reduce((b, p) => (p.y > (b?.y || 0) ? p : b), null);
     const best = pts.reduce((b, p) => (p.y > (b?.y || 0) ? p : b), null);
     const last = pts[pts.length - 1], first = pts[0];
@@ -96,7 +111,9 @@ function oneRmDetail(id) {
       if (p && m !== 'vol') {
         // A point you tapped: the set you actually did, big, with what it works out to underneath
         fill(rv, toDisplay(p.weight), h('span.lx-unit', ` ${unit()}`), h('span.lx-x', ' × '), String(p.reps), h('span.lx-unit', ' reps'), pr);
-        fill(rs, `${m === 'orm' ? `≈ ${big(p.y)} ${unit()} est. 1RM · ` : ''}${dateLong(p.x)}`);
+        const when = p.gran === 'month' ? `best in ${fmtDate(p.x, { month: 'long', year: 'numeric' })} (${p.n} workout${p.n === 1 ? '' : 's'})`
+          : p.gran === 'week' ? `best that week · ${dateLong(p.x)}` : dateLong(p.x);
+        fill(rs, `${m === 'orm' ? `≈ ${big(p.y)} ${unit()} est. 1RM · ` : ''}${when}`);
         return;
       }
       fill(rv, big(q.y), h('span.lx-unit', ` ${unit()}`), pr);
@@ -108,11 +125,12 @@ function oneRmDetail(id) {
       h('h2.detail-title', info.name),
       h('div.segment.lx-measure', MEASURES.map(([k, l]) => h('button' + (k === m ? '.on' : ''), { onclick: () => { state.settings.ormMeasure = k; commit(); draw(); } }, l))),
       h('div.lx-readout', rv, rs),
-      h('section.card.chart-card.lx-chart', lineChart(pts.map((p) => ({ ...p, kg: p.y, y: +toDisplay(p.y) })), {
+      h('section.card.chart-card.lx-chart', lineChart(plotted.map((p) => ({ ...p, kg: p.y, y: +toDisplay(p.y) })), {
+        smooth: true, area: true, ring: true, labels: plotted.length <= 12, gap: { day: 45, week: 45, month: 100 }[gran],
         height: 220, fmtY: (v) => (v >= 10000 ? `${Math.round(v / 1000)}k` : Math.round(v)), label: `${info.name}: ${MEASURES.find(([k]) => k === m)[1]}`,
         fmtX: (t) => new Date(t).toLocaleDateString(undefined, days && days <= 182 ? { month: 'short', day: 'numeric' } : { month: 'short', year: '2-digit' }),
-        dots: pts.length <= 30, mark: best?.x, sticky: true,
-        onSelect: (p) => readout(p ? pts.find((x) => x.x === p.x) : null),
+        dots: plotted.length <= 40, mark: best?.x, sticky: true,
+        onSelect: (p) => readout(p ? plotted.find((x) => x.x === p.x) : null),
         empty: all.length ? 'Nothing in this period. Try a longer one.' : 'Log this lift to see your graph',
       })),
       h('div.segment.range.lx-period', PERIODS.map(([l, d]) => h('button' + (d === days ? '.on' : ''), { onclick: () => { state.settings.ormPeriod = d; commit(); draw(); } }, l))),
