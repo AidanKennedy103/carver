@@ -12,7 +12,7 @@ const NEEDS = { next: 'workout', week: 'workout', strength: 'workout', calendar:
 
 // What each tab is for and how to use it, for the tour
 const TOUR = {
-  home: ['Home', 'home', ['Goal tiles go gold when you hit them. Tap one to act on it: water adds 250 ml, workout opens your plans.', 'Daily goals: slide one across when it’s done. Forgot a day? Tap ‹ above them to go back.', 'Settings (top right) → Edit Home page to change what’s here and the order.']],
+  home: ['Home', 'home', ['Goal tiles go gold when you hit them. Tap one to act on it: water adds 250 ml, workout opens your plans.', 'Daily goals: slide one across when it’s done. Tap ‹ above them to tick off an earlier day.', 'Settings (top right) → Edit Home page to change what’s here and the order.']],
   workout: ['Workout', 'dumbbell', ['Make a plan once, then start it in one tap. Last time’s weights fill in for you.', 'Tick each set as you go; the rest timer starts on its own. Tap a set number for warm-up or drop sets.', 'Hold an exercise to drag it into a new order, or link exercises into a superset or circuit.']],
   nutrition: ['Nutrition', 'apple', ['Log food by search, barcode or your recent foods. Calories and macros add up as you go.', 'Tap +250 ml to log a glass of water.', 'Your calorie and protein goals change under Goals at the top.']],
   fitness: ['Fitness', 'activity', ['Log runs, walks, rides and other cardio, or bring them in from Apple Health.']],
