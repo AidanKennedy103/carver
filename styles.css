@@ -2422,3 +2422,6 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 :root[data-theme="light"] .switch.on { background: var(--gold); box-shadow: none; }
 :root[data-theme="light"] .switch:not(.on) i { background: #fff; }
 .setup-food-label { margin-top: 18px; }
+/* iPhone home-screen app in light mode (dark status bar text): iOS leaves a strip under the page the
+   height of the status bar. The tab bar carries on down into it so the bottom isn't a grey band. */
+.tabbar::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 160px; background: var(--bar); }
