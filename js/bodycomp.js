@@ -282,7 +282,7 @@ export function metricChart(trendPts, { pins = null } = {}) {
       h('div.metric-now', nowV, h('span', ` ${m.unit}`), nowS),
       seriesChart(data, {
         per: view === 'year' ? 8 : 7, labels: view !== 'year' || data.length <= 8, goal: goalKg ? m.show(goalKg) : null,
-        minSpan: m.weighIns ? ({ week: 7, month: 11, year: 22 }[view] / (bodyUnit() === 'lb' ? 1 : 2.2)) : 0, fmtY: fmtV, label: `${m.label} over time`,
+        minSpan: m.weighIns ? ({ week: 5, month: 8, year: 16 }[view] / (bodyUnit() === 'lb' ? 1 : 2.2)) : 0, fmtY: fmtV, label: `${m.label} over time`,
         fmtX: (t) => new Date(t).toLocaleDateString(undefined, gran === 'month' ? { month: 'short' } : { month: 'numeric', day: 'numeric' }),
         onSelect: showNow, pins: pins ? pins() : [],
       }),

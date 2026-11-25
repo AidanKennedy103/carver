@@ -307,7 +307,7 @@ function monotonePath(seg) {
  * opts: { per, height, labels, goal, fmtY, fmtX, onSelect(point|null), pins: [{ x, el, prompt, onClick, label }], minSpan }
  */
 export function seriesChart(data, opts = {}) {
-  const { per = 7, height = 290, color = COLORS.gold, labels = true, goal = null, fmtY = (v) => String(v), fmtX = (t) => new Date(t).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' }), onSelect = null, minSpan = 0 } = opts;
+  const { per = 7, height = 320, color = COLORS.gold, labels = true, goal = null, fmtY = (v) => String(v), fmtX = (t) => new Date(t).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' }), onSelect = null, minSpan = 0 } = opts;
   const wrap = h('div.schart');
   if (!data.length) { wrap.append(h('div.chart-empty', opts.empty || 'No data yet')); return wrap; }
   const VW = 340, axisW = 38, H = height, padT = 30, padB = 26;
@@ -326,7 +326,7 @@ export function seriesChart(data, opts = {}) {
     let lo = Math.min(...vis), hi = Math.max(...vis);
     if (hi - lo < minSpan) { const c = (lo + hi) / 2; lo = c - minSpan / 2; hi = c + minSpan / 2; }
     const span = hi - lo || 1;
-    return { top: hi + span * 0.22, bot: lo - span * 0.35 };
+    return { top: hi + span * 0.16, bot: lo - span * 0.26 };
   }
 
   function render() {
