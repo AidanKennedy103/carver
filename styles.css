@@ -2338,3 +2338,11 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .setup-tour-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
 .setup-tour ul { margin: 0; padding-left: 18px; color: var(--text-2); font-size: 14px; line-height: 1.45; }
 .setup-tour li + li { margin-top: 6px; }
+
+/* Setup tabs: only the slider says what's on. Icons and tags stay neutral; an off slider has a visible track */
+.setup-tab .tab-pick-ico { background: var(--surface-3); color: var(--text-2); }
+.setup-tab .wip-tag { color: var(--muted); border-color: var(--line-2); }
+.switch { background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--line-2); }
+.switch i { background: var(--muted); }
+.switch.on { background: var(--gold); box-shadow: none; }
+.switch.on i { background: #fff; }
