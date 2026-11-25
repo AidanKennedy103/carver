@@ -45,7 +45,7 @@ export function oneRmSection() {
 
 // ---------- One lift, up close ----------
 
-const PERIODS = [['1M', 30], ['3M', 91], ['6M', 182], ['1Y', 365], ['All', 0]];
+const PERIODS = [['3M', 91], ['6M', 182], ['1Y', 365], ['All', 0]];   // a month is too short to see strength change
 const MEASURES = [
   ['orm', 'Est. 1RM', 'Estimated from your best set each workout (Epley formula)'],
   ['top', 'Heaviest', 'The most weight you lifted for at least one rep each workout'],
@@ -88,7 +88,7 @@ function oneRmDetail(id) {
 
   function draw() {
     const m = MEASURES.some(([k]) => k === state.settings.ormMeasure) ? state.settings.ormMeasure : 'orm';
-    const days = PERIODS.some(([, d]) => d === state.settings.ormPeriod) ? state.settings.ormPeriod : 182;
+    const days = PERIODS.some(([, d]) => d === state.settings.ormPeriod) ? state.settings.ormPeriod : 91;   // opens on 3 months
     const all = series(id, m);
     const since = days ? Date.now() - days * 864e5 : 0;
     const pts = all.filter((p) => p.x >= since);
