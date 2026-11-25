@@ -12,7 +12,7 @@ export function applyTheme() {
   const t = resolved();
   const root = document.documentElement;
   if (root.dataset.theme !== t) root.dataset.theme = t;
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t === 'light' ? '#f4f4f6' : '#000000');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t === 'light' ? '#ffffff' : '#000000');
   document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', t);
   try { localStorage.setItem('carver.theme', t); } catch { /* private mode */ }
 }
