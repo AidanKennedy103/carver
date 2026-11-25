@@ -172,7 +172,7 @@ export function lineChart(data, opts = {}) {
   for (const seg of segs) if (seg.length > 1) svg.append(s('path', { d: pathOf(seg), fill: 'none', stroke: color, 'stroke-width': opts.gap ? 1.75 : 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
   // Every point gets a dot when asked (dots: 'all'); otherwise only on short lines
   const dotR = dots === 'all' ? (pts.length > 90 ? 2.5 : 3.25) : 3.5;
-  if (dots === 'all' || (dots && pts.length <= 40)) for (const p of pts) svg.append(s('circle', { cx: p.px, cy: p.py, r: dotR, fill: color, stroke: 'var(--surface, #111113)', 'stroke-width': dots === 'all' ? 1.5 : 2 }));
+  if (dots === 'all' || (dots && pts.length <= 40)) for (const p of pts) svg.append(s('circle', { cx: p.px, cy: p.py, r: dotR, fill: color, stroke: 'var(--surface)', 'stroke-width': dots === 'all' ? 1.5 : 2 }));
   const mk = opts.mark != null ? pts.find((p) => p.x === opts.mark) : null;   // a point to ring (a PR)
   if (mk) svg.append(s('circle', { cx: mk.px, cy: mk.py, r: 7, fill: 'none', stroke: color, 'stroke-width': 2 }), s('circle', { cx: mk.px, cy: mk.py, r: 3.5, fill: color }));
   let host = wrap;

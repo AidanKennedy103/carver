@@ -298,7 +298,7 @@ function pointsCard() {
   const week = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6)).map((k) => ({ k, v: dayPoints(k).total }));
   const pct = Math.min(1, p.total / goal), R = 40, C = 2 * Math.PI * R;
   const ring = h('div.pts-ring');
-  ring.innerHTML = `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke="#26262a" stroke-width="10"/><circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--gold)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(C * pct).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/></svg>`;
+  ring.innerHTML = `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--line)" stroke-width="10"/><circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--gold)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(C * pct).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/></svg>`;
   ring.append(h('div.pts-mid', h('b', p.total), h('span', `of ${goal}`)));
   return h('section.card.pts-card',
     h('div.pts-top', ring,

@@ -501,13 +501,13 @@ function arc(a0, a1, r = 36) {
 function graphicSvg(g) {
   let out = '';
   if (g.ring) {
-    out += `<circle cx="50" cy="50" r="36" fill="none" stroke="#232326" stroke-width="13"/>`;
+    out += `<circle cx="50" cy="50" r="36" fill="none" stroke="var(--surface-3)" stroke-width="13"/>`;
     for (const [a0, a1, tone] of g.ring) out += `<g fill="none" stroke="${SHADES[tone]}" stroke-width="13" stroke-linecap="round">${arc(a0, a1)}</g>`;
     out += g.center === 'home'
-      ? '<path d="M37 51 50 40l13 11v12H37z" fill="#e3b04b"/><rect x="46.5" y="55" width="7" height="8" rx="1.5" fill="#141312"/>'
+      ? '<path d="M37 51 50 40l13 11v12H37z" fill="#e3b04b"/><rect x="46.5" y="55" width="7" height="8" rx="1.5" fill="var(--gold-tint-2)"/>'
       : g.center === 'db'
       ? `<g transform="translate(36 43)" fill="#e3b04b"><rect x="0" y="2" width="4" height="10" rx="1.5"/><rect x="4.5" y="3.5" width="2.5" height="7" rx="1"/><rect x="7" y="6" width="14" height="2" rx="1"/><rect x="21" y="3.5" width="2.5" height="7" rx="1"/><rect x="24" y="2" width="4" height="10" rx="1.5"/></g>`
-      : `<text x="50" y="52" text-anchor="middle" font-size="24" font-weight="800" fill="#f2e3bd">${g.center}</text><text x="50" y="64" text-anchor="middle" font-size="8" font-weight="600" fill="#8e8e93" letter-spacing=".5">${g.centerLabel || 'DAYS'}</text>`;
+      : `<text x="50" y="52" text-anchor="middle" font-size="24" font-weight="800" fill="var(--cream)">${g.center}</text><text x="50" y="64" text-anchor="middle" font-size="8" font-weight="600" fill="#8e8e93" letter-spacing=".5">${g.centerLabel || 'DAYS'}</text>`;
   } else if (g.bars) {
     [[28, 0.42, 2], [50, 0.66, 1], [72, 0.9, 0]].forEach(([x, v, tone]) => {   // centred on 50
       const hgt = 70 * v;
@@ -515,13 +515,13 @@ function graphicSvg(g) {
     });
   } else if (g.list) {
     [[30, 1], [50, 0.8], [70, 0.6]].forEach(([y, v], i) => {
-      out += `<circle cx="24" cy="${y}" r="7" fill="${SHADES[i]}"/><rect x="38" y="${y - 4.5}" width="${46 * v}" height="9" rx="4.5" fill="#2c2b2e"/>`;
+      out += `<circle cx="24" cy="${y}" r="7" fill="${SHADES[i]}"/><rect x="38" y="${y - 4.5}" width="${46 * v}" height="9" rx="4.5" fill="var(--surface-3)"/>`;
     });
   } else {
     [[30, 0.35], [50, 0.75], [70, 0.5]].forEach(([x, v]) => {
       const ky = 84 - 68 * v;
-      out += `<rect x="${x - 2.5}" y="16" width="5" height="68" rx="2.5" fill="#232326"/><rect x="${x - 2.5}" y="${ky}" width="5" height="${84 - ky}" rx="2.5" fill="url(#pg-a)"/>`;
-      out += `<circle cx="${x}" cy="${ky}" r="8" fill="#f2e3bd"/>`;
+      out += `<rect x="${x - 2.5}" y="16" width="5" height="68" rx="2.5" fill="var(--surface-3)"/><rect x="${x - 2.5}" y="${ky}" width="5" height="${84 - ky}" rx="2.5" fill="url(#pg-a)"/>`;
+      out += `<circle cx="${x}" cy="${ky}" r="8" fill="var(--cream)"/>`;
     });
   }
   return `<svg viewBox="0 0 100 100" aria-hidden="true"><defs>

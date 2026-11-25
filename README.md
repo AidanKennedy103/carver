@@ -4,7 +4,7 @@
 
 A free iPhone web app that puts workout tracking, food tracking, body weight, progress photos and your trends in one place. It's a beta for friends. You don't need the App Store or the $99 Apple fee, and it opens full-screen like a normal app.
 
-Black and gold. The logo is a gold blackletter **C**, drawn stroke by stroke with a broad pen (`scripts/letter.mjs`), with a hairline carved into its stem.
+Black and gold, with a light mode (Settings → Appearance: Dark, Light or Match phone; dark is the default). The logo is a gold blackletter **C**, drawn stroke by stroke with a broad pen (`scripts/letter.mjs`), with a hairline carved into its stem.
 
 ## What it does
 

@@ -15,12 +15,14 @@ import { progressPage } from './progress.js';
 import { openWorkout } from './session.js';
 import { initCloud } from './cloud.js';
 import { openShared } from './share.js';
+import { applyTheme } from './theme.js';
 
+applyTheme();
 initScreens(document.getElementById('app'));
 initTabs({ home: homePage, workout: workoutPage, nutrition: nutritionPage, fitness: fitnessPage, social: socialPage, habits: habitsPage, recovery: recoveryPage, body: () => progressPage({ tab: true }) });
 
 // Redraw the main page when data changes (only if it's showing)
-onChange(() => top()?.refresh?.());
+onChange(() => { applyTheme(); top()?.refresh?.(); });
 
 initCloud();
 

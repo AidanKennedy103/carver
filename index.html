@@ -16,6 +16,18 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Carver">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <script>
+    // Light or dark before the first paint (js/theme.js keeps it in step after that)
+    try {
+      var t = localStorage.getItem('carver.theme');
+      if (t === 'light') {
+        document.documentElement.dataset.theme = 'light';
+        document.querySelector('meta[name="theme-color"]').content = '#f2f2f7';
+        document.querySelector('meta[name="color-scheme"]').content = 'light';
+        document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]').content = 'default';   // dark status bar text on a light app
+      }
+    } catch (e) {}
+  </script>
   <!-- Launch screens (one per iPhone screen size) -->
   <link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3)" href="icons/splash-1320x2868.png?v=4">
   <link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3)" href="icons/splash-1206x2622.png?v=4">

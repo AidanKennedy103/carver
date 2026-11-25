@@ -452,7 +452,11 @@ export function swipeRow(content, actions) {
   const set = (x, anim) => {
     content.style.transition = anim ? 'transform .28s cubic-bezier(.2,.8,.2,1)' : 'none';
     content.style.transform = x ? `translateX(${x}px)` : '';
+    // The buttons only show while the row is pulled (so no sliver peeks out at a rounded corner)
+    clearTimeout(hideTray);
+    if (x) el.classList.add('moving'); else hideTray = setTimeout(() => el.classList.remove('moving'), anim ? 300 : 0);
   };
+  let hideTray = 0;
   const api = {
     close() { base = 0; set(0, true); el.classList.remove('open'); if (openRow === api) openRow = null; },
   };

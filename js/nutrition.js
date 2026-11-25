@@ -123,7 +123,7 @@ function weekDots(key, go) {
 function calRing(eaten, goal, left, over, soft) {
   const R = 44, C = 2 * Math.PI * R, pct = goal ? Math.min(1, eaten / goal) : 0;
   const el = h('div.plate', { role: 'img', 'aria-label': `${r0(eaten)} of ${r0(goal)} kcal` });
-  el.innerHTML = `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke="#26262a" stroke-width="8"/>
+  el.innerHTML = `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${R}" fill="none" stroke="var(--line)" stroke-width="8"/>
     ${pct > 0 ? `<circle cx="50" cy="50" r="${R}" fill="none" stroke="${over ? 'var(--red)' : 'var(--gold)'}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(C * pct).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 50 50)"/>` : ''}</svg>`;
   el.append(h('div.plate-mid',
     h('b' + (over ? '.over' : ''), Math.abs(r0(left)).toLocaleString()),

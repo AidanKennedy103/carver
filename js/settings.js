@@ -16,6 +16,7 @@ import { aboutScreen } from './about.js';
 import { clearPhotos } from './photos.js';
 import { importCronometer } from './cronometer.js';
 import { account } from './cloud.js';
+import { themeChoice } from './theme.js';
 import { readFiles, readWorkouts, saveWorkouts, routines, planFrom, readMFP, saveMFP, workoutTemplate } from './imports.js';
 
 export function openSettings() {
@@ -33,6 +34,7 @@ export function openSettings() {
   const liftSeg = unitSeg('unit', [['lb', 'Pounds (lb)'], ['kg', 'Kilograms (kg)']], unit);
   const bodySeg = unitSeg('bodyUnit', [['lb', 'Pounds (lb)'], ['kg', 'Kilograms (kg)']], bodyUnit);
   const distSeg = unitSeg('distUnit', [['mi', 'Miles'], ['km', 'Kilometres']], distUnit);
+  const themeSeg = unitSeg('theme', [['dark', 'Dark'], ['light', 'Light'], ['auto', 'Match phone']], themeChoice);
 
   // Tabs: keep only the parts of Carver you use, in the order you like
   const tabRows = h('div.group');
@@ -126,6 +128,7 @@ export function openSettings() {
           if (n != null) { commit((st) => { st.profile.name = n; }); nameVal.textContent = n || 'Add'; }
         },
       }, h('span', 'Your name'), nameVal)),
+    h('label.form-label', 'Appearance'), themeSeg,
     h('label.form-label', 'Home'),
     h('div.group', h('button.group-row', { onclick: () => { s.close(); Promise.all([import('./home.js'), import('./tabs.js')]).then(([m, tb]) => { tb.goTab('home'); m.startHomeEdit(); }); } }, h('span', 'Edit Home page'), h('span.card-go', '›'))),
     h('label.form-label', 'Tabs'), tabRows,
