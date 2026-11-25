@@ -62,18 +62,30 @@ function logScan() {
   const kinds = h('div.chips.scan-kinds');
   const drawKinds = () => fill(kinds, SCANS.map(([k, label]) => h('button.chip' + (k === kind ? '.on' : ''), { onclick: () => { kind = k; drawKinds(); } }, label)));
   drawKinds();
-  const FIELDS = [['fat', 'Body fat', '%'], ['fatMass', 'Fat mass', bodyUnit()], ['lean', 'Lean mass', bodyUnit()], ['bone', 'Bone mass', bodyUnit()], ['visceral', 'Visceral fat', bodyUnit()]];
+  const FIELDS = [['fat', 'Body fat', '%'], ['fatMass', 'Fat mass', 'mass'], ['lean', 'Lean mass', 'mass'], ['bone', 'Bone mass', 'mass'], ['visceral', 'Visceral fat', 'mass']];
   const inputs = {};
+  // Scan reports come in either unit (lots of DEXA reports are in kg): pick the one on yours
+  let mu = bodyUnit();
+  const unitTags = [];
+  const unitSeg = h('div.segment.scan-unit');
+  const drawUnit = () => {
+    fill(unitSeg, [['lb', 'lb'], ['kg', 'kg']].map(([v, l]) => h('button' + (mu === v ? '.on' : ''), { onclick: () => { mu = v; drawUnit(); } }, l)));
+    unitTags.forEach((t) => { t.textContent = mu; });
+  };
   const s = sheet(h('div.form',
     h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', 'Add a scan'), h('button.link.strong', { onclick: save }, 'Save')),
     h('p.fine', 'Copy the numbers from your scan report. Fill in what it gives you; body fat alone is enough.'),
     kinds,
+    h('div.scan-unit-row', h('span', 'Masses on the report are in'), unitSeg),
     h('div.group', h('label.goal-row', h('span', 'Date of scan'), date),
       FIELDS.map(([k, label, u]) => {
         inputs[k] = h('input.field.goal-input', { inputmode: 'decimal', placeholder: '—', 'aria-label': label });
-        return h('label.goal-row', h('span', label), h('span.goal-field', inputs[k], h('span.goal-unit', u)));
+        const tag = h('span.goal-unit', u === 'mass' ? mu : u);
+        if (u === 'mass') unitTags.push(tag);
+        return h('label.goal-row', h('span', label), h('span.goal-field', inputs[k], tag));
       })),
     h('p.fine', 'If you weigh in on your smart scale within 3 days of the scan, Carver works out how far off the scale reads and corrects its body fat and lean mass from then on.')));
+  drawUnit();
   function save() {
     const num = (k) => { const v = parseFloat(inputs[k].value.replace(',', '.')); return v > 0 ? v : null; };
     const ts = date.value ? new Date(date.value + 'T12:00').getTime() : Date.now();
@@ -81,10 +93,11 @@ function logScan() {
     let fat = num('fat');
     const fm = num('fatMass'), lean = num('lean'), bone = num('bone'), vis = num('visceral');
     if (fat != null && fat >= 75) { toast('Body fat looks too high'); return; }
-    if (lean) r.lean = bodyFromDisplay(lean);
-    if (bone) r.bone = bodyFromDisplay(bone);
-    if (fm) r.fatMass = bodyFromDisplay(fm);
-    if (vis) r.visceral = bodyFromDisplay(vis);
+    const kg = (v) => (mu === 'lb' ? v / 2.20462262 : v);   // stored in kg, whatever the report used
+    if (lean) r.lean = kg(lean);
+    if (bone) r.bone = kg(bone);
+    if (fm) r.fatMass = kg(fm);
+    if (vis) r.visceral = kg(vis);
     // DEXA reports often lead with masses: work the % out from them if it's missing
     if (fat == null && fm && lean) fat = (fm / (fm + lean + (bone || 0))) * 100;
     if (fat != null) r.fat = r1(fat);
