@@ -103,28 +103,30 @@ function oneRmDetail(id) {
     const setText = (p) => (m === 'vol' ? `${p.sets} set${p.sets === 1 ? '' : 's'} · top ${toDisplay(p.weight)} × ${p.reps}` : `${toDisplay(p.weight)} ${unit()} × ${p.reps}`);
 
     // The readout: the latest workout, or the point under your finger
-    const rv = h('div.lx-val'), rs = h('div.lx-sub');
+    const rv = h('div.lx-val'), rs = h('div.lx-sub'), rsets = h('div.lx-sets');
+    // The sets you did in that workout (warm-ups left out), the one the number comes from in gold
+    const setsOf = (q) => {
+      const w = state.workouts.find((x) => x.start === q.x);
+      return w ? w.exercises.filter((e) => e.exId === id).flatMap((e) => e.sets.filter((x) => x.done && x.type !== 'w')) : [];
+    };
     const readout = (p) => {
       const q = p || last;
-      if (!q) { fill(rv, '—'); fill(rs, 'No workouts in this period'); return; }
-      const pr = q === allBest || (p && allBest && p.x === allBest.x) ? h('span.lx-pr', icon('trophy', 13), 'PR') : null;
-      if (p && m !== 'vol') {
-        // A point you tapped: the set you actually did, big, with what it works out to underneath
-        fill(rv, toDisplay(p.weight), h('span.lx-unit', ` ${unit()}`), h('span.lx-x', ' × '), String(p.reps), h('span.lx-unit', ' reps'), pr);
-        const when = p.gran === 'month' ? `best in ${fmtDate(p.x, { month: 'long', year: 'numeric' })} (${p.n} workout${p.n === 1 ? '' : 's'})`
-          : p.gran === 'week' ? `best that week · ${dateLong(p.x)}` : dateLong(p.x);
-        fill(rs, `${m === 'orm' ? `≈ ${big(p.y)} ${unit()} est. 1RM · ` : ''}${when}`);
-        return;
-      }
-      fill(rv, big(q.y), h('span.lx-unit', ` ${unit()}`), pr);
-      fill(rs, `${p ? '' : 'Latest · '}${dateLong(q.x)} · ${setText(q)}`);
+      if (!q) { fill(rv, '—'); fill(rs, 'No workouts in this period'); fill(rsets); return; }
+      const pr = q === allBest || (allBest && q.x === allBest.x) ? h('span.lx-pr', icon('trophy', 13), 'PR') : null;
+      // Big: the estimate (or heaviest / volume); underneath: when, then the actual sets
+      fill(rv, big(q.y), h('span.lx-unit', ` ${unit()}${m === 'orm' ? ' est. 1RM' : ''}`), pr);
+      const when = q.gran === 'month' ? `Best in ${fmtDate(q.x, { month: 'long', year: 'numeric' })} · ${dateLong(q.x)}`
+        : q.gran === 'week' ? `Best that week · ${dateLong(q.x)}` : `${p ? '' : 'Latest · '}${dateLong(q.x)}`;
+      fill(rs, when);
+      const sets = setsOf(q);
+      fill(rsets, sets.length ? sets.map((x) => h('span.lx-set' + (x.weight === q.weight && x.reps === q.reps ? '.top' : ''), `${toDisplay(x.weight)} × ${x.reps}`)) : h('span.lx-set', setText(q)));
     };
     readout(null);
 
     fill(body,
       h('h2.detail-title', info.name),
       h('div.segment.lx-measure', MEASURES.map(([k, l]) => h('button' + (k === m ? '.on' : ''), { onclick: () => { state.settings.ormMeasure = k; commit(); draw(); } }, l))),
-      h('div.lx-readout', rv, rs),
+      h('div.lx-readout', rv, rs, rsets),
       h('section.card.chart-card.lx-chart', lineChart(plotted.map((p) => ({ ...p, kg: p.y, y: +toDisplay(p.y) })), {
         area: true, gap: { day: 45, week: 45, month: 100 }[gran],   // straight lines between workouts, as before
         height: 220, fmtY: (v) => (v >= 10000 ? `${Math.round(v / 1000)}k` : Math.round(v)), label: `${info.name}: ${MEASURES.find(([k]) => k === m)[1]}`,
