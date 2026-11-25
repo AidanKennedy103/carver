@@ -136,7 +136,31 @@ export function lineChart(data, opts = {}) {
   wrap.append(svg);
   // Pins: [{ x, el, onClick, label }] as small markers in a lane above the plot, at their date
   const pins = (opts.pins || []).filter((p) => p.x >= x0 && p.x <= x1);
-  if (pins.length) wrap.insertBefore(h('div.chart-pins', pins.map((pin) => h('button.chart-pin', { style: { left: `${(px(pin.x) / W) * 100}%` }, onclick: pin.onClick, 'aria-label': pin.label || 'Pinned item' }, pin.el))), svg);
+  // A pin with a prompt asks first: tap it and a bubble ("View progress pic from Nov 23") opens the item
+  if (pins.length) {
+    const lane = h('div.chart-pins');
+    let bubble = null;
+    const close = () => { bubble?.remove(); bubble = null; lane.querySelector('.chart-pin.on')?.classList.remove('on'); document.removeEventListener('pointerdown', outside, true); };
+    const outside = (e) => { if (!lane.contains(e.target)) close(); };
+    const ask = (pin, btn) => {
+      const same = btn.classList.contains('on');
+      close();
+      if (same) return;
+      const pct = (px(pin.x) / W) * 100;
+      bubble = h('button.pin-bubble', { onclick: (e) => { e.stopPropagation(); close(); pin.onClick(); } }, pin.prompt, h('span.pin-go', '›'));
+      bubble.style.left = `${pct}%`;
+      bubble.style.transform = `translateX(${pct < 25 ? -12 : pct > 75 ? -88 : -50}%)`;
+      btn.classList.add('on');
+      lane.append(bubble);
+      document.addEventListener('pointerdown', outside, true);
+    };
+    for (const pin of pins) {
+      const btn = h('button.chart-pin', { style: { left: `${(px(pin.x) / W) * 100}%` }, 'aria-label': pin.label || 'Pinned item' }, pin.el);
+      btn.onclick = () => (pin.prompt ? ask(pin, btn) : pin.onClick());
+      lane.append(btn);
+    }
+    wrap.insertBefore(lane, svg);
+  }
   addTooltip(wrap, svg, pts, W, opts.tip || ((p) => `<b>${fmtY(p.y)}</b><span>${fmtX(p.x)}</span>`), opts.onSelect || null);
   return wrap;
 }

@@ -2046,6 +2046,9 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .chart-pins { position: relative; height: 22px; margin-bottom: 2px; }
 .chart-pin { position: absolute; top: 0; width: 22px; height: 22px; margin-left: -11px; padding: 0; display: grid; place-items: center; border-radius: 50%; color: var(--gold); background: none; }
 .chart-pin:active { background: var(--gold-bg); }
+.chart-pin.on { background: var(--gold-bg); }
+.pin-bubble { position: absolute; top: 26px; z-index: 5; white-space: nowrap; display: flex; align-items: center; gap: 6px; padding: 7px 10px 7px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--gold); background: var(--surface-2); border: 1px solid rgba(227, 176, 75, .35); box-shadow: 0 6px 18px rgba(0, 0, 0, .45); }
+.pin-go { font-size: 17px; line-height: 1; }
 .pin-note { margin: 4px 0 8px; }
 
 /* Warm-up sets: you add them; they look lighter so they read as warm-ups */
