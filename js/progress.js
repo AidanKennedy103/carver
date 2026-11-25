@@ -62,14 +62,15 @@ export function progressPage({ tab = false } = {}) {
 
       // Progress photos
       h('div.section-head', h('h2.section-title', 'Progress photos'), h('button.link', { onclick: takeProgressPhoto }, icon('plus', 16), 'Add')),
+      // Kept behind a tap: no faces (or bodies) springing out at you while you check your weight
       pics.length
-        ? h('div.photo-strip', pics.slice(0, 12).map((p) => h('button.photo-thumb', { onclick: () => push(() => photoScreen(p.id)) },
-          loadInto(h('img', { alt: 'Progress photo', loading: 'lazy' }), p.id),
-          h('span.photo-date', fmtDate(p.ts, { month: 'short', day: 'numeric' })))))
+        ? h('button.card.photo-gate', { onclick: () => push(allPhotosScreen) },
+          h('span.photo-gate-ico', icon('camera', 20)),
+          h('span.photo-gate-text', h('b', `${pics.length} progress photo${pics.length === 1 ? '' : 's'}`), h('span.muted', `Latest ${fmtDate(pics[0].ts, { month: 'short', day: 'numeric', ...(new Date(pics[0].ts).getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) })} · tap to view`)),
+          h('span.photo-gate-go', '›'))
         : h('button.card.empty-plan', { onclick: takeProgressPhoto },
           h('div.empty-title', 'Take your first progress photo'),
-          h('div.empty-text', 'Same spot, same light, once a month.')),
-      pics.length > 12 ? h('button.link', { onclick: () => push(allPhotosScreen) }, `See all ${pics.length}`) : null,
+          h('div.empty-text', 'Same spot, same light, once a month. They stay hidden until you tap to view them.')),
       pics.length && !account() ? h('p.fine', 'Photos stay on this phone unless you sign in. They aren’t in the data export.') : null,
 
       measureSection(),

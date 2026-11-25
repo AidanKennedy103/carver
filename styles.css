@@ -2284,3 +2284,10 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 :root[data-theme="light"] .ex-group.circuit .ex-group-tag, :root[data-theme="light"] .ex-group.circuit .grp-ex-name { color: #1688bd; }
 :root[data-theme="light"] .ex-group.superset .grp-ex-name, :root[data-theme="light"] .ex-group.superset .ex-group-tag { color: #d93a30; }
 :root[data-theme="light"] .ex-group.superset .ex-badge-g { background: #e5544b; }
+
+/* Progress photos behind a tap */
+.photo-gate { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 14px 16px; }
+.photo-gate-ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--gold-bg); color: var(--gold); flex: none; }
+.photo-gate-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.photo-gate-text .muted { font-size: 13px; }
+.photo-gate-go { color: var(--faint); font-size: 22px; }
