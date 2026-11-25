@@ -32,8 +32,8 @@ export function openSetup({ replay = false } = {}) {
     tabs: replay ? shownTabs() : ['workout', 'nutrition'],
     aim: state.goals.aim || 'maintain',
     perWeek: state.goals.workoutsPerWeek || 3,
-    kcal: state.goals.kcal || 2500,
-    protein: state.goals.p || 180,
+    kcal: replay ? state.goals.kcal : null,      // optional: left alone unless you set them here
+    protein: replay ? state.goals.p : null,
     home: replay ? homeSections() : null,   // worked out from the tabs once you get there
   };
   const STEPS = ['welcome', 'tabs', 'goals', 'home', 'tour'];
@@ -59,8 +59,8 @@ export function openSetup({ replay = false } = {}) {
       s.settings.home = d.home;
       s.goals.aim = d.aim;
       s.goals.workoutsPerWeek = d.perWeek;
-      s.goals.kcal = d.kcal;
-      s.goals.p = d.protein;
+      if (d.kcal) s.goals.kcal = d.kcal;
+      if (d.protein) s.goals.p = d.protein;
       delete s.settings.needsSetup;
     });
     close();
@@ -85,6 +85,15 @@ export function openSetup({ replay = false } = {}) {
       if (v >= min && v <= max) { set(v); draw(); } else if (!isNaN(v)) toast(`Between ${min} and ${max}`);
     } }, `${val}${suffix || ''}`),
     h('button', { 'aria-label': 'More', onclick: () => { set(Math.min(max, val + step)); draw(); } }, '+'));
+
+  // An optional number: "Add" until you tap it and type one (clear it to go back to none)
+  const optional = (val, set, { min, max, suffix = '', label }) => h('button.setup-opt' + (val ? '' : '.empty'), { onclick: async () => {
+    const raw = await promptBox(label, val ? String(val) : '', { inputmode: 'numeric', placeholder: 'Optional' });
+    if (raw == null) return;
+    if (raw.trim() === '') { set(null); draw(); return; }
+    const v = parseInt(raw, 10);
+    if (v >= min && v <= max) { set(v); draw(); } else toast(`Between ${min} and ${max}`);
+  } }, val ? `${val}${suffix}` : 'Add');
 
   const pages = {
     welcome: () => [
@@ -113,9 +122,9 @@ export function openSetup({ replay = false } = {}) {
       seg(AIMS, d.aim, (v) => { d.aim = v; }),
       h('div.group.setup-goals',
         d.tabs.includes('workout') ? h('div.group-row', h('span', 'Workouts a week'), stepper(d.perWeek, (v) => { d.perWeek = v; }, { min: 1, max: 7, step: 1, label: 'Workouts a week' })) : null,
-        d.tabs.includes('nutrition') ? h('div.group-row', h('span', 'Calories a day'), stepper(d.kcal, (v) => { d.kcal = v; }, { min: 1200, max: 6000, step: 100, label: 'Calories a day' })) : null,
-        d.tabs.includes('nutrition') ? h('div.group-row', h('span', 'Protein a day'), stepper(d.protein, (v) => { d.protein = v; }, { min: 40, max: 400, step: 5, suffix: ' g', label: 'Protein a day (g)' })) : null),
-      d.tabs.includes('nutrition') ? h('p.fine', 'Not sure? A common starting point for protein is about 0.7–1 g per lb of body weight. The diet coach in Nutrition can work calories out for you later.') : null,
+        d.tabs.includes('nutrition') ? h('div.group-row', h('span', 'Calories a day', h('span.setup-optional', 'optional')), optional(d.kcal, (v) => { d.kcal = v; }, { min: 1000, max: 6000, label: 'Calories a day' })) : null,
+        d.tabs.includes('nutrition') ? h('div.group-row', h('span', 'Protein a day', h('span.setup-optional', 'optional')), optional(d.protein, (v) => { d.protein = v; }, { min: 30, max: 400, suffix: ' g', label: 'Protein a day (g)' })) : null),
+      d.tabs.includes('nutrition') ? h('p.fine', 'Skip these if you’re not sure. You can set them any time in Nutrition → Goals, or let the diet coach work them out from your weigh-ins.') : null,
     ],
     home: () => {
       if (!d.home) d.home = homeFor();
