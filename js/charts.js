@@ -107,7 +107,7 @@ export function lineChart(data, opts = {}) {
   const wrap = h('div.chart');
   if (!data.length) { wrap.append(h('div.chart-empty', opts.empty || 'No data yet')); return wrap; }
   const ov = opts.overlay?.data?.length > 1 ? opts.overlay : null;   // { data, color, ref, fmt }: a smaller line with its own scale, in the bottom of the chart
-  const xs = data.map((d) => d.x).concat(ov ? ov.data.map((d) => d.x) : []), ys = data.map((d) => d.y).concat(goal != null ? [goal] : []);
+  const xs = data.map((d) => d.x).concat(ov ? ov.data.map((d) => d.x) : []), ys = (opts.yFrom?.length ? opts.yFrom : data).map((d) => d.y).concat(goal != null ? [goal] : []);   // yFrom: scale to just these points (e.g. the range in view)
   const fit = opts.fit ? linFit(Array.isArray(opts.fit) ? opts.fit : data) : null;   // a dashed best-fit line: which way you're trending (opts.fit: true, or the points to fit)
   if (fit) ys.push(fit.at(fit.x0), fit.at(fit.x1));
   let x0 = Math.min(...xs), x1 = Math.max(...xs);
@@ -191,8 +191,19 @@ export function lineChart(data, opts = {}) {
     }
     for (const lab of svg.querySelectorAll('text.chart-axis[text-anchor="end"]')) if (+lab.getAttribute('x') === padL - 6) lab.remove();
     wrap.append(scroller, yAxis);
-    const ro = new ResizeObserver(() => { if (scroller.clientWidth) { scroller.scrollLeft = scroller.scrollWidth; ro.disconnect(); } });
+    const ro = new ResizeObserver(() => { if (scroller.clientWidth) { scroller.scrollLeft = opts.startAt ?? scroller.scrollWidth; ro.disconnect(); } });
     ro.observe(scroller);
+    // opts.onView({ from, to, left }): the dates in view once you stop scrolling (to refit the scale)
+    if (opts.onView) {
+      let t = 0;
+      scroller.addEventListener('scroll', () => {
+        clearTimeout(t);
+        t = setTimeout(() => {
+          const sw = scroller.scrollWidth, toX = (f) => x0 + ((f * W - padL) / (W - padL - padR)) * (x1 - x0);
+          opts.onView({ from: toX(scroller.scrollLeft / sw), to: toX((scroller.scrollLeft + scroller.clientWidth) / sw), left: scroller.scrollLeft });
+        }, 160);
+      }, { passive: true });
+    }
   }
   host.append(svg);
   // Pins: [{ x, el, onClick, label }] as small markers in a lane above the plot, at their date
