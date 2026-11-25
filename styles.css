@@ -2428,3 +2428,7 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 :root.standalone[data-theme="light"] { --drop: 36px; }
 .tabbar { bottom: calc(-1 * var(--drop)); }
 .live-bar { bottom: calc(62px + var(--safe-bottom) - var(--drop)); }
+
+/* Delete a weigh-in you tapped on the chart */
+.metric-del { float: right; margin-top: 2px; }
+.metric-del-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--red); padding: 4px 10px; border-radius: 8px; background: var(--red-bg); }

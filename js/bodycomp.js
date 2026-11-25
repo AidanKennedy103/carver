@@ -9,7 +9,7 @@
 import { h, fill, sheet, toast, confirmBox, fmtDate, icon, promptBox, actionSheet } from './ui.js';
 import { state, commit, uid, bodyDisplay, bodyFromDisplay, bodyUnit } from './store.js';
 import { lineChart, fitNote, seriesChart } from './charts.js';
-import { latestWeight } from './body.js';
+import { latestWeight, deleteWeight } from './body.js';
 
 const comp = () => state.body.comp || [];
 const measures = () => state.body.measures || [];
@@ -209,7 +209,7 @@ function leanPoints() {
 export function bodyMetrics(trendPts) {
   const mass = (v) => +bodyDisplay(v), pct = (v) => Math.round(v * 10) / 10;
   const out = [
-    { k: 'weight', label: 'Weight', pts: trendPts.map((p) => ({ x: p.x, y: p.raw ?? p.y })), show: mass, unit: bodyUnit(), weighIns: true },   // each weigh-in, as you stepped on the scale
+    { k: 'weight', label: 'Weight', pts: trendPts.map((p) => ({ x: p.x, y: p.raw ?? p.y, id: p.id })), show: mass, unit: bodyUnit(), weighIns: true },   // each weigh-in, as you stepped on the scale
     { k: 'fat', label: 'Body fat', pts: comp().filter((x) => x.fat != null).map((x) => ({ x: x.ts, y: fatOf(x) })), show: pct, unit: '%' },
     { k: 'lean', label: 'Lean mass', pts: leanPoints(), show: mass, unit: bodyUnit() },
     { k: 'bmi', label: 'BMI', pts: heightM() ? trendPts.map((p) => ({ x: p.x, y: p.y / heightM() ** 2 })) : [], show: pct, unit: '' },
@@ -264,8 +264,13 @@ export function metricChart(trendPts, { pins = null } = {}) {
     const goalKg = k === 'weight' && state.goals.weight ? state.goals.weight : null;
 
     // The number up top: the latest, or the point you tapped
-    const nowV = h('b'), nowS = h('span.metric-d');
+    const nowV = h('b'), nowS = h('span.metric-d'), nowDel = h('span.metric-del');
     const showNow = (p) => {
+      // A single weigh-in you tapped can be deleted right here (a reading that's way off, say)
+      fill(nowDel, p && p.id && m.weighIns && (p.n || 1) === 1 ? h('button.metric-del-btn', { onclick: async () => {
+        if (!(await confirmBox(`Delete the ${fmtV(p.y)} ${m.unit} weigh-in?`, fmtDate(p.x, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }), { ok: 'Delete', danger: true }))) return;
+        deleteWeight(p.id); toast('Weigh-in deleted');
+      } }, icon('trash', 14), 'Delete') : null);
       if (!p) {
         fill(nowV, fmtV(last));
         fill(nowS, d != null ? ` ${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d)} ${m.unit} in ${{ week: 'a month', month: '3 months', year: 'a year' }[view]}` : '');
@@ -279,7 +284,7 @@ export function metricChart(trendPts, { pins = null } = {}) {
     fill(wrap,
       list.length > 1 ? h('div.chips.tight.metric-chips', list.map((x) => h('button.chip' + (x.k === k ? '.on' : ''), { onclick: () => { state.settings.bodyMetric = x.k; commit(); } }, x.label))) : null,
       h('div.segment.metric-range.top', VIEWS.map(([v, l]) => h('button' + (v === view ? '.on' : ''), { onclick: () => { state.settings.bodyView = v; commit(); } }, l))),
-      h('div.metric-now', nowV, h('span', ` ${m.unit}`), nowS),
+      h('div.metric-now', nowV, h('span', ` ${m.unit}`), nowS, nowDel),
       seriesChart(data, {
         per: view === 'year' ? 8 : 7, labels: view !== 'year' || data.length <= 8, goal: goalKg ? m.show(goalKg) : null,
         minSpan: m.weighIns ? ({ week: 5, month: 8, year: 16 }[view] / (bodyUnit() === 'lb' ? 1 : 2.2)) : 0, fmtY: fmtV, label: `${m.label} over time`,
