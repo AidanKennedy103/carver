@@ -44,9 +44,9 @@ function short(n) {
 }
 const fmtHours = (ms) => { const hrs = ms / 36e5; return hrs < 10 ? hrs.toFixed(1).replace(/\.0$/, '') : String(Math.round(hrs)); };
 
-// ---------- Rings: you pick up to 4, each shown for today or for this week ----------
+// ---------- Rings: you pick up to 6, each shown for today or for this week ----------
 
-export const MAX_RINGS = 4;
+export const MAX_RINGS = 6;
 const DEFAULT_RINGS = ['gym', 'kcal', 'protein'];
 const WEIGH_COLOR = '#9aa3b2';
 
