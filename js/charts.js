@@ -327,7 +327,7 @@ export function seriesChart(data, opts = {}) {
     let lo = Math.min(...vis), hi = Math.max(...vis);
     if (hi - lo < minSpan) { const c = (lo + hi) / 2; lo = c - minSpan / 2; hi = c + minSpan / 2; }
     const span = hi - lo || 1;
-    return { top: hi + span * 0.18, bot: lo - span * 0.3 };
+    return { top: hi + span * 0.08, bot: lo - span * 0.16 };
   }
 
   function render() {
