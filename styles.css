@@ -2215,3 +2215,23 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 
 /* Weight chart values on the points */
 .chart-val { font-size: 10.5px; font-weight: 700; fill: var(--gold); font-variant-numeric: tabular-nums; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+
+/* FitIndex-style chart: evenly spaced, scrolls side to side, scale fixed on the right */
+.schart { position: relative; margin: 6px -4px 0 0; }
+.schart-scroll { overflow-x: auto; overflow-y: hidden; margin-right: 38px; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; position: relative; }
+.schart-scroll::-webkit-scrollbar { display: none; }
+.schart-svg { display: block; height: auto; min-width: 100%; touch-action: pan-x pan-y; }
+.schart-vgrid { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 4; }
+.schart-base { stroke: var(--line); stroke-width: 1; }
+.schart-goal { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 5; opacity: .7; }
+.schart-dot { fill: var(--surface); stroke: var(--gold); stroke-width: 2.25; transition: r .15s; }
+.schart-dot.on { fill: var(--gold); r: 6.5; }
+.schart-val { font-size: 11.5px; font-weight: 700; fill: var(--gold); font-variant-numeric: tabular-nums; paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
+.schart-x { font-size: 10.5px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.schart-axis { position: absolute; top: 0; right: 0; bottom: 0; width: 38px; border-left: 1px solid var(--line); font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.schart-axis span { position: absolute; left: 6px; top: 22px; }
+.schart-axis span.bot { top: auto; bottom: 30px; }
+.schart-axis span.goal { color: var(--muted); transform: translateY(-50%); }
+.schart-pins { position: relative; height: 22px; }
+.schart .pin-bubble { position: absolute; top: 24px; transform: translateX(-50%); z-index: 3; }
+.metric-range.top { margin: 6px 0 10px; }

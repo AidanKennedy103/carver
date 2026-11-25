@@ -8,7 +8,7 @@
 
 import { h, fill, sheet, toast, confirmBox, fmtDate, icon, promptBox } from './ui.js';
 import { state, commit, uid, bodyDisplay, bodyFromDisplay, bodyUnit } from './store.js';
-import { lineChart, fitNote } from './charts.js';
+import { lineChart, fitNote, seriesChart } from './charts.js';
 import { latestWeight } from './body.js';
 
 const comp = () => state.body.comp || [];
@@ -148,49 +148,53 @@ function bucket(list, gran) {
 }
 /** Weigh-ins more than this many days apart start a new section of the line. */
 export const GAP_DAYS = 10;
-/** The chart with a chip for each metric and a time range. Remembers your pick. */
-/** opts.pins(): progress photos (or anything) to pin on the line at their dates. */
+/** The chart with a chip for each metric and Week / Month / Year, FitIndex style. Remembers your pick. */
+const VIEWS = [['week', 'Week'], ['month', 'Month'], ['year', 'Year']];
+const VIEW_GRAN = { week: 'day', month: 'week', year: 'month' };
+const VIEW_DAYS = { week: 30, month: 91, year: 365 };
+/** opts.pins(): progress photos (or anything) to pin over the chart at their dates. */
 export function metricChart(trendPts, { pins = null } = {}) {
   const list = bodyMetrics(trendPts);
   if (!list.length) return null;
   const wrap = h('div.metric-chart');
-  let view = null;   // the stretch you've scrolled to: { from, to, left, key }
   function draw() {
     const k = list.some((m) => m.k === state.settings.bodyMetric) ? state.settings.bodyMetric : list[0].k;
-    const days = RANGES.some(([, v]) => v === state.settings.bodyDays) ? state.settings.bodyDays : 30;   // opens on the last month
+    const view = VIEWS.some(([v]) => v === state.settings.bodyView) ? state.settings.bodyView : 'week';
     const m = list.find((x) => x.k === k);
-    const pts = m.pts.filter((p) => p.x > Date.now() - days * 864e5);
-    const shown = (pts.length > 1 ? pts : m.pts).map((p) => ({ ...p, y: m.show(p.y) }));
-    // Weigh-ins: the range sets how much fits across, and you scroll side to side for the rest
-    const scrolls = m.weighIns && days < 1e5 && pts.length > 1 && m.pts.length > pts.length;
-    const gran = m.weighIns ? GRAN[days] : 'day';
-    const plotted = bucket(scrolls ? m.pts.map((p) => ({ ...p, y: m.show(p.y) })) : shown, gran);
-    const visible = bucket(shown, gran).length;
-    // The weight scale fits what's on screen: the newest stretch, or wherever you've scrolled back to
-    const key = `${k}|${days}`;
-    if (view?.key !== key) view = null;
-    const inView = view ? plotted.filter((p) => p.x >= view.from - 864e5 && p.x <= view.to + 864e5) : null;
-    const yFrom = scrolls ? (inView?.length ? inView : bucket(shown, gran)) : null;
-    const onView = scrolls ? (v) => {
-      const pts2 = plotted.filter((p) => p.x >= v.from - 864e5 && p.x <= v.to + 864e5);
-      if (!pts2.length) return;
-      const lo = Math.min(...pts2.map((p) => p.y)), hi = Math.max(...pts2.map((p) => p.y));
-      const was = yFrom.map((p) => p.y), lo0 = Math.min(...was), hi0 = Math.max(...was);
-      view = { ...v, key };
-      if (Math.abs(lo - lo0) > 0.05 || Math.abs(hi - hi0) > 0.05) draw();
-    } : null;
-    const first = shown[0].y, last = shown[shown.length - 1].y, d = Math.round((last - first) * 10) / 10;
+    const gran = VIEW_GRAN[view];
+    const all = m.pts.map((p) => ({ ...p, y: m.show(p.y) }));
+    const data = bucket(all, gran);
+    const fmtV = (v) => (Math.abs(v) >= 100 ? (Math.round(v * 10) / 10).toFixed(1).replace(/\.0$/, '') : String(Math.round(v * 10) / 10));
+    const since = Date.now() - VIEW_DAYS[view] * 864e5;
+    const recent = all.filter((p) => p.x >= since);
+    const last = all[all.length - 1].y;
+    const d = recent.length > 1 ? Math.round((last - recent[0].y) * 10) / 10 : null;
+    const goalKg = k === 'weight' && state.goals.weight ? state.goals.weight : null;
+
+    // The number up top: the latest, or the point you tapped
+    const nowV = h('b'), nowS = h('span.metric-d');
+    const showNow = (p) => {
+      if (!p) {
+        fill(nowV, fmtV(last));
+        fill(nowS, d != null ? ` ${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d)} ${m.unit} in ${{ week: 'a month', month: '3 months', year: 'a year' }[view]}` : '');
+        return;
+      }
+      fill(nowV, fmtV(p.y));
+      fill(nowS, ` ${p.gran === 'week' ? `avg, week of ${fmtDate(p.start, { month: 'short', day: 'numeric' })}` : p.gran === 'month' ? `avg, ${fmtDate(p.x, { month: 'long', year: 'numeric' })}` : fmtDate(p.x, { weekday: 'short', month: 'short', day: 'numeric' })}`);
+    };
+    showNow(null);
+
     fill(wrap,
       list.length > 1 ? h('div.chips.tight.metric-chips', list.map((x) => h('button.chip' + (x.k === k ? '.on' : ''), { onclick: () => { state.settings.bodyMetric = x.k; commit(); } }, x.label))) : null,
-      h('div.metric-now', h('b', `${last}`), h('span', ` ${m.unit}`), shown.length > 1 ? h('span.metric-d' + (d === 0 ? '' : ''), ` ${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d)} ${m.unit} ${pts.length > 1 ? (days === 1e5 ? 'all time' : `in ${RANGE_WORD[days]}`) : 'overall'}`) : null),
-      lineChart(plotted, { height: 190, dots: m.weighIns ? 'all' : shown.length < 30, gap: m.weighIns ? { day: GAP_DAYS, week: 22, month: 75 }[gran] : null, area: true, smooth: !!m.weighIns, ring: !!m.weighIns, minSpan: m.weighIns ? (bodyUnit() === 'lb' ? 12 : 6) : null,
-        labels: m.weighIns && (gran === 'month' || visible <= 8),
-        fmtX: (t) => new Date(t).toLocaleDateString(undefined, gran === 'month' ? { month: 'short', year: '2-digit' } : { month: 'short', day: 'numeric' }), fit: m.weighIns ? shown : null, scroll: scrolls ? days : null, yFrom, onView, startAt: view?.key === key ? view.left : undefined, fmtY: (v) => (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10), label: `${m.label} over time`, pins: pins ? pins() : [],
-        tip: (p) => p.gran === 'week' ? `<b>${p.y} ${m.unit}</b><span>Week of ${fmtDate(p.start, { month: 'short', day: 'numeric' })} · average of ${p.n}</span>`
-          : p.gran === 'month' ? `<b>${p.y} ${m.unit}</b><span>${fmtDate(p.x, { month: 'long', year: 'numeric' })} · average of ${p.n}</span>`
-            : `<b>${p.y} ${m.unit}</b><span>${fmtDate(p.x, { month: 'short', day: 'numeric', year: 'numeric' })}</span>` }),
-      m.weighIns ? fitNote(shown, m.unit) : null,
-      h('div.segment.metric-range', RANGES.map(([l, v]) => h('button' + (v === days ? '.on' : ''), { onclick: () => { state.settings.bodyDays = v; commit(); } }, l))));
+      h('div.segment.metric-range.top', VIEWS.map(([v, l]) => h('button' + (v === view ? '.on' : ''), { onclick: () => { state.settings.bodyView = v; commit(); } }, l))),
+      h('div.metric-now', nowV, h('span', ` ${m.unit}`), nowS),
+      seriesChart(data, {
+        per: view === 'year' ? 8 : 7, labels: view !== 'year' || data.length <= 8, goal: goalKg ? m.show(goalKg) : null,
+        minSpan: m.weighIns ? (bodyUnit() === 'lb' ? 20 : 10) : 0, fmtY: fmtV, label: `${m.label} over time`,
+        fmtX: (t) => new Date(t).toLocaleDateString(undefined, gran === 'month' ? { month: 'short' } : { month: 'numeric', day: 'numeric' }),
+        onSelect: showNow, pins: pins ? pins() : [],
+      }),
+      m.weighIns ? fitNote(recent.length > 2 ? recent : all, m.unit) : null);
   }
   draw();
   return wrap;
