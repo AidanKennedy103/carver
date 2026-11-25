@@ -277,7 +277,8 @@ export function metricChart(trendPts, { pins = null } = {}) {
         return;
       }
       fill(nowV, fmtV(p.y));
-      fill(nowS, ` ${p.gran === 'week' ? `avg, week of ${fmtDate(p.start, { month: 'short', day: 'numeric' })}` : p.gran === 'month' ? `avg, ${fmtDate(p.x, { month: 'long', year: 'numeric' })}` : fmtDate(p.x, { weekday: 'short', month: 'short', day: 'numeric' })}`);
+      const yr = (t) => (new Date(t).getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {});   // the year only when it isn't this one
+      fill(nowS, ` ${p.gran === 'week' ? `avg, week of ${fmtDate(p.start, { month: 'short', day: 'numeric', ...yr(p.start) })}` : p.gran === 'month' ? `avg, ${fmtDate(p.x, { month: 'long', ...yr(p.x) })}` : fmtDate(p.x, { weekday: 'short', month: 'short', day: 'numeric', ...yr(p.x) })}`);
     };
     showNow(null);
 
