@@ -35,6 +35,26 @@ function niceTicks(min, max, count = 4) {
   return ticks;
 }
 
+/** Least-squares line through [{ x: ms, y }]: { slope (per day), at(x) }, or null with fewer than 3 points or under a week. */
+export function linFit(data) {
+  if (data.length < 3) return null;
+  const n = data.length, xm = data.reduce((a, d) => a + d.x, 0) / n, ym = data.reduce((a, d) => a + d.y, 0) / n;
+  let sxy = 0, sxx = 0;
+  for (const d of data) { sxy += (d.x - xm) * (d.y - ym); sxx += (d.x - xm) ** 2; }
+  if (!sxx || data[n - 1].x - data[0].x < 7 * 864e5) return null;
+  const b = sxy / sxx;
+  return { slope: b * 864e5, at: (x) => ym + b * (x - xm), x0: data[0].x, x1: data[n - 1].x };
+}
+
+/** "Trending −0.4 lb a week" under a chart with a best-fit line. */
+export function fitNote(data, unit) {
+  const f = linFit(data);
+  if (!f) return null;
+  const r1 = (v) => Math.round(v * 10) / 10;
+  const [v, per] = Math.abs(r1(f.slope * 7)) >= 0.1 ? [r1(f.slope * 7), 'a week'] : [r1(f.slope * 30), 'a month'];
+  return h('p.fit-note', h('i'), h('span', ...(v === 0 ? ['Trend: holding steady'] : ['Trending ', h('b', `${v > 0 ? '+' : '−'}${Math.abs(v)} ${unit}`.trim()), ` ${per}`])));
+}
+
 /** Attach a tooltip that follows the finger/mouse to the nearest point. */
 function addTooltip(wrap, svg, pts, W, render, onSelect = null) {
   const tip = h('div.chart-tip');
@@ -80,6 +100,8 @@ export function lineChart(data, opts = {}) {
   if (!data.length) { wrap.append(h('div.chart-empty', opts.empty || 'No data yet')); return wrap; }
   const ov = opts.overlay?.data?.length > 1 ? opts.overlay : null;   // { data, color, ref, fmt }: a smaller line with its own scale, in the bottom of the chart
   const xs = data.map((d) => d.x).concat(ov ? ov.data.map((d) => d.x) : []), ys = data.map((d) => d.y).concat(goal != null ? [goal] : []);
+  const fit = opts.fit ? linFit(data) : null;   // a dashed best-fit line: which way you're trending
+  if (fit) ys.push(fit.at(fit.x0), fit.at(fit.x1));
   let x0 = Math.min(...xs), x1 = Math.max(...xs);
   if (x0 === x1) { x0 -= 864e5 * 3; x1 += 864e5 * 3; }
   const ticks = niceTicks(Math.min(...ys), Math.max(...ys));
@@ -121,6 +143,7 @@ export function lineChart(data, opts = {}) {
   }
 
   const pts = data.map((d) => ({ ...d, px: px(d.x), py: py(d.y), over: ov ? nearest(ov.data, d.x) : undefined }));
+  if (fit) svg.append(s('line', { x1: px(fit.x0), y1: py(fit.at(fit.x0)), x2: px(fit.x1), y2: py(fit.at(fit.x1)), class: 'chart-fit' }));
   // opts.gap (days): a longer break between points starts a new section of the line, like a pause in tracking
   const segs = [];
   for (const p of pts) {

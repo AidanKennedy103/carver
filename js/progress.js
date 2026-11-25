@@ -3,7 +3,7 @@
 import { h, fill, icon, push, pop, navBar, toast, actionSheet, confirmBox, fmtDate, swipe, swipeSegment, sheet } from './ui.js';
 import { commit } from './store.js';
 import { bodyDisplay as toDisplay, bodyUnit as unit } from './store.js';
-import { lineChart } from './charts.js';
+import { lineChart, fitNote } from './charts.js';
 import { weights, latestWeight, trend, change, logWeightSheet, importSheet, weightRow } from './body.js';
 import { photos, addPhoto, deletePhoto, loadInto } from './photos.js';
 import { monthlySection } from './monthly.js';
@@ -93,12 +93,13 @@ function weightScreen() {
     const shown = range ? all.filter((p) => p.x > Date.now() - range * 864e5) : all;
     fill(body,
       h('h2.detail-title', 'Weight'),
-      h('div.detail-date', `Each dot is a weigh-in. A break of more than ${GAP_DAYS} days starts a new section.`),
+      h('div.detail-date', `Each dot is a weigh-in. A break of more than ${GAP_DAYS} days starts a new section. The dashed line is your trend.`),
       h('div.segment.range', [[30, '1M'], [90, '3M'], [365, '1Y'], [0, 'All']].map(([d, l]) => h('button' + (range === d ? '.on' : ''), { onclick: () => { range = d; draw(); } }, l))),
       h('section.card.chart-card', lineChart(shown.map((p) => ({ ...p, y: +toDisplay(p.raw ?? p.y), avg: +toDisplay(p.y) })), {
-        height: 200, dots: 'all', gap: GAP_DAYS, area: false, fmtY: (v) => Math.round(v), label: 'Weigh-ins',
+        height: 200, dots: 'all', gap: GAP_DAYS, area: false, fit: true, fmtY: (v) => Math.round(v), label: 'Weigh-ins',
         tip: (p) => `<b>${p.y} ${unit()}</b><span>7-day avg ${p.avg} · ${fmtDate(p.x, { month: 'short', day: 'numeric' })}</span>`,
       })),
+      fitNote(shown.map((p) => ({ x: p.x, y: +toDisplay(p.raw ?? p.y) })), unit()),
       h('div.stats-inline',
         ...[[7, 'Week'], [30, 'Month'], [90, '3 months']].map(([d, l]) => { const c = change(d); return h('div.stat', h('span.stat-k', l), h('span.stat-v', c == null ? '—' : signed(c))); })),
       h('div.section-head', h('h2.section-title', 'Weigh-ins')),
