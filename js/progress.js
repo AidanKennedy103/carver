@@ -9,7 +9,7 @@ import { photos, addPhoto, deletePhoto, loadInto } from './photos.js';
 import { monthlySection } from './monthly.js';
 import { account, enabled as cloudOn } from './cloud.js';
 import { sharePhoto } from './groups.js';
-import { compSection, measureSection, weightGoalText, metricChart } from './bodycomp.js';
+import { compSection, measureSection, weightGoalText, metricChart, GAP_DAYS } from './bodycomp.js';
 import { importHealth } from './health.js';
 import { goalsButton } from './goals.js';
 
@@ -93,11 +93,11 @@ function weightScreen() {
     const shown = range ? all.filter((p) => p.x > Date.now() - range * 864e5) : all;
     fill(body,
       h('h2.detail-title', 'Weight'),
-      h('div.detail-date', 'The line is your 7-day average, which evens out daily water swings.'),
+      h('div.detail-date', `Each dot is a weigh-in. A break of more than ${GAP_DAYS} days starts a new section.`),
       h('div.segment.range', [[30, '1M'], [90, '3M'], [365, '1Y'], [0, 'All']].map(([d, l]) => h('button' + (range === d ? '.on' : ''), { onclick: () => { range = d; draw(); } }, l))),
-      h('section.card.chart-card', lineChart(shown.map((p) => ({ ...p, y: +toDisplay(p.y) })), {
-        height: 200, dots: shown.length < 40, fmtY: (v) => Math.round(v), label: 'Weight trend',
-        tip: (p) => `<b>${toDisplay(p.raw)} ${unit()}</b><span>Trend ${p.y} · ${fmtDate(p.x, { month: 'short', day: 'numeric' })}</span>`,
+      h('section.card.chart-card', lineChart(shown.map((p) => ({ ...p, y: +toDisplay(p.raw ?? p.y), avg: +toDisplay(p.y) })), {
+        height: 200, dots: 'all', gap: GAP_DAYS, area: false, fmtY: (v) => Math.round(v), label: 'Weigh-ins',
+        tip: (p) => `<b>${p.y} ${unit()}</b><span>7-day avg ${p.avg} · ${fmtDate(p.x, { month: 'short', day: 'numeric' })}</span>`,
       })),
       h('div.stats-inline',
         ...[[7, 'Week'], [30, 'Month'], [90, '3 months']].map(([d, l]) => { const c = change(d); return h('div.stat', h('span.stat-k', l), h('span.stat-v', c == null ? '—' : signed(c))); })),

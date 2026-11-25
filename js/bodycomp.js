@@ -117,7 +117,7 @@ function leanPoints() {
 export function bodyMetrics(trendPts) {
   const mass = (v) => +bodyDisplay(v), pct = (v) => Math.round(v * 10) / 10;
   const out = [
-    { k: 'weight', label: 'Weight', pts: trendPts, show: mass, unit: bodyUnit() },
+    { k: 'weight', label: 'Weight', pts: trendPts.map((p) => ({ x: p.x, y: p.raw ?? p.y })), show: mass, unit: bodyUnit(), weighIns: true },   // each weigh-in, as you stepped on the scale
     { k: 'fat', label: 'Body fat', pts: comp().filter((x) => x.fat != null).map((x) => ({ x: x.ts, y: x.fat })), show: pct, unit: '%' },
     { k: 'lean', label: 'Lean mass', pts: leanPoints(), show: mass, unit: bodyUnit() },
     { k: 'bmi', label: 'BMI', pts: heightM() ? trendPts.map((p) => ({ x: p.x, y: p.y / heightM() ** 2 })) : [], show: pct, unit: '' },
@@ -132,6 +132,8 @@ export function bodyMetrics(trendPts) {
 }
 
 const RANGES = [['3M', 90], ['1Y', 365], ['All', 1e5]];
+/** Weigh-ins more than this many days apart start a new section of the line. */
+export const GAP_DAYS = 10;
 /** The chart with a chip for each metric and a time range. Remembers your pick. */
 /** opts.pins(): progress photos (or anything) to pin on the line at their dates. */
 export function metricChart(trendPts, { pins = null } = {}) {
@@ -148,7 +150,7 @@ export function metricChart(trendPts, { pins = null } = {}) {
     fill(wrap,
       list.length > 1 ? h('div.chips.tight.metric-chips', list.map((x) => h('button.chip' + (x.k === k ? '.on' : ''), { onclick: () => { state.settings.bodyMetric = x.k; commit(); } }, x.label))) : null,
       h('div.metric-now', h('b', `${last}`), h('span', ` ${m.unit}`), shown.length > 1 ? h('span.metric-d' + (d === 0 ? '' : ''), ` ${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d)} ${m.unit} ${pts.length > 1 ? `in ${RANGES.find((r) => r[1] === days)?.[0] === 'All' ? 'all time' : RANGES.find((r) => r[1] === days)?.[0] === '1Y' ? 'a year' : '3 months'}` : 'overall'}`) : null),
-      lineChart(shown, { height: 150, dots: shown.length < 30, fmtY: (v) => (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10), label: `${m.label} over time`, pins: pins ? pins() : [],
+      lineChart(shown, { height: 150, dots: m.weighIns ? 'all' : shown.length < 30, gap: m.weighIns ? GAP_DAYS : null, area: !m.weighIns, fmtY: (v) => (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10), label: `${m.label} over time`, pins: pins ? pins() : [],
         tip: (p) => `<b>${p.y} ${m.unit}</b><span>${fmtDate(p.x, { month: 'short', day: 'numeric', year: 'numeric' })}</span>` }),
       h('div.segment.metric-range', RANGES.map(([l, v]) => h('button' + (v === days ? '.on' : ''), { onclick: () => { state.settings.bodyRange = v; commit(); } }, l))));
   }

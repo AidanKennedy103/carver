@@ -121,16 +121,24 @@ export function lineChart(data, opts = {}) {
   }
 
   const pts = data.map((d) => ({ ...d, px: px(d.x), py: py(d.y), over: ov ? nearest(ov.data, d.x) : undefined }));
-  const path = pts.map((p, i) => `${i ? 'L' : 'M'}${p.px.toFixed(1)} ${p.py.toFixed(1)}`).join(' ');
+  // opts.gap (days): a longer break between points starts a new section of the line, like a pause in tracking
+  const segs = [];
+  for (const p of pts) {
+    const prev = segs.length ? segs[segs.length - 1] : null;
+    if (prev && !(opts.gap && p.x - prev[prev.length - 1].x > opts.gap * 864e5)) prev.push(p); else segs.push([p]);
+  }
+  const pathOf = (seg) => seg.map((p, i) => `${i ? 'L' : 'M'}${p.px.toFixed(1)} ${p.py.toFixed(1)}`).join(' ');
   if (area && pts.length > 1) {
     const id = 'g' + Math.random().toString(36).slice(2, 8);
     const grad = s('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 });
     grad.append(s('stop', { offset: 0, 'stop-color': color, 'stop-opacity': 0.25 }), s('stop', { offset: 1, 'stop-color': color, 'stop-opacity': 0 }));
     const defs = s('defs'); defs.append(grad); svg.append(defs);
-    svg.append(s('path', { d: `${path} L${pts[pts.length - 1].px} ${H - padB} L${pts[0].px} ${H - padB} Z`, fill: `url(#${id})` }));
+    for (const seg of segs) if (seg.length > 1) svg.append(s('path', { d: `${pathOf(seg)} L${seg[seg.length - 1].px} ${H - padB} L${seg[0].px} ${H - padB} Z`, fill: `url(#${id})` }));
   }
-  svg.append(s('path', { d: path, fill: 'none', stroke: color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
-  if (dots && pts.length <= 40) for (const p of pts) svg.append(s('circle', { cx: p.px, cy: p.py, r: 3.5, fill: color, stroke: '#111113', 'stroke-width': 2 }));
+  for (const seg of segs) if (seg.length > 1) svg.append(s('path', { d: pathOf(seg), fill: 'none', stroke: color, 'stroke-width': opts.gap ? 1.75 : 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+  // Every point gets a dot when asked (dots: 'all'); otherwise only on short lines
+  const dotR = dots === 'all' ? (pts.length > 90 ? 2.5 : 3.25) : 3.5;
+  if (dots === 'all' || (dots && pts.length <= 40)) for (const p of pts) svg.append(s('circle', { cx: p.px, cy: p.py, r: dotR, fill: color, stroke: 'var(--surface, #111113)', 'stroke-width': dots === 'all' ? 1.5 : 2 }));
   const mk = opts.mark != null ? pts.find((p) => p.x === opts.mark) : null;   // a point to ring (a PR)
   if (mk) svg.append(s('circle', { cx: mk.px, cy: mk.py, r: 7, fill: 'none', stroke: color, 'stroke-width': 2 }), s('circle', { cx: mk.px, cy: mk.py, r: 3.5, fill: color }));
   wrap.append(svg);
