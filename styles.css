@@ -2301,3 +2301,12 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .hday-label.past { background: var(--gold-bg); color: var(--gold); }
 .hday-back { font-size: 11px; font-weight: 600; opacity: .8; }
 .hday-tip { margin-top: 6px; }
+
+/* Scans that calibrate your scale */
+.scan-kinds { margin: 4px 0 12px; flex-wrap: wrap; }
+.scan-date { width: auto; max-width: 170px; }
+.dexa-cta, .dexa-line { display: flex; width: 100%; text-align: left; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 13px; }
+.dexa-cta { align-items: center; color: var(--gold); font-weight: 600; }
+.dexa-line { flex-direction: column; gap: 2px; }
+.dexa-line b { font-size: 13px; }
+.dexa-line span { color: var(--muted); font-size: 12.5px; line-height: 1.35; }

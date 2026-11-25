@@ -6,7 +6,7 @@
 // (muscle and bone in kg). Measurements are off until you turn them on:
 // state.body.measures = [{ id, ts, waist, chest, … }] in cm.
 
-import { h, fill, sheet, toast, confirmBox, fmtDate, icon, promptBox } from './ui.js';
+import { h, fill, sheet, toast, confirmBox, fmtDate, icon, promptBox, actionSheet } from './ui.js';
 import { state, commit, uid, bodyDisplay, bodyFromDisplay, bodyUnit } from './store.js';
 import { lineChart, fitNote, seriesChart } from './charts.js';
 import { latestWeight } from './body.js';
@@ -26,6 +26,96 @@ const COMP = [
   { k: 'bone', label: 'Bone mass', mass: true },
 ];
 const showComp = (c, v) => (c.mass ? `${bodyDisplay(v)} ${bodyUnit()}` : `${Math.round(v * 10) / 10}%`);
+
+// ---------- Scans (DEXA and friends): the accurate readings your scale is calibrated to ----------
+// Home scales guess body fat from electrical resistance and are often a few % off, but they're
+// consistent. So when you add a scan, the scale's readings from within 3 days of it give the
+// offset, and every scale reading after that (until the next scan) is shifted by it.
+
+export const SCANS = [['dexa', 'DEXA'], ['inbody', 'InBody'], ['bodpod', 'Bod Pod'], ['hydro', 'Hydrostatic'], ['calipers', 'Calipers']];
+const scanName = (src) => SCANS.find(([k]) => k === src)?.[1] || null;
+const isScan = (r) => !!scanName(r.source);
+const NEAR = 3 * 864e5;
+const r1 = (v) => Math.round(v * 10) / 10;
+
+/** Each scan with fat %, and how far off the scale was around it (null if you didn't weigh in on it then). */
+export function scans() {
+  return comp().filter((r) => isScan(r) && r.fat != null).map((sc) => {
+    const near = comp().filter((x) => !isScan(x) && x.fat != null && Math.abs(x.ts - sc.ts) <= NEAR);
+    const read = near.length ? near.reduce((a, x) => a + x.fat, 0) / near.length : null;
+    return { ...sc, scaleRead: read, offset: read == null ? null : sc.fat - read };
+  });
+}
+/** The scan a scale reading is calibrated to: the latest one before it (or just after it), if it has an offset. */
+function calFor(ts) {
+  const list = scans().filter((x) => x.offset != null);
+  return list.filter((x) => x.ts <= ts + NEAR).pop() || list[0] || null;
+}
+/** Body fat % for a reading: scans as they are, scale readings shifted to match your scans. */
+export const fatOf = (r) => (r.fat == null ? null : isScan(r) ? r.fat : r1(r.fat + (calFor(r.ts)?.offset || 0)));
+
+/** Add a DEXA, InBody, Bod Pod, hydrostatic or caliper scan, on the day it was done. */
+function logScan() {
+  let kind = 'dexa';
+  const today = new Date(), iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const date = h('input.field.scan-date', { type: 'date', value: iso, max: iso, 'aria-label': 'Scan date' });
+  const kinds = h('div.chips.scan-kinds');
+  const drawKinds = () => fill(kinds, SCANS.map(([k, label]) => h('button.chip' + (k === kind ? '.on' : ''), { onclick: () => { kind = k; drawKinds(); } }, label)));
+  drawKinds();
+  const FIELDS = [['fat', 'Body fat', '%'], ['fatMass', 'Fat mass', bodyUnit()], ['lean', 'Lean mass', bodyUnit()], ['bone', 'Bone mass', bodyUnit()], ['visceral', 'Visceral fat', bodyUnit()]];
+  const inputs = {};
+  const s = sheet(h('div.form',
+    h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', 'Add a scan'), h('button.link.strong', { onclick: save }, 'Save')),
+    h('p.fine', 'Copy the numbers from your scan report. Fill in what it gives you; body fat alone is enough.'),
+    kinds,
+    h('div.group', h('label.goal-row', h('span', 'Date of scan'), date),
+      FIELDS.map(([k, label, u]) => {
+        inputs[k] = h('input.field.goal-input', { inputmode: 'decimal', placeholder: '—', 'aria-label': label });
+        return h('label.goal-row', h('span', label), h('span.goal-field', inputs[k], h('span.goal-unit', u)));
+      })),
+    h('p.fine', 'If you weigh in on your smart scale within 3 days of the scan, Carver works out how far off the scale reads and corrects its body fat and lean mass from then on.')));
+  function save() {
+    const num = (k) => { const v = parseFloat(inputs[k].value.replace(',', '.')); return v > 0 ? v : null; };
+    const ts = date.value ? new Date(date.value + 'T12:00').getTime() : Date.now();
+    const r = { id: uid(), ts, source: kind };
+    let fat = num('fat');
+    const fm = num('fatMass'), lean = num('lean'), bone = num('bone'), vis = num('visceral');
+    if (fat != null && fat >= 75) { toast('Body fat looks too high'); return; }
+    if (lean) r.lean = bodyFromDisplay(lean);
+    if (bone) r.bone = bodyFromDisplay(bone);
+    if (fm) r.fatMass = bodyFromDisplay(fm);
+    if (vis) r.visceral = bodyFromDisplay(vis);
+    // DEXA reports often lead with masses: work the % out from them if it's missing
+    if (fat == null && fm && lean) fat = (fm / (fm + lean + (bone || 0))) * 100;
+    if (fat != null) r.fat = r1(fat);
+    if (r.fat == null && r.lean == null) { toast('Add body fat, or fat and lean mass'); return; }
+    commit((st) => { st.body.comp = [...(st.body.comp || []), r].sort((a, b) => a.ts - b.ts); });
+    s.close();
+    const sc = scans().find((x) => x.id === r.id);
+    toast(sc?.offset != null && Math.abs(sc.offset) >= 0.5 ? `Saved. Your scale reads ${Math.abs(r1(sc.offset))}% ${sc.offset > 0 ? 'low' : 'high'}; corrected from now on` : 'Scan saved');
+  }
+}
+
+/** What "+ Add" offers: a quick reading, or a proper scan. */
+function addComp() {
+  actionSheet('Body composition', [
+    { label: 'Smart scale or calipers reading', onClick: logComp },
+    { label: 'DEXA, InBody or other scan', onClick: logScan },
+  ]);
+}
+
+/** One line about your latest scan and the correction it gives your scale. */
+function scanLine() {
+  const list = scans();
+  const last = list[list.length - 1] || comp().filter(isScan).pop();
+  if (!last) return h('button.dexa-cta', { onclick: logScan }, icon('target', 15), h('span', 'Had a DEXA or InBody scan? Add it to calibrate your scale'));
+  const when = fmtDate(last.ts, { month: 'short', day: 'numeric', ...(new Date(last.ts).getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) });
+  const off = last.offset;
+  const what = off == null ? 'Weigh in on your smart scale within 3 days of a scan to calibrate it.'
+    : Math.abs(off) < 0.5 ? 'Your scale matched it closely, so no correction needed.'
+      : `Your scale read ${Math.abs(r1(off))}% ${off > 0 ? 'low' : 'high'}, so its readings are corrected by that.`;
+  return h('button.dexa-line', { onclick: logScan }, h('b', `${scanName(last.source)} ${when}${last.fat != null ? ` · ${r1(last.fat)}%` : ''}`), h('span', what));
+}
 
 // ---------- BMI ----------
 
@@ -61,17 +151,19 @@ export function compSection() {
   const bmi = bmiOf(w?.kg);
   const goal = state.goals.bodyFat;
   const since = first30(list, 'fat');
+  const fatV = fat ? fatOf(fat) : null, adjusted = fat && !isScan(fat) && fatV !== fat.fat;
   return [
-    h('div.section-head', h('h2.section-title', 'Body composition'), h('button.link', { onclick: logComp }, '+ Add')),
+    h('div.section-head', h('h2.section-title', 'Body composition'), h('button.link', { onclick: addComp }, '+ Add')),
     list.length ? h('section.card',
       fat ? h('div.energy-top',
-        h('div', h('div.energy-v', `${Math.round(fat.fat * 10) / 10}`, h('span.orm-unit', '% fat')), h('div.energy-k', `${fmtDate(fat.ts, { month: 'short', day: 'numeric' })}${goal ? ` · goal ${goal}%` : ''}`)),
-        lean && Math.abs(lean.ts - fat.ts) < 864e5 ? h('div.energy-goal', h('div.weight-change', `${bodyDisplay(lean.lean)} ${bodyUnit()}`), h('div.energy-k', 'lean mass'))
-          : w ? h('div.energy-goal', h('div.weight-change', `${bodyDisplay(w.kg * (1 - fat.fat / 100))} ${bodyUnit()}`), h('div.energy-k', 'lean mass')) : null) : null,
-      since && fat && since !== fat ? h('p.fine', `${fat.fat - since.fat > 0 ? '+' : ''}${Math.round((fat.fat - since.fat) * 10) / 10}% body fat in the last 30 days.`) : null,
+        h('div', h('div.energy-v', `${Math.round(fatV * 10) / 10}`, h('span.orm-unit', '% fat')), h('div.energy-k', `${fmtDate(fat.ts, { month: 'short', day: 'numeric' })}${adjusted ? ` · scale said ${r1(fat.fat)}%` : isScan(fat) ? ` · ${scanName(fat.source)}` : ''}${goal ? ` · goal ${goal}%` : ''}`)),
+        lean && Math.abs(lean.ts - fat.ts) < 864e5 && (isScan(lean) || !adjusted) ? h('div.energy-goal', h('div.weight-change', `${bodyDisplay(lean.lean)} ${bodyUnit()}`), h('div.energy-k', 'lean mass'))
+          : w ? h('div.energy-goal', h('div.weight-change', `${bodyDisplay(w.kg * (1 - fatV / 100))} ${bodyUnit()}`), h('div.energy-k', 'lean mass')) : null) : null,
+      since && fat && since !== fat ? h('p.fine', `${fatV - fatOf(since) > 0 ? '+' : ''}${r1(fatV - fatOf(since))}% body fat in the last 30 days.`) : null,
       h('div.comp-grid', w ? bmiTile(w) : null, COMP.filter((c) => c.k !== 'fat' && !(c.k === 'lean' && fat)).map((c) => { const x = latest(list, c.k); return x ? h('div.tile', h('div.tile-v', showComp(c, x[c.k])), h('div.tile-k', c.label)) : null; })),
-      bmi ? h('p.fine', `BMI ${bmi.toFixed(1)} is ${bmiWord(bmi)}${/range/.test(bmiWord(bmi)) ? '' : ' the 18.5–25 range'}. It only uses height and weight, so muscular lifters often read high; body fat and lean mass say more.`) : null)
-      : [w ? h('section.card', h('div.comp-grid', bmiTile(w))) : null, h('button.card.empty-plan-row', { onclick: logComp }, icon('chart', 18), h('span', 'Add your body fat or a smart-scale reading'))],
+      bmi ? h('p.fine', `BMI ${bmi.toFixed(1)} is ${bmiWord(bmi)}${/range/.test(bmiWord(bmi)) ? '' : ' the 18.5–25 range'}. It only uses height and weight, so muscular lifters often read high; body fat and lean mass say more.`) : null,
+      scanLine())
+      : [w ? h('section.card', h('div.comp-grid', bmiTile(w))) : null, h('button.card.empty-plan-row', { onclick: addComp }, icon('chart', 18), h('span', 'Add your body fat, a smart-scale reading or a DEXA scan'))],
   ];
 }
 
@@ -109,7 +201,7 @@ function leanPoints() {
   return [...measured, ...comp().filter((c) => c.fat != null && c.lean == null && !measured.some((m) => Math.abs(m.x - c.ts) < 864e5)).map((c) => {
     let best = null;
     for (const w of ws) if (Math.abs(w.ts - c.ts) < 3 * 864e5 && (!best || Math.abs(w.ts - c.ts) < Math.abs(best.ts - c.ts))) best = w;
-    return best ? { x: c.ts, y: best.kg * (1 - c.fat / 100) } : null;
+    return best ? { x: c.ts, y: best.kg * (1 - fatOf(c) / 100) } : null;
   }).filter(Boolean)].sort((a, b) => a.x - b.x);
 }
 
@@ -118,7 +210,7 @@ export function bodyMetrics(trendPts) {
   const mass = (v) => +bodyDisplay(v), pct = (v) => Math.round(v * 10) / 10;
   const out = [
     { k: 'weight', label: 'Weight', pts: trendPts.map((p) => ({ x: p.x, y: p.raw ?? p.y })), show: mass, unit: bodyUnit(), weighIns: true },   // each weigh-in, as you stepped on the scale
-    { k: 'fat', label: 'Body fat', pts: comp().filter((x) => x.fat != null).map((x) => ({ x: x.ts, y: x.fat })), show: pct, unit: '%' },
+    { k: 'fat', label: 'Body fat', pts: comp().filter((x) => x.fat != null).map((x) => ({ x: x.ts, y: fatOf(x) })), show: pct, unit: '%' },
     { k: 'lean', label: 'Lean mass', pts: leanPoints(), show: mass, unit: bodyUnit() },
     { k: 'bmi', label: 'BMI', pts: heightM() ? trendPts.map((p) => ({ x: p.x, y: p.y / heightM() ** 2 })) : [], show: pct, unit: '' },
     { k: 'muscle', label: 'Muscle', pts: comp().filter((x) => x.muscle != null).map((x) => ({ x: x.ts, y: x.muscle })), show: mass, unit: bodyUnit() },
