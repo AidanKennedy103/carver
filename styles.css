@@ -2434,3 +2434,5 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .metric-del-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--red); padding: 4px 10px; border-radius: 8px; background: var(--red-bg); }
 .scan-unit-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 12px; font-size: 14px; color: var(--text-2); }
 .scan-unit { width: 120px; flex: none; }
+.rings-top .week-day { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rings-top .week-day + .rings-edit { margin-left: 0; }

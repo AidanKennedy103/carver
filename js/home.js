@@ -480,6 +480,8 @@ export function homePage() {
       swipe(h('section.card.rings-card',
         h('div.rings-top',
           h('div.segment.ring-view', [['day', 'Today'], ['week', 'Week']].map(([v, l]) => h('button' + (view === v ? '.on' : ''), { onclick: () => commit((st) => { st.settings.ringView = v; }) }, l))),
+          // Week view: how far into the week you are (weeks start on Monday)
+          view === 'week' ? h('span.week-day', `${DAY_SHORT[(new Date().getDay() + 6) % 7]} · day ${(new Date().getDay() + 6) % 7 + 1}/7`) : null,
           h('button.rings-edit', { onclick: editRings, 'aria-label': 'Choose goal tiles' }, icon('edit', 16))),
         goals.length ? goalTiles(goals, view)
           : h('button.link', { onclick: editRings }, 'Pick your goals')),
