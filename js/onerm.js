@@ -92,7 +92,14 @@ function oneRmDetail(id) {
     const readout = (p) => {
       const q = p || last;
       if (!q) { fill(rv, '—'); fill(rs, 'No workouts in this period'); return; }
-      fill(rv, big(q.y), h('span.lx-unit', ` ${unit()}`), q === allBest || (p && allBest && p.x === allBest.x) ? h('span.lx-pr', icon('trophy', 13), 'PR') : null);
+      const pr = q === allBest || (p && allBest && p.x === allBest.x) ? h('span.lx-pr', icon('trophy', 13), 'PR') : null;
+      if (p && m !== 'vol') {
+        // A point you tapped: the set you actually did, big, with what it works out to underneath
+        fill(rv, toDisplay(p.weight), h('span.lx-unit', ` ${unit()}`), h('span.lx-x', ' × '), String(p.reps), h('span.lx-unit', ' reps'), pr);
+        fill(rs, `${m === 'orm' ? `≈ ${big(p.y)} ${unit()} est. 1RM · ` : ''}${dateLong(p.x)}`);
+        return;
+      }
+      fill(rv, big(q.y), h('span.lx-unit', ` ${unit()}`), pr);
       fill(rs, `${p ? '' : 'Latest · '}${dateLong(q.x)} · ${setText(q)}`);
     };
     readout(null);
@@ -104,7 +111,7 @@ function oneRmDetail(id) {
       h('section.card.chart-card.lx-chart', lineChart(pts.map((p) => ({ ...p, kg: p.y, y: +toDisplay(p.y) })), {
         height: 220, fmtY: (v) => (v >= 10000 ? `${Math.round(v / 1000)}k` : Math.round(v)), label: `${info.name}: ${MEASURES.find(([k]) => k === m)[1]}`,
         fmtX: (t) => new Date(t).toLocaleDateString(undefined, days && days <= 182 ? { month: 'short', day: 'numeric' } : { month: 'short', year: '2-digit' }),
-        dots: pts.length <= 30, mark: best?.x,
+        dots: pts.length <= 30, mark: best?.x, sticky: true,
         onSelect: (p) => readout(p ? pts.find((x) => x.x === p.x) : null),
         empty: all.length ? 'Nothing in this period. Try a longer one.' : 'Log this lift to see your graph',
       })),
@@ -114,7 +121,7 @@ function oneRmDetail(id) {
         h('div.lx-stat', h('span.lx-k', 'Change'), h('span.lx-v' + (change > 0 ? '.up' : change < 0 ? '.down' : ''), pts.length > 1 ? `${change > 0 ? '+' : change < 0 ? '−' : ''}${big(Math.abs(change))} ${unit()}` : '—'), h('span.lx-d', periodText)),
         h('div.lx-stat', h('span.lx-k', 'Sessions'), h('span.lx-v', pts.length), h('span.lx-d', periodText))) : null,
       allBest ? h('div.lx-pr-row', icon('trophy', 16), h('span', h('b', `All-time best ${big(allBest.y)} ${unit()}`), ` · ${setText(allBest)} · ${fmtDate(allBest.x, { month: 'short', day: 'numeric', year: 'numeric' })}`)) : null,
-      h('p.fine.lx-note', `${MEASURES.find(([k]) => k === m)[2]}. Drag across the chart to see any workout.`),
+      h('p.fine.lx-note', `${MEASURES.find(([k]) => k === m)[2]}. Tap or drag across the chart to see the weight and reps you did.`),
       h('div.bottom-space'));
   }
   draw();

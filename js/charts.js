@@ -56,7 +56,8 @@ export function fitNote(data, unit) {
 }
 
 /** Attach a tooltip that follows the finger/mouse to the nearest point. */
-function addTooltip(wrap, svg, pts, W, render, onSelect = null) {
+/** sticky: a tap keeps its point picked until you tap off the chart. */
+function addTooltip(wrap, svg, pts, W, render, onSelect = null, sticky = false) {
   const tip = h('div.chart-tip');
   const cross = s('line', { class: 'chart-cross', y1: 0, y2: '100%' });
   const dot = s('circle', { r: 5, class: 'chart-hover-dot' });
@@ -81,6 +82,11 @@ function addTooltip(wrap, svg, pts, W, render, onSelect = null) {
   const hide = () => { tip.classList.remove('show'); cross.style.display = dot.style.display = 'none'; onSelect?.(null); };
   svg.addEventListener('pointerdown', (e) => show(e.clientX));
   svg.addEventListener('pointermove', (e) => show(e.clientX));
+  if (sticky) {
+    const off = (e) => { if (!wrap.isConnected) document.removeEventListener('pointerdown', off, true); else if (!svg.contains(e.target)) hide(); };
+    document.addEventListener('pointerdown', off, true);
+    return;
+  }
   svg.addEventListener('pointerleave', hide);
   svg.addEventListener('pointerup', (e) => { if (e.pointerType !== 'mouse') setTimeout(hide, 1600); });
 }
@@ -217,7 +223,7 @@ export function lineChart(data, opts = {}) {
     }
     host.insertBefore(lane, svg);
   }
-  addTooltip(wrap, svg, pts, W, opts.tip || ((p) => `<b>${fmtY(p.y)}</b><span>${fmtX(p.x)}</span>`), opts.onSelect || null);
+  addTooltip(wrap, svg, pts, W, opts.tip || ((p) => `<b>${fmtY(p.y)}</b><span>${fmtX(p.x)}</span>`), opts.onSelect || null, !!opts.sticky);
   return wrap;
 }
 
