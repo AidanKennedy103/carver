@@ -118,8 +118,8 @@ function oneRmDetail(id) {
       const when = q.gran === 'month' ? `Best in ${fmtDate(q.x, { month: 'long', year: 'numeric' })} · ${dateLong(q.x)}`
         : q.gran === 'week' ? `Best that week · ${dateLong(q.x)}` : `${p ? '' : 'Latest · '}${dateLong(q.x)}`;
       fill(rs, when);
-      const sets = setsOf(q);
-      fill(rsets, sets.length ? sets.map((x) => h('span.lx-set' + (x.weight === q.weight && x.reps === q.reps ? '.top' : ''), `${toDisplay(x.weight)} × ${x.reps}`)) : h('span.lx-set', setText(q)));
+      // just the set the number comes from
+      fill(rsets, h('span.lx-set.top', m === 'vol' ? setText(q) : `${toDisplay(q.weight)} ${unit()} × ${q.reps}`));
     };
     readout(null);
 
