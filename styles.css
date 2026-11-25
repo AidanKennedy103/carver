@@ -2235,3 +2235,10 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .schart-pins { position: relative; height: 22px; }
 .schart .pin-bubble { position: absolute; top: 24px; transform: translateX(-50%); z-index: 3; }
 .metric-range.top { margin: 6px 0 10px; }
+
+/* Scale on the left */
+.schart { margin: 6px 0 0 -4px; }
+.schart-scroll { margin-right: 0; margin-left: 38px; }
+.schart-axis { left: 0; right: auto; border-left: 0; border-right: 1px solid var(--line); }
+.schart-axis span { left: auto; right: 6px; top: auto; transform: translateY(-50%); }
+.schart-axis span.goal { color: var(--muted); font-style: italic; }

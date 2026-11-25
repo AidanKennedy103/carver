@@ -4,7 +4,7 @@
 // Series colors were checked with the dataviz palette validator against the
 // dark card surface (#111113): lightness band, colour-blind separation, contrast.
 
-import { h } from './ui.js';
+import { h, fill } from './ui.js';
 
 export const COLORS = {
   gold: '#e3b04b',          // single-series lines (brand accent)
@@ -301,8 +301,9 @@ function monotonePath(seg) {
 
 /**
  * A FitIndex-style chart: points evenly spaced (about `per` to a screen), one smooth line with a
- * fill to the bottom, the value on each point, a fixed scale on the right, and you scroll side to
- * side through everything (it opens on the newest). data: [{ x (date), y }], oldest first.
+ * fill to the bottom, the value on each point, the scale on the left, and you scroll side to side
+ * through everything (it opens on the newest). The scale fits the points on screen and refits
+ * when you stop scrolling. data: [{ x (date), y }], oldest first.
  * opts: { per, height, labels, goal, fmtY, fmtX, onSelect(point|null), pins: [{ x, el, prompt, onClick, label }], minSpan }
  */
 export function seriesChart(data, opts = {}) {
@@ -315,74 +316,96 @@ export function seriesChart(data, opts = {}) {
   const W = Math.max(plotW, n * step);
   const lead = W - n * step;   // fewer points than a screen: they sit at the right, newest last
   const px = (i) => lead + step * (i + 0.5);
-  // One scale for everything, so nothing jumps while you scroll; room under the line for the fill
-  const ys = data.map((d) => d.y).concat(goal != null ? [goal] : []);
-  let lo = Math.min(...ys), hi = Math.max(...ys);
-  if (hi - lo < minSpan) { const c = (lo + hi) / 2; lo = c - minSpan / 2; hi = c + minSpan / 2; }
-  const span = hi - lo || 1;
-  const top = hi + span * 0.18, bot = lo - span * 0.55;
-  const py = (y) => padT + (1 - (y - bot) / (top - bot)) * (H - padT - padB);
-  const pts = data.map((d, i) => ({ ...d, i, px: px(i), py: py(d.y) }));
+  const scroller = h('div.schart-scroll');
+  const axis = h('div.schart-axis');
+  let picked = -1, first = Math.max(0, n - per), bubble = null;
 
-  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, class: 'schart-svg', role: 'img', 'aria-label': opts.label || 'Chart' });
-  svg.style.width = `${(W / plotW) * 100}%`;
-  const id = 'sg' + Math.random().toString(36).slice(2, 8);
-  const grad = s('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 });
-  grad.append(s('stop', { offset: 0, 'stop-color': color, 'stop-opacity': 0.55 }), s('stop', { offset: 0.65, 'stop-color': color, 'stop-opacity': 0.16 }), s('stop', { offset: 1, 'stop-color': color, 'stop-opacity': 0.02 }));
-  const defs = s('defs'); defs.append(grad); svg.append(defs);
-  // a dashed guide under every point, and its date along the bottom
-  const every = step < 34 ? Math.ceil(34 / step) : 1;
-  for (const p of pts) {
-    svg.append(s('line', { x1: p.px, x2: p.px, y1: padT - 14, y2: H - padB, class: 'schart-vgrid' }));
-    if ((n - 1 - p.i) % every === 0) { const t = s('text', { x: p.px, y: H - 8, class: 'schart-x', 'text-anchor': 'middle' }); t.textContent = fmtX(p.x, p); svg.append(t); }
+  /** The scale for the points on screen: they fill the height, with room under the line for the fill. */
+  function scaleFor(i0) {
+    const vis = data.slice(Math.max(0, i0 - 1), Math.min(n, i0 + per + 1)).map((d) => d.y);
+    let lo = Math.min(...vis), hi = Math.max(...vis);
+    if (hi - lo < minSpan) { const c = (lo + hi) / 2; lo = c - minSpan / 2; hi = c + minSpan / 2; }
+    const span = hi - lo || 1;
+    return { top: hi + span * 0.22, bot: lo - span * 0.35 };
   }
-  svg.append(s('line', { x1: 0, x2: W, y1: H - padB, y2: H - padB, class: 'schart-base' }));
-  if (goal != null) svg.append(s('line', { x1: 0, x2: W, y1: py(goal), y2: py(goal), class: 'schart-goal' }));
-  const line = monotonePath(pts);
-  svg.append(s('path', { d: `${line} L${pts[n - 1].px} ${H - padB} L${pts[0].px} ${H - padB} Z`, fill: `url(#${id})` }));
-  svg.append(s('path', { d: line, fill: 'none', stroke: color, 'stroke-width': 2.25, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
-  const dots = pts.map((p) => { const c = s('circle', { cx: p.px, cy: p.py, r: 4.5, class: 'schart-dot' }); svg.append(c); return c; });
-  if (labels) for (const p of pts) { const t = s('text', { x: p.px, y: p.py - 11, class: 'schart-val', 'text-anchor': 'middle' }); t.textContent = fmtY(p.y); svg.append(t); }
 
-  // Tap a point to pick it (tap it again, or off the chart, to let go)
-  let picked = -1;
-  const pick = (i) => {
-    if (picked >= 0) dots[picked].classList.remove('on');
-    picked = i === picked ? -1 : i;
-    if (picked >= 0) dots[picked].classList.add('on');
-    onSelect?.(picked >= 0 ? pts[picked] : null);
-  };
-  svg.addEventListener('click', (e) => {
-    const r = svg.getBoundingClientRect();
-    const x = ((e.clientX - r.left) / r.width) * W;
-    pick(Math.max(0, Math.min(n - 1, Math.round((x - lead) / step - 0.5))));
-  });
+  function render() {
+    const { top, bot } = scaleFor(first);
+    const py = (y) => padT + (1 - (y - bot) / (top - bot)) * (H - padT - padB);
+    const pts = data.map((d, i) => ({ ...d, i, px: px(i), py: py(d.y) }));
+    const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, class: 'schart-svg', role: 'img', 'aria-label': opts.label || 'Chart' });
+    svg.style.width = `${(W / plotW) * 100}%`;
+    const id = 'sg' + Math.random().toString(36).slice(2, 8);
+    const grad = s('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 });
+    grad.append(s('stop', { offset: 0, 'stop-color': color, 'stop-opacity': 0.55 }), s('stop', { offset: 0.65, 'stop-color': color, 'stop-opacity': 0.16 }), s('stop', { offset: 1, 'stop-color': color, 'stop-opacity': 0.02 }));
+    const cid = 'sc' + Math.random().toString(36).slice(2, 8);
+    const clip = s('clipPath', { id: cid }); clip.append(s('rect', { x: 0, y: padT - 16, width: W, height: H - padB - padT + 16 }));
+    const defs = s('defs'); defs.append(grad, clip); svg.append(defs);
+    // a dashed guide under every point, and its date along the bottom
+    const every = step < 34 ? Math.ceil(34 / step) : 1;
+    for (const p of pts) {
+      svg.append(s('line', { x1: p.px, x2: p.px, y1: padT - 14, y2: H - padB, class: 'schart-vgrid' }));
+      if ((n - 1 - p.i) % every === 0) { const t = s('text', { x: p.px, y: H - 8, class: 'schart-x', 'text-anchor': 'middle' }); t.textContent = fmtX(p.x, p); svg.append(t); }
+    }
+    svg.append(s('line', { x1: 0, x2: W, y1: H - padB, y2: H - padB, class: 'schart-base' }));
+    const g = s('g', { 'clip-path': `url(#${cid})` });   // points off this scale (scrolled away) are cut at the edge
+    if (goal != null && goal > bot && goal < top) g.append(s('line', { x1: 0, x2: W, y1: py(goal), y2: py(goal), class: 'schart-goal' }));
+    const line = monotonePath(pts);
+    g.append(s('path', { d: `${line} L${pts[n - 1].px} ${H - padB} L${pts[0].px} ${H - padB} Z`, fill: `url(#${id})` }));
+    g.append(s('path', { d: line, fill: 'none', stroke: color, 'stroke-width': 2.25, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    const dots = pts.map((p) => { const c = s('circle', { cx: p.px, cy: p.py, r: 4.5, class: 'schart-dot' + (p.i === picked ? ' on' : '') }); g.append(c); return c; });
+    if (labels) for (const p of pts) { const t = s('text', { x: p.px, y: p.py - 11, class: 'schart-val', 'text-anchor': 'middle' }); t.textContent = fmtY(p.y); g.append(t); }
+    svg.append(g);
+    // Tap a point to pick it (tap it again to let go)
+    svg.addEventListener('click', (e) => {
+      const r = svg.getBoundingClientRect();
+      const i = Math.max(0, Math.min(n - 1, Math.round((((e.clientX - r.left) / r.width) * W - lead) / step - 0.5)));
+      if (picked >= 0) dots[picked].classList.remove('on');
+      picked = i === picked ? -1 : i;
+      if (picked >= 0) dots[picked].classList.add('on');
+      onSelect?.(picked >= 0 ? pts[picked] : null);
+    });
 
-  const scroller = h('div.schart-scroll', svg);
-  // Pins (progress photos) sit above the point nearest their date and scroll with the chart
-  const pins = (opts.pins || []).filter((p) => p.x >= data[0].x - 3 * 864e5 && p.x <= data[n - 1].x + 3 * 864e5);
-  if (pins.length) {
+    // Pins (progress photos) above the point nearest their date; they scroll with the chart
     const lane = h('div.schart-pins', { style: { width: `${(W / plotW) * 100}%` } });
-    let bubble = null;
     const close = () => { bubble?.remove(); bubble = null; lane.querySelector('.chart-pin.on')?.classList.remove('on'); };
-    for (const pin of pins) {
+    for (const pin of (opts.pins || []).filter((q) => q.x >= data[0].x - 3 * 864e5 && q.x <= data[n - 1].x + 3 * 864e5)) {
       let best = 0;
-      for (const p of pts) if (Math.abs(p.x - pin.x) < Math.abs(pts[best].x - pin.x)) best = p.i;
+      for (const q of pts) if (Math.abs(q.x - pin.x) < Math.abs(pts[best].x - pin.x)) best = q.i;
       const left = `${(pts[best].px / W) * 100}%`;
       const btn = h('button.chart-pin', { style: { left }, 'aria-label': pin.label || 'Pinned item' }, pin.el);
       btn.onclick = () => {
         if (!pin.prompt) { pin.onClick(); return; }
         const same = btn.classList.contains('on'); close(); if (same) return;
-        bubble = h('button.pin-bubble', { style: { left }, onclick: (e) => { e.stopPropagation(); close(); pin.onClick(); } }, pin.prompt, h('span.pin-go', '›'));
+        bubble = h('button.pin-bubble', { style: { left }, onclick: (ev) => { ev.stopPropagation(); close(); pin.onClick(); } }, pin.prompt, h('span.pin-go', '›'));
         btn.classList.add('on'); lane.append(bubble);
       };
       lane.append(btn);
     }
-    scroller.prepend(lane);
+    const left = scroller.scrollLeft;
+    fill(scroller, lane.childElementCount ? lane : null, svg);
+    scroller.scrollLeft = left;
+
+    // The scale, on the left: top, middle and bottom of what's on screen (and your goal when it's in view)
+    const mark = (v, cls = '') => h('span' + cls, { style: { top: `${(py(v) / H) * 100}%` } }, fmtY(Math.round(v * 10) / 10));
+    const inside = (v) => v > bot + (top - bot) * 0.04 && v < top - (top - bot) * 0.04;
+    let ticks = niceTicks(bot, top, 3).filter(inside);
+    if (ticks.length < 2) ticks = niceTicks(bot, top, 5).filter((v) => inside(v) && Number.isInteger(v));   // always at least two marks
+    if (ticks.length > 3) ticks = ticks.filter((_, i) => i % 2 === 0);
+    fill(axis, ticks.map((v) => mark(v)), goal != null && goal > bot && goal < top && ticks.every((v) => Math.abs(py(v) - py(goal)) > 14) ? mark(goal, '.goal') : null);
   }
-  // The scale, fixed on the right while the chart scrolls
-  const axis = h('div.schart-axis', h('span', fmtY(Math.round(top))), goal != null ? h('span.goal', { style: { top: `${(py(goal) / H) * 100}%` } }, fmtY(Math.round(goal))) : null, h('span.bot', fmtY(Math.round(bot))));
-  wrap.append(scroller, axis);
+
+  render();
+  wrap.append(axis, scroller);
+  // Refit the scale to the points you've scrolled to, once you stop
+  let t = 0;
+  scroller.addEventListener('scroll', () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const i0 = Math.max(0, Math.min(n - per, Math.round((scroller.scrollLeft / scroller.scrollWidth) * W / step - lead / step)));
+      if (i0 !== first) { first = i0; render(); }
+    }, 140);
+  }, { passive: true });
   const ro = new ResizeObserver(() => { if (scroller.clientWidth) { scroller.scrollLeft = scroller.scrollWidth; ro.disconnect(); } });
   ro.observe(scroller);
   return wrap;
