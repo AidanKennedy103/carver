@@ -160,7 +160,7 @@ export function bodyFromDisplay(v) {
 export const distUnit = () => state.settings.distUnit || (unit() === 'kg' ? 'km' : 'mi');
 // The pieces of Home, in the order people choose (Settings → Edit Home page).
 export const HOME_SECTIONS = [
-  { id: 'rings', name: 'Goal rings', sub: 'Your rings for today or the week' },
+  { id: 'rings', name: 'Goal tiles', sub: 'Your goals for today or the week' },
   { id: 'restday', name: 'Rest-day check', sub: 'How your week is going on rest days' },
   { id: 'daily', name: 'Daily goals', sub: 'Slide to mark your daily goals done' },
   { id: 'next', name: 'Next workout', sub: 'Your next plan, ready to start' },

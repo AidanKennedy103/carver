@@ -163,7 +163,7 @@ function editRings() {
         return h('div.group-row.ring-pick' + (full ? '.dim' : ''),
           h('button.ring-pick-main', {
             onclick: () => {
-              if (full) { toast(`Up to ${MAX_RINGS} rings`); return; }
+              if (full) { toast(`Up to ${MAX_RINGS} goals`); return; }
               picked = on ? picked.filter((x) => x !== r.id) : [...picked, r.id];
               commit((st) => { st.goals.rings = picked; });
               draw();
@@ -181,7 +181,7 @@ function editRings() {
   }
   draw();
   const s = sheet(h('div.form',
-    h('div.sheet-head', h('span'), h('div.sheet-title', 'Your rings'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
+    h('div.sheet-head', h('span'), h('div.sheet-title', 'Your goal tiles'), h('button.link.strong', { onclick: () => s.close() }, 'Done')),
     box));
 }
 
@@ -480,9 +480,9 @@ export function homePage() {
       swipe(h('section.card.rings-card',
         h('div.rings-top',
           h('div.segment.ring-view', [['day', 'Today'], ['week', 'Week']].map(([v, l]) => h('button' + (view === v ? '.on' : ''), { onclick: () => commit((st) => { st.settings.ringView = v; }) }, l))),
-          h('button.rings-edit', { onclick: editRings, 'aria-label': 'Choose rings' }, icon('edit', 16))),
+          h('button.rings-edit', { onclick: editRings, 'aria-label': 'Choose goal tiles' }, icon('edit', 16))),
         goals.length ? goalTiles(goals, view)
-          : h('button.link', { onclick: editRings }, 'Pick your rings')),
+          : h('button.link', { onclick: editRings }, 'Pick your goals')),
       { left: view === 'day' ? setView('week') : null, right: view === 'week' ? setView('day') : null, target: () => body.querySelector('.rings-card') }),
     ],
       restday: () => tabOn('workout') && !state.active ? restBanner(() => goTab('workout')) : null,
