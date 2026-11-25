@@ -18,6 +18,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <script>
     // Light or dark before the first paint (js/theme.js keeps it in step after that)
+    if (navigator.standalone) document.documentElement.classList.add('standalone');   // opened from the Home Screen
     try {
       var t = localStorage.getItem('carver.theme');
       if (t === 'light') {

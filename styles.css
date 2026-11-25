@@ -2422,3 +2422,9 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 :root[data-theme="light"] .switch.on { background: var(--gold); box-shadow: none; }
 :root[data-theme="light"] .switch:not(.on) i { background: #fff; }
 .setup-food-label { margin-top: 18px; }
+/* iPhone Home Screen app in light mode: iOS ends the page about 50pt short of the bottom (dark status bar
+   text). Drop the tab bar (and the workout bar above it) down past that so it sits at the bottom edge. */
+:root { --drop: 0px; }
+:root.standalone[data-theme="light"] { --drop: 56px; }
+.tabbar { bottom: calc(-1 * var(--drop)); }
+.live-bar { bottom: calc(62px + var(--safe-bottom) - var(--drop)); }
