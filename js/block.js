@@ -260,7 +260,7 @@ export function exerciseList(exs, optsFor, onChange) {
     }
     i = j;
   }
-  holdToDrag(outer, { onDrop: (els) => onChange(els.flatMap((x) => x._exs)) });
+  holdToDrag(outer, { onDrop: (els) => onChange(els.flatMap((x) => x._exs)), collapse: true });
   return outer;
 }
 

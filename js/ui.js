@@ -350,7 +350,8 @@ export function toast(text, { action, onAction } = {}) {
  * onDrop(items) gets the list's items in their new order. Nested lists work: an item
  * only belongs to the list it sits directly in.
  */
-export function holdToDrag(list, { onDrop, hold = 380 } = {}) {
+/** collapse: fold every item down to its header while dragging (adds .collapsed to the list), so you can see the whole list. */
+export function holdToDrag(list, { onDrop, hold = 380, collapse = false } = {}) {
   let st = null;
   const own = () => [...list.children].filter((x) => x.classList.contains('dg-item'));
   const scroller = () => list.closest('.scroll-body') || document.scrollingElement;
@@ -360,6 +361,15 @@ export function holdToDrag(list, { onDrop, hold = 380 } = {}) {
     st.on = true;
     navigator.vibrate?.(18);
     const sc = scroller();
+    if (collapse) {
+      // Fold the list, then keep the held item's header under your finger
+      const before = el.getBoundingClientRect().top;
+      list.classList.add('collapsed');
+      const r = el.getBoundingClientRect();
+      sc.scrollTop += r.top - before;
+      const r2 = el.getBoundingClientRect();
+      st.y0 = r2.top + Math.min(st.y0 - before, r2.height / 2);
+    }
     st.sc = sc; st.scroll0 = sc.scrollTop; st.top0 = el.offsetTop;
     el.classList.add('dragging');
     list.classList.add('drag-on');
@@ -394,6 +404,12 @@ export function holdToDrag(list, { onDrop, hold = 380 } = {}) {
       cancelAnimationFrame(st.raf);
       st.el.classList.remove('dragging'); st.el.style.transform = '';
       list.classList.remove('drag-on');
+      if (collapse) {
+        // Unfold where you dropped it: that item stays where it is on screen
+        const before = st.el.getBoundingClientRect().top;
+        list.classList.remove('collapsed');
+        st.sc.scrollTop += st.el.getBoundingClientRect().top - before;
+      }
       window.addEventListener('click', stopClick, { capture: true, once: true });
       setTimeout(() => window.removeEventListener('click', stopClick, { capture: true }), 80);
       if (drop) onDrop?.(own());

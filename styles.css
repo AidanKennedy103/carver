@@ -2096,6 +2096,10 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .dg-item input, .dg-item textarea { -webkit-user-select: text; user-select: text; }
 .dg-item.dragging { position: relative; z-index: 5; transition: none; background: var(--surface-2, #1c1c1f); border-radius: 14px; box-shadow: 0 12px 30px rgba(0, 0, 0, .6); opacity: .97; }
 .drag-on > .dg-item:not(.dragging) { transition: transform .15s; }
+/* While you drag an exercise, every card folds to its name so the whole workout fits */
+.ex-stack.collapsed > .ex-card > :not(.card-head) { display: none; }
+.ex-stack.collapsed > .ex-group > :not(.ex-group-head):not(.grp-who) { display: none; }
+.ex-stack.collapsed > .dg-item { margin-bottom: 8px; }
 .drag-hint { margin: 10px 0 4px; }
 
 /* Superset / circuit: one card, round by round */
