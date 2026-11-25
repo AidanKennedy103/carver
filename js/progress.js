@@ -93,10 +93,11 @@ function weightScreen() {
     const shown = range ? all.filter((p) => p.x > Date.now() - range * 864e5) : all;
     fill(body,
       h('h2.detail-title', 'Weight'),
-      h('div.detail-date', `Each dot is a weigh-in. A break of more than ${GAP_DAYS} days starts a new section. The dashed line is your trend.`),
+      h('div.detail-date', `Each dot is a weigh-in. A break of more than ${GAP_DAYS} days starts a new section. The dashed line is your trend. Scroll the chart side to side to go back in time.`),
       h('div.segment.range', [[30, '1M'], [90, '3M'], [365, '1Y'], [0, 'All']].map(([d, l]) => h('button' + (range === d ? '.on' : ''), { onclick: () => { range = d; draw(); } }, l))),
-      h('section.card.chart-card', lineChart(shown.map((p) => ({ ...p, y: +toDisplay(p.raw ?? p.y), avg: +toDisplay(p.y) })), {
-        height: 200, dots: 'all', gap: GAP_DAYS, area: false, fit: true, fmtY: (v) => Math.round(v), label: 'Weigh-ins',
+      h('section.card.chart-card', lineChart((range ? all : shown).map((p) => ({ ...p, y: +toDisplay(p.raw ?? p.y), avg: +toDisplay(p.y) })), {
+        height: 200, dots: 'all', gap: GAP_DAYS, area: false, scroll: range || null,
+        fit: shown.map((p) => ({ x: p.x, y: +toDisplay(p.raw ?? p.y) })), fmtY: (v) => Math.round(v), label: 'Weigh-ins',
         tip: (p) => `<b>${p.y} ${unit()}</b><span>7-day avg ${p.avg} · ${fmtDate(p.x, { month: 'short', day: 'numeric' })}</span>`,
       })),
       fitNote(shown.map((p) => ({ x: p.x, y: +toDisplay(p.raw ?? p.y) })), unit()),

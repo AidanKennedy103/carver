@@ -146,11 +146,14 @@ export function metricChart(trendPts, { pins = null } = {}) {
     const m = list.find((x) => x.k === k);
     const pts = m.pts.filter((p) => p.x > Date.now() - days * 864e5);
     const shown = (pts.length > 1 ? pts : m.pts).map((p) => ({ ...p, y: m.show(p.y) }));
+    // Weigh-ins: the range sets how much fits across, and you scroll side to side for the rest
+    const scrolls = m.weighIns && days < 1e5 && pts.length > 1 && m.pts.length > pts.length;
+    const plotted = scrolls ? m.pts.map((p) => ({ ...p, y: m.show(p.y) })) : shown;
     const first = shown[0].y, last = shown[shown.length - 1].y, d = Math.round((last - first) * 10) / 10;
     fill(wrap,
       list.length > 1 ? h('div.chips.tight.metric-chips', list.map((x) => h('button.chip' + (x.k === k ? '.on' : ''), { onclick: () => { state.settings.bodyMetric = x.k; commit(); } }, x.label))) : null,
       h('div.metric-now', h('b', `${last}`), h('span', ` ${m.unit}`), shown.length > 1 ? h('span.metric-d' + (d === 0 ? '' : ''), ` ${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d)} ${m.unit} ${pts.length > 1 ? `in ${RANGES.find((r) => r[1] === days)?.[0] === 'All' ? 'all time' : RANGES.find((r) => r[1] === days)?.[0] === '1Y' ? 'a year' : '3 months'}` : 'overall'}`) : null),
-      lineChart(shown, { height: 150, dots: m.weighIns ? 'all' : shown.length < 30, gap: m.weighIns ? GAP_DAYS : null, area: !m.weighIns, fit: m.weighIns, fmtY: (v) => (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10), label: `${m.label} over time`, pins: pins ? pins() : [],
+      lineChart(plotted, { height: 150, dots: m.weighIns ? 'all' : shown.length < 30, gap: m.weighIns ? GAP_DAYS : null, area: !m.weighIns, fit: m.weighIns ? shown : null, scroll: scrolls ? days : null, fmtY: (v) => (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10), label: `${m.label} over time`, pins: pins ? pins() : [],
         tip: (p) => `<b>${p.y} ${m.unit}</b><span>${fmtDate(p.x, { month: 'short', day: 'numeric', year: 'numeric' })}</span>` }),
       m.weighIns ? fitNote(shown, m.unit) : null,
       h('div.segment.metric-range', RANGES.map(([l, v]) => h('button' + (v === days ? '.on' : ''), { onclick: () => { state.settings.bodyRange = v; commit(); } }, l))));

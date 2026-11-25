@@ -74,8 +74,9 @@ function addTooltip(wrap, svg, pts, W, render, onSelect = null) {
     if (onSelect) { onSelect(best); return; }   // the page shows the point itself
     tip.innerHTML = render(best);
     tip.classList.add('show');
-    const left = (best.px / W) * r.width;
-    tip.style.left = Math.max(4, Math.min(r.width - tip.offsetWidth - 4, left - tip.offsetWidth / 2)) + 'px';
+    const box = wrap.getBoundingClientRect();
+    const left = r.left - box.left + (best.px / W) * r.width;
+    tip.style.left = Math.max(4, Math.min(box.width - tip.offsetWidth - 4, left - tip.offsetWidth / 2)) + 'px';
   };
   const hide = () => { tip.classList.remove('show'); cross.style.display = dot.style.display = 'none'; onSelect?.(null); };
   svg.addEventListener('pointerdown', (e) => show(e.clientX));
@@ -94,16 +95,20 @@ const nearest = (list, x) => { let b = null, bd = 4 * 864e5; for (const d of lis
 
 export function lineChart(data, opts = {}) {
   const { height = 160, color = COLORS.gold, axes = true, fmtY = (v) => Math.round(v), fmtX = (t) => new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), goal = null, area = true, dots = true } = opts;
-  const W = 340, H = height;
+  let W = 340;
+  const H = height;
   const padL = axes ? 36 : 4, padR = axes ? 8 : 4, padT = 10, padB = axes ? 22 : 6;
   const wrap = h('div.chart');
   if (!data.length) { wrap.append(h('div.chart-empty', opts.empty || 'No data yet')); return wrap; }
   const ov = opts.overlay?.data?.length > 1 ? opts.overlay : null;   // { data, color, ref, fmt }: a smaller line with its own scale, in the bottom of the chart
   const xs = data.map((d) => d.x).concat(ov ? ov.data.map((d) => d.x) : []), ys = data.map((d) => d.y).concat(goal != null ? [goal] : []);
-  const fit = opts.fit ? linFit(data) : null;   // a dashed best-fit line: which way you're trending
+  const fit = opts.fit ? linFit(Array.isArray(opts.fit) ? opts.fit : data) : null;   // a dashed best-fit line: which way you're trending (opts.fit: true, or the points to fit)
   if (fit) ys.push(fit.at(fit.x0), fit.at(fit.x1));
   let x0 = Math.min(...xs), x1 = Math.max(...xs);
   if (x0 === x1) { x0 -= 864e5 * 3; x1 += 864e5 * 3; }
+  // opts.scroll (days): show that many days across, and scroll side to side through the rest (starts at the newest)
+  const wide = opts.scroll && axes ? Math.max(1, (x1 - x0) / (opts.scroll * 864e5)) : 1;
+  W = 340 * wide;
   const ticks = niceTicks(Math.min(...ys), Math.max(...ys));
   const y0 = ticks[0], y1 = ticks[ticks.length - 1];
   const px = (x) => padL + ((x - x0) / (x1 - x0)) * (W - padL - padR);
@@ -117,7 +122,7 @@ export function lineChart(data, opts = {}) {
       lab.textContent = fmtY(t);
       svg.append(lab);
     }
-    const n = Math.min(4, data.length);
+    const n = Math.min(Math.round(4 * wide), data.length);
     for (let i = 0; i < n; i++) {
       const t = x0 + ((x1 - x0) * i) / Math.max(1, n - 1);
       const lab = s('text', { x: px(t), y: H - 6, class: 'chart-axis', 'text-anchor': i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle' });
@@ -164,12 +169,32 @@ export function lineChart(data, opts = {}) {
   if (dots === 'all' || (dots && pts.length <= 40)) for (const p of pts) svg.append(s('circle', { cx: p.px, cy: p.py, r: dotR, fill: color, stroke: 'var(--surface, #111113)', 'stroke-width': dots === 'all' ? 1.5 : 2 }));
   const mk = opts.mark != null ? pts.find((p) => p.x === opts.mark) : null;   // a point to ring (a PR)
   if (mk) svg.append(s('circle', { cx: mk.px, cy: mk.py, r: 7, fill: 'none', stroke: color, 'stroke-width': 2 }), s('circle', { cx: mk.px, cy: mk.py, r: 3.5, fill: color }));
-  wrap.append(svg);
+  let host = wrap;
+  if (wide > 1) {
+    // The plot scrolls; the weight labels on the left stay put
+    host = h('div.chart-scroll-in', { style: { width: `${wide * 100}%` } });
+    const scroller = h('div.chart-scroll', host);
+    svg.classList.add('scrolls');
+    const yAxis = s('svg', { viewBox: `0 0 ${padL} ${H}`, class: 'chart-yaxis', 'aria-hidden': 'true' });
+    yAxis.style.width = `${(padL / 340) * 100}%`;
+    yAxis.append(s('rect', { x: 0, y: 0, width: padL, height: H - padB + 6, class: 'chart-yaxis-bg' }));
+    for (const t of ticks) {
+      const lab = s('text', { x: padL - 6, y: py(t) + 4, class: 'chart-axis', 'text-anchor': 'end' });
+      lab.textContent = fmtY(t);
+      yAxis.append(lab);
+    }
+    for (const lab of svg.querySelectorAll('text.chart-axis[text-anchor="end"]')) if (+lab.getAttribute('x') === padL - 6) lab.remove();
+    wrap.append(scroller, yAxis);
+    const ro = new ResizeObserver(() => { if (scroller.clientWidth) { scroller.scrollLeft = scroller.scrollWidth; ro.disconnect(); } });
+    ro.observe(scroller);
+  }
+  host.append(svg);
   // Pins: [{ x, el, onClick, label }] as small markers in a lane above the plot, at their date
   const pins = (opts.pins || []).filter((p) => p.x >= x0 && p.x <= x1);
   // A pin with a prompt asks first: tap it and a bubble ("View progress pic from Nov 23") opens the item
   if (pins.length) {
     const lane = h('div.chart-pins');
+    wrap.classList.add('has-pins');
     let bubble = null;
     const close = () => { bubble?.remove(); bubble = null; lane.querySelector('.chart-pin.on')?.classList.remove('on'); document.removeEventListener('pointerdown', outside, true); };
     const outside = (e) => { if (!lane.contains(e.target)) close(); };
@@ -190,7 +215,7 @@ export function lineChart(data, opts = {}) {
       btn.onclick = () => (pin.prompt ? ask(pin, btn) : pin.onClick());
       lane.append(btn);
     }
-    wrap.insertBefore(lane, svg);
+    host.insertBefore(lane, svg);
   }
   addTooltip(wrap, svg, pts, W, opts.tip || ((p) => `<b>${fmtY(p.y)}</b><span>${fmtX(p.x)}</span>`), opts.onSelect || null);
   return wrap;

@@ -2050,6 +2050,12 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .pin-bubble { position: absolute; top: 26px; z-index: 5; white-space: nowrap; display: flex; align-items: center; gap: 6px; padding: 7px 10px 7px 12px; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--gold); background: var(--surface-2); border: 1px solid rgba(227, 176, 75, .35); box-shadow: 0 6px 18px rgba(0, 0, 0, .45); }
 .pin-go { font-size: 17px; line-height: 1; }
 .pin-note { margin: 4px 0 8px; }
+.chart-scroll { overflow-x: auto; overflow-y: visible; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+.chart-scroll::-webkit-scrollbar { display: none; }
+.chart-svg.scrolls { touch-action: pan-x pan-y; }
+.chart-yaxis { position: absolute; left: 0; top: 0; height: auto; pointer-events: none; }
+.chart.has-pins .chart-yaxis { top: 24px; }
+.chart-yaxis-bg { fill: var(--surface); }
 .chart-fit { stroke: var(--text, #fff); stroke-opacity: .55; stroke-width: 1.5; stroke-dasharray: 5 4; stroke-linecap: round; }
 .fit-note { display: flex; align-items: center; gap: 8px; margin: 2px 0 0; font-size: 13px; color: var(--muted); }
 .fit-note i { width: 16px; border-top: 1.5px dashed currentColor; opacity: .8; }

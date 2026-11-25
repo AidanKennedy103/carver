@@ -163,7 +163,7 @@ addEventListener('touchcancel', edgeEnd);
  * (target(), or the element itself) slides in from the side you swiped toward.
  * Vertical scrolling, charts, inputs and sideways-scrolling rows are left alone.
  */
-const NO_SWIPE = 'input, textarea, select, .chips, .photo-strip, .chart-svg, .no-swipe, .swipe-row';
+const NO_SWIPE = 'input, textarea, select, .chips, .photo-strip, .chart-svg, .chart-scroll, .no-swipe, .swipe-row';
 export function swipe(el, { left, right, target, ignore } = {}) {
   let t = null;
   el.addEventListener('touchstart', (e) => {
