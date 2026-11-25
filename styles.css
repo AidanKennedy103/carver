@@ -2247,3 +2247,6 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .lx-sets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .lx-set { font-size: 13px; font-weight: 600; padding: 4px 9px; border-radius: 8px; background: var(--surface); color: var(--text); font-variant-numeric: tabular-nums; }
 .lx-set.top { background: var(--gold-bg); color: var(--gold); box-shadow: inset 0 0 0 1px rgba(227, 176, 75, .5); }
+
+/* Strength Tracking: the set behind the 1RM, bigger */
+.lx-sets .lx-set { font-size: 17px; font-weight: 700; padding: 6px 12px; border-radius: 10px; }
