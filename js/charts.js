@@ -302,12 +302,12 @@ function monotonePath(seg) {
 /**
  * A FitIndex-style chart: points evenly spaced (about `per` to a screen), one smooth line with a
  * fill to the bottom, the value on each point, the scale on the left, and you scroll side to side
- * through everything (it opens on the newest). The scale fits the points on screen and refits
- * when you stop scrolling. data: [{ x (date), y }], oldest first.
+ * through everything (it opens on the newest). One scale fits every point and never moves.
+ * data: [{ x (date), y }], oldest first.
  * opts: { per, height, labels, goal, fmtY, fmtX, onSelect(point|null), pins: [{ x, el, prompt, onClick, label }], minSpan }
  */
 export function seriesChart(data, opts = {}) {
-  const { per = 7, height = 320, color = COLORS.gold, labels = true, goal = null, fmtY = (v) => String(v), fmtX = (t) => new Date(t).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' }), onSelect = null, minSpan = 0 } = opts;
+  const { per = 7, height = 420, color = COLORS.gold, labels = true, goal = null, fmtY = (v) => String(v), fmtX = (t) => new Date(t).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' }), onSelect = null, minSpan = 0 } = opts;
   const wrap = h('div.schart');
   if (!data.length) { wrap.append(h('div.chart-empty', opts.empty || 'No data yet')); return wrap; }
   const VW = 340, axisW = 38, H = height, padT = 30, padB = 26;
@@ -318,26 +318,27 @@ export function seriesChart(data, opts = {}) {
   const px = (i) => lead + step * (i + 0.5);
   const scroller = h('div.schart-scroll');
   const axis = h('div.schart-axis');
-  let picked = -1, first = Math.max(0, n - per), bubble = null;
+  let picked = -1, bubble = null;
 
-  /** The scale for the points on screen: they fill the height, with room under the line for the fill. */
-  function scaleFor(i0) {
-    const vis = data.slice(Math.max(0, i0 - 1), Math.min(n, i0 + per + 1)).map((d) => d.y);
+  /** One scale for every point (like FitIndex), so it never moves as you scroll; the chart is tall
+   *  enough that the ups and downs still show. Room above the line, and the fill underneath. */
+  function scaleFor() {
+    const vis = data.map((d) => d.y);
     let lo = Math.min(...vis), hi = Math.max(...vis);
     if (hi - lo < minSpan) { const c = (lo + hi) / 2; lo = c - minSpan / 2; hi = c + minSpan / 2; }
     const span = hi - lo || 1;
-    return { top: hi + span * 0.16, bot: lo - span * 0.26 };
+    return { top: hi + span * 0.18, bot: lo - span * 0.3 };
   }
 
   function render() {
-    const { top, bot } = scaleFor(first);
+    const { top, bot } = scaleFor();
     const py = (y) => padT + (1 - (y - bot) / (top - bot)) * (H - padT - padB);
     const pts = data.map((d, i) => ({ ...d, i, px: px(i), py: py(d.y) }));
     const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, class: 'schart-svg', role: 'img', 'aria-label': opts.label || 'Chart' });
     svg.style.width = `${(W / plotW) * 100}%`;
     const id = 'sg' + Math.random().toString(36).slice(2, 8);
     const grad = s('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 });
-    grad.append(s('stop', { offset: 0, 'stop-color': color, 'stop-opacity': 0.55 }), s('stop', { offset: 0.65, 'stop-color': color, 'stop-opacity': 0.16 }), s('stop', { offset: 1, 'stop-color': color, 'stop-opacity': 0.02 }));
+    grad.append(s('stop', { offset: 0, 'stop-color': color, 'stop-opacity': 0.7 }), s('stop', { offset: 0.6, 'stop-color': color, 'stop-opacity': 0.38 }), s('stop', { offset: 1, 'stop-color': color, 'stop-opacity': 0.12 }));
     const cid = 'sc' + Math.random().toString(36).slice(2, 8);
     const clip = s('clipPath', { id: cid }); clip.append(s('rect', { x: 0, y: padT - 16, width: W, height: H - padB - padT + 16 }));
     const defs = s('defs'); defs.append(grad, clip); svg.append(defs);
@@ -397,15 +398,6 @@ export function seriesChart(data, opts = {}) {
 
   render();
   wrap.append(axis, scroller);
-  // Refit the scale to the points you've scrolled to, once you stop
-  let t = 0;
-  scroller.addEventListener('scroll', () => {
-    clearTimeout(t);
-    t = setTimeout(() => {
-      const i0 = Math.max(0, Math.min(n - per, Math.round((scroller.scrollLeft / scroller.scrollWidth) * W / step - lead / step)));
-      if (i0 !== first) { first = i0; render(); }
-    }, 140);
-  }, { passive: true });
   const ro = new ResizeObserver(() => { if (scroller.clientWidth) { scroller.scrollLeft = scroller.scrollWidth; ro.disconnect(); } });
   ro.observe(scroller);
   return wrap;
