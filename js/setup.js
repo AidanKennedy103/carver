@@ -22,6 +22,27 @@ const TOUR = {
   body: ['Physical Metrics', 'user', ['Log your weight (or sync a smart scale through Apple Health) to see your real trend.', 'Add a DEXA or InBody scan to calibrate your scale’s body fat.', 'Progress photos stay hidden behind a button until you want to see them.']],
 };
 
+// Little pictures of each Home piece, so you can see what you're picking (static drawings, no data)
+const spark = (d, gold = true) => `<svg viewBox="0 0 100 34" preserveAspectRatio="none" class="wp-spark"><path d="${d} L100 34 L0 34Z" class="wp-area${gold ? '' : ' blue'}"/><path d="${d}" class="wp-line${gold ? '' : ' blue'}"/></svg>`;
+const PREVIEW = {
+  rings: '<div class="wp-tiles"><i class="done"></i><i><b style="width:60%"></b></i><i><b style="width:35%"></b></i><i><b style="width:80%"></b></i></div>',
+  restday: '<div class="wp-note"><b>Rest day</b><span>On track · 2 of 3 this week</span></div>',
+  daily: '<div class="wp-slide done"><s></s>Drink water</div><div class="wp-slide"><s></s>50 push-ups</div>',
+  next: '<div class="wp-next"><div><b>Push day</b><span>6 exercises</span></div><em>Start</em></div>',
+  week: '<div class="wp-week">' + [0, 1, 2, 3, 4, 5, 6].map((i) => ([0, 2, 4].includes(i) ? '<i class="on"></i>' : '<i></i>')).join('') + '</div><div class="wp-cap">3 of 4 workouts</div>',
+  macros: '<div class="wp-macros"><svg viewBox="0 0 36 36" class="wp-ring"><circle cx="18" cy="18" r="14" class="wp-ring-bg"/><circle cx="18" cy="18" r="14" class="wp-ring-fg" stroke-dasharray="60 88"/></svg><div><i style="width:70%"></i><i style="width:45%"></i><i style="width:55%"></i></div></div>',
+  water: '<div class="wp-water"><i><b></b></i><em>+250</em></div><div class="wp-cap">1.5 of 2.5 L</div>',
+  readiness: '<div class="wp-ready"><span>82</span><div><b>Ready to train</b><i></i></div></div>',
+  progress: spark('M0 12 L14 14 L28 13 L42 18 L56 17 L70 22 L84 21 L100 26') + '<div class="wp-cap">−2.4 lb this month</div>',
+  strength: '<div class="wp-big">225<small> lb</small></div>' + spark('M0 28 L20 25 L40 24 L60 18 L80 15 L100 8'),
+  calendar: '<div class="wp-cal">' + Array.from({ length: 28 }, (_, i) => ([0, 2, 4].includes(i % 7) && i < 26 ? '<i class="on"></i>' : '<i></i>')).join('') + '</div>',
+  today: '<div class="wp-rows"><p><i class="g"></i>Push day · 52 min</p><p><i class="o"></i>1,840 kcal logged</p><p><i></i>Weighed in · 181.2</p></div>',
+  nudges: '<div class="wp-rows"><p><i class="g"></i>Progress photo</p><p><i></i>This month’s goals</p></div>',
+  groups: '<div class="wp-avs"><i></i><i></i><i></i></div><div class="wp-cap">Sam finished Leg day</div>',
+  profile: '<div class="wp-stats"><p><b>6</b>week streak</p><p><b>48</b>workouts</p><p><b>3</b>PRs</p></div>',
+};
+const preview = (id) => { const el = h('div.wp'); el.innerHTML = PREVIEW[id] || ''; return el; };
+
 /** Open the walkthrough. replay: started from Settings, so it starts from your current choices. */
 export function openSetup({ replay = false } = {}) {
   if (document.querySelector('.setup')) return;
@@ -129,14 +150,17 @@ export function openSetup({ replay = false } = {}) {
     home: () => {
       if (!d.home) d.home = homeFor();
       const avail = HOME_SECTIONS.filter((x) => !NEEDS[x.id] || d.tabs.includes(NEEDS[x.id]));
+      const order = (list) => list.sort((a, b) => HOME_SECTIONS.findIndex((q) => q.id === a) - HOME_SECTIONS.findIndex((q) => q.id === b));
       return [
         h('h2.setup-title', 'Build your Home page'),
-        h('p.setup-sub', 'Pick what you want to see when you open Carver. Change the order later in Settings → Edit Home page.'),
-        h('div.group', avail.map((x) => {
+        h('p.setup-sub', `Tap the widgets you want on Home. ${d.home.length} picked; change the order later in Settings → Edit Home page.`),
+        h('div.wgrid', avail.map((x) => {
           const on = d.home.includes(x.id);
-          return h('button.group-row.setup-pick', { onclick: () => { d.home = on ? d.home.filter((y) => y !== x.id) : [...d.home, x.id].sort((a, b) => HOME_SECTIONS.findIndex((q) => q.id === a) - HOME_SECTIONS.findIndex((q) => q.id === b)); draw(); } },
-            h('span.pick-check' + (on ? '.on' : ''), on ? icon('check', 16) : null),
-            h('span.tab-pick-text', h('span', x.name), h('span.tab-pick-sub', x.sub)));
+          return h('button.wcard' + (on ? '.on' : ''), { 'aria-pressed': String(on), onclick: () => { d.home = on ? d.home.filter((y) => y !== x.id) : order([...d.home, x.id]); draw(); } },
+            h('span.wcard-check', on ? icon('check', 13) : null),
+            h('div.wcard-pic', preview(x.id)),
+            h('b.wcard-name', x.name),
+            h('span.wcard-sub', x.sub));
         })),
       ];
     },
