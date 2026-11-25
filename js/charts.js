@@ -302,12 +302,12 @@ function monotonePath(seg) {
 /**
  * A FitIndex-style chart: points evenly spaced (about `per` to a screen), one smooth line with a
  * fill to the bottom, the value on each point, the scale on the left, and you scroll side to side
- * through everything (it opens on the newest). One scale fits every point, so it stays put as you
- * scroll. data: [{ x (date), y }], oldest first.
+ * through everything (it opens on the newest). The scale fits the points on screen and refits
+ * when you stop scrolling. data: [{ x (date), y }], oldest first.
  * opts: { per, height, labels, goal, fmtY, fmtX, onSelect(point|null), pins: [{ x, el, prompt, onClick, label }], minSpan }
  */
 export function seriesChart(data, opts = {}) {
-  const { per = 7, height = 236, color = COLORS.gold, labels = true, goal = null, fmtY = (v) => String(v), fmtX = (t) => new Date(t).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' }), onSelect = null, minSpan = 0 } = opts;
+  const { per = 7, height = 290, color = COLORS.gold, labels = true, goal = null, fmtY = (v) => String(v), fmtX = (t) => new Date(t).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' }), onSelect = null, minSpan = 0 } = opts;
   const wrap = h('div.schart');
   if (!data.length) { wrap.append(h('div.chart-empty', opts.empty || 'No data yet')); return wrap; }
   const VW = 340, axisW = 38, H = height, padT = 30, padB = 26;
@@ -318,11 +318,11 @@ export function seriesChart(data, opts = {}) {
   const px = (i) => lead + step * (i + 0.5);
   const scroller = h('div.schart-scroll');
   const axis = h('div.schart-axis');
-  let picked = -1, bubble = null;
+  let picked = -1, first = Math.max(0, n - per), bubble = null;
 
-  /** One scale for every point, so nothing jumps as you scroll; room under the line for the fill. */
-  function scaleFor() {
-    const vis = data.map((d) => d.y);
+  /** The scale for the points on screen: they fill the height, with room under the line for the fill. */
+  function scaleFor(i0) {
+    const vis = data.slice(Math.max(0, i0 - 1), Math.min(n, i0 + per + 1)).map((d) => d.y);
     let lo = Math.min(...vis), hi = Math.max(...vis);
     if (hi - lo < minSpan) { const c = (lo + hi) / 2; lo = c - minSpan / 2; hi = c + minSpan / 2; }
     const span = hi - lo || 1;
@@ -330,7 +330,7 @@ export function seriesChart(data, opts = {}) {
   }
 
   function render() {
-    const { top, bot } = scaleFor();
+    const { top, bot } = scaleFor(first);
     const py = (y) => padT + (1 - (y - bot) / (top - bot)) * (H - padT - padB);
     const pts = data.map((d, i) => ({ ...d, i, px: px(i), py: py(d.y) }));
     const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, class: 'schart-svg', role: 'img', 'aria-label': opts.label || 'Chart' });
@@ -397,6 +397,15 @@ export function seriesChart(data, opts = {}) {
 
   render();
   wrap.append(axis, scroller);
+  // Refit the scale to the points you've scrolled to, once you stop
+  let t = 0;
+  scroller.addEventListener('scroll', () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const i0 = Math.max(0, Math.min(n - per, Math.round((scroller.scrollLeft / scroller.scrollWidth) * W / step - lead / step)));
+      if (i0 !== first) { first = i0; render(); }
+    }, 140);
+  }, { passive: true });
   const ro = new ResizeObserver(() => { if (scroller.clientWidth) { scroller.scrollLeft = scroller.scrollWidth; ro.disconnect(); } });
   ro.observe(scroller);
   return wrap;
