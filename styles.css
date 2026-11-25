@@ -2212,3 +2212,6 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .set-tip { display: flex; align-items: flex-start; gap: 6px; margin: 2px 0 8px; font-size: 13px; color: var(--muted); }
 .set-tip .icon { flex: none; margin-top: 1px; color: var(--gold); }
 .set-tip .t-w { color: #ffb340; } .set-tip .t-d { color: #64d2ff; } .set-tip .t-f { color: var(--red); }
+
+/* Weight chart values on the points */
+.chart-val { font-size: 10.5px; font-weight: 700; fill: var(--gold); font-variant-numeric: tabular-nums; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }

@@ -109,13 +109,15 @@ export function lineChart(data, opts = {}) {
   const ov = opts.overlay?.data?.length > 1 ? opts.overlay : null;   // { data, color, ref, fmt }: a smaller line with its own scale, in the bottom of the chart
   const xs = data.map((d) => d.x).concat(ov ? ov.data.map((d) => d.x) : []), ys = (opts.yFrom?.length ? opts.yFrom : data).map((d) => d.y).concat(goal != null ? [goal] : []);   // yFrom: scale to just these points (e.g. the range in view)
   const fit = opts.fit ? linFit(Array.isArray(opts.fit) ? opts.fit : data) : null;   // a dashed best-fit line: which way you're trending (opts.fit: true, or the points to fit)
-  if (fit) ys.push(fit.at(fit.x0), fit.at(fit.x1));
   let x0 = Math.min(...xs), x1 = Math.max(...xs);
   if (x0 === x1) { x0 -= 864e5 * 3; x1 += 864e5 * 3; }
   // opts.scroll (days): show that many days across, and scroll side to side through the rest (starts at the newest)
   const wide = opts.scroll && axes ? Math.max(1, (x1 - x0) / (opts.scroll * 864e5)) : 1;
   W = 340 * wide;
-  const ticks = niceTicks(Math.min(...ys), Math.max(...ys));
+  // opts.minSpan: never zoom in tighter than this (so day-to-day noise doesn't look like a big swing)
+  let yLo = Math.min(...ys), yHi = Math.max(...ys);
+  if (opts.minSpan && yHi - yLo < opts.minSpan) { const c = (yLo + yHi) / 2; yLo = c - opts.minSpan / 2; yHi = c + opts.minSpan / 2; }
+  const ticks = niceTicks(yLo, yHi);
   const y0 = ticks[0], y1 = ticks[ticks.length - 1];
   const px = (x) => padL + ((x - x0) / (x1 - x0)) * (W - padL - padR);
   const py = (y) => padT + (1 - (y - y0) / (y1 - y0 || 1)) * (H - padT - padB);
@@ -154,25 +156,60 @@ export function lineChart(data, opts = {}) {
   }
 
   const pts = data.map((d) => ({ ...d, px: px(d.x), py: py(d.y), over: ov ? nearest(ov.data, d.x) : undefined }));
-  if (fit) svg.append(s('line', { x1: px(fit.x0), y1: py(fit.at(fit.x0)), x2: px(fit.x1), y2: py(fit.at(fit.x1)), class: 'chart-fit' }));
+  if (fit) {
+    const cid = 'c' + Math.random().toString(36).slice(2, 8);
+    const cp = s('clipPath', { id: cid }); cp.append(s('rect', { x: padL, y: padT, width: W - padL - padR, height: H - padT - padB }));
+    const defs = s('defs'); defs.append(cp); svg.append(defs);
+    svg.append(s('line', { x1: px(fit.x0), y1: py(fit.at(fit.x0)), x2: px(fit.x1), y2: py(fit.at(fit.x1)), class: 'chart-fit', 'clip-path': `url(#${cid})` }));
+  }
   // opts.gap (days): a longer break between points starts a new section of the line, like a pause in tracking
   const segs = [];
   for (const p of pts) {
     const prev = segs.length ? segs[segs.length - 1] : null;
     if (prev && !(opts.gap && p.x - prev[prev.length - 1].x > opts.gap * 864e5)) prev.push(p); else segs.push([p]);
   }
-  const pathOf = (seg) => seg.map((p, i) => `${i ? 'L' : 'M'}${p.px.toFixed(1)} ${p.py.toFixed(1)}`).join(' ');
+  const linePath = (seg) => seg.map((p, i) => `${i ? 'L' : 'M'}${p.px.toFixed(1)} ${p.py.toFixed(1)}`).join(' ');
+  // opts.smooth: a soft curve through the points that never bulges past them (monotone cubic)
+  const smoothPath = (seg) => {
+    if (seg.length < 3) return linePath(seg);
+    const n = seg.length, d = [], m = [];
+    for (let i = 0; i < n - 1; i++) d.push((seg[i + 1].py - seg[i].py) / (seg[i + 1].px - seg[i].px || 1));
+    m[0] = d[0]; m[n - 1] = d[n - 2];
+    for (let i = 1; i < n - 1; i++) m[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) / 2;
+    for (let i = 0; i < n - 1; i++) {
+      if (d[i] === 0) { m[i] = 0; m[i + 1] = 0; continue; }
+      const a = m[i] / d[i], b = m[i + 1] / d[i], s = a * a + b * b;
+      if (s > 9) { const t = 3 / Math.sqrt(s); m[i] = t * a * d[i]; m[i + 1] = t * b * d[i]; }
+    }
+    let out = `M${seg[0].px.toFixed(1)} ${seg[0].py.toFixed(1)}`;
+    for (let i = 0; i < n - 1; i++) {
+      const p = seg[i], q = seg[i + 1], dx = (q.px - p.px) / 3;
+      out += ` C${(p.px + dx).toFixed(1)} ${(p.py + m[i] * dx).toFixed(1)} ${(q.px - dx).toFixed(1)} ${(q.py - m[i + 1] * dx).toFixed(1)} ${q.px.toFixed(1)} ${q.py.toFixed(1)}`;
+    }
+    return out;
+  };
+  const pathOf = opts.smooth ? smoothPath : linePath;
   if (area && pts.length > 1) {
     const id = 'g' + Math.random().toString(36).slice(2, 8);
     const grad = s('linearGradient', { id, x1: 0, y1: 0, x2: 0, y2: 1 });
-    grad.append(s('stop', { offset: 0, 'stop-color': color, 'stop-opacity': 0.25 }), s('stop', { offset: 1, 'stop-color': color, 'stop-opacity': 0 }));
+    grad.append(s('stop', { offset: 0, 'stop-color': color, 'stop-opacity': opts.smooth ? 0.42 : 0.25 }), s('stop', { offset: 1, 'stop-color': color, 'stop-opacity': opts.smooth ? 0.03 : 0 }));
     const defs = s('defs'); defs.append(grad); svg.append(defs);
     for (const seg of segs) if (seg.length > 1) svg.append(s('path', { d: `${pathOf(seg)} L${seg[seg.length - 1].px} ${H - padB} L${seg[0].px} ${H - padB} Z`, fill: `url(#${id})` }));
   }
   for (const seg of segs) if (seg.length > 1) svg.append(s('path', { d: pathOf(seg), fill: 'none', stroke: color, 'stroke-width': opts.gap ? 1.75 : 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
   // Every point gets a dot when asked (dots: 'all'); otherwise only on short lines
   const dotR = dots === 'all' ? (pts.length > 90 ? 2.5 : 3.25) : 3.5;
-  if (dots === 'all' || (dots && pts.length <= 40)) for (const p of pts) svg.append(s('circle', { cx: p.px, cy: p.py, r: dotR, fill: color, stroke: 'var(--surface)', 'stroke-width': dots === 'all' ? 1.5 : 2 }));
+  if (dots === 'all' || (dots && pts.length <= 40)) for (const p of pts) svg.append(opts.ring
+    ? s('circle', { cx: p.px, cy: p.py, r: 4, fill: 'var(--surface)', stroke: color, 'stroke-width': 2 })
+    : s('circle', { cx: p.px, cy: p.py, r: dotR, fill: color, stroke: 'var(--surface)', 'stroke-width': dots === 'all' ? 1.5 : 2 }));
+  if (opts.labels) {
+    let lastX = -1e9;
+    for (const p of pts) {
+      if (p.px - lastX < 30) continue;   // no overlapping numbers
+      const t = s('text', { x: Math.min(W - padR - 10, p.px), y: Math.max(padT + 8, p.py - 9), class: 'chart-val', 'text-anchor': 'middle' });
+      t.textContent = fmtY(p.y); svg.append(t); lastX = p.px;
+    }
+  }
   const mk = opts.mark != null ? pts.find((p) => p.x === opts.mark) : null;   // a point to ring (a PR)
   if (mk) svg.append(s('circle', { cx: mk.px, cy: mk.py, r: 7, fill: 'none', stroke: color, 'stroke-width': 2 }), s('circle', { cx: mk.px, cy: mk.py, r: 3.5, fill: color }));
   let host = wrap;

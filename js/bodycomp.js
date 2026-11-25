@@ -133,6 +133,19 @@ export function bodyMetrics(trendPts) {
 
 const RANGES = [['1M', 30], ['3M', 91], ['1Y', 365], ['All', 1e5]];
 const RANGE_WORD = { 30: 'a month', 91: '3 months', 365: 'a year', 1e5: 'all time' };
+// Longer ranges show fewer points, like FitIndex: every weigh-in for a month, weekly averages for 3 months, monthly after that
+const GRAN = { 30: 'day', 91: 'week', 365: 'month', 1e5: 'month' };
+function bucket(list, gran) {
+  if (gran === 'day') return list.map((p) => ({ ...p, n: 1, gran }));
+  const keyOf = (t) => {
+    const d = new Date(t);
+    if (gran === 'month') return d.getFullYear() * 12 + d.getMonth();
+    d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime();
+  };
+  const groups = new Map();
+  for (const p of list) { const k = keyOf(p.x); (groups.get(k) || groups.set(k, []).get(k)).push(p); }
+  return [...groups.values()].map((g) => ({ x: g.reduce((a, p) => a + p.x, 0) / g.length, y: Math.round((g.reduce((a, p) => a + p.y, 0) / g.length) * 10) / 10, n: g.length, gran, start: g[0].x }));
+}
 /** Weigh-ins more than this many days apart start a new section of the line. */
 export const GAP_DAYS = 10;
 /** The chart with a chip for each metric and a time range. Remembers your pick. */
@@ -150,12 +163,14 @@ export function metricChart(trendPts, { pins = null } = {}) {
     const shown = (pts.length > 1 ? pts : m.pts).map((p) => ({ ...p, y: m.show(p.y) }));
     // Weigh-ins: the range sets how much fits across, and you scroll side to side for the rest
     const scrolls = m.weighIns && days < 1e5 && pts.length > 1 && m.pts.length > pts.length;
-    const plotted = scrolls ? m.pts.map((p) => ({ ...p, y: m.show(p.y) })) : shown;
+    const gran = m.weighIns ? GRAN[days] : 'day';
+    const plotted = bucket(scrolls ? m.pts.map((p) => ({ ...p, y: m.show(p.y) })) : shown, gran);
+    const visible = bucket(shown, gran).length;
     // The weight scale fits what's on screen: the newest stretch, or wherever you've scrolled back to
     const key = `${k}|${days}`;
     if (view?.key !== key) view = null;
     const inView = view ? plotted.filter((p) => p.x >= view.from - 864e5 && p.x <= view.to + 864e5) : null;
-    const yFrom = scrolls ? (inView?.length ? inView : shown) : null;
+    const yFrom = scrolls ? (inView?.length ? inView : bucket(shown, gran)) : null;
     const onView = scrolls ? (v) => {
       const pts2 = plotted.filter((p) => p.x >= v.from - 864e5 && p.x <= v.to + 864e5);
       if (!pts2.length) return;
@@ -168,8 +183,12 @@ export function metricChart(trendPts, { pins = null } = {}) {
     fill(wrap,
       list.length > 1 ? h('div.chips.tight.metric-chips', list.map((x) => h('button.chip' + (x.k === k ? '.on' : ''), { onclick: () => { state.settings.bodyMetric = x.k; commit(); } }, x.label))) : null,
       h('div.metric-now', h('b', `${last}`), h('span', ` ${m.unit}`), shown.length > 1 ? h('span.metric-d' + (d === 0 ? '' : ''), ` ${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d)} ${m.unit} ${pts.length > 1 ? (days === 1e5 ? 'all time' : `in ${RANGE_WORD[days]}`) : 'overall'}`) : null),
-      lineChart(plotted, { height: 180, dots: m.weighIns ? 'all' : shown.length < 30, gap: m.weighIns ? GAP_DAYS : null, area: !m.weighIns, fit: m.weighIns ? shown : null, scroll: scrolls ? days : null, yFrom, onView, startAt: view?.key === key ? view.left : undefined, fmtY: (v) => (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10), label: `${m.label} over time`, pins: pins ? pins() : [],
-        tip: (p) => `<b>${p.y} ${m.unit}</b><span>${fmtDate(p.x, { month: 'short', day: 'numeric', year: 'numeric' })}</span>` }),
+      lineChart(plotted, { height: 190, dots: m.weighIns ? 'all' : shown.length < 30, gap: m.weighIns ? { day: GAP_DAYS, week: 22, month: 75 }[gran] : null, area: true, smooth: !!m.weighIns, ring: !!m.weighIns, minSpan: m.weighIns ? (bodyUnit() === 'lb' ? 12 : 6) : null,
+        labels: m.weighIns && (gran === 'month' || visible <= 8),
+        fmtX: (t) => new Date(t).toLocaleDateString(undefined, gran === 'month' ? { month: 'short', year: '2-digit' } : { month: 'short', day: 'numeric' }), fit: m.weighIns ? shown : null, scroll: scrolls ? days : null, yFrom, onView, startAt: view?.key === key ? view.left : undefined, fmtY: (v) => (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10), label: `${m.label} over time`, pins: pins ? pins() : [],
+        tip: (p) => p.gran === 'week' ? `<b>${p.y} ${m.unit}</b><span>Week of ${fmtDate(p.start, { month: 'short', day: 'numeric' })} · average of ${p.n}</span>`
+          : p.gran === 'month' ? `<b>${p.y} ${m.unit}</b><span>${fmtDate(p.x, { month: 'long', year: 'numeric' })} · average of ${p.n}</span>`
+            : `<b>${p.y} ${m.unit}</b><span>${fmtDate(p.x, { month: 'short', day: 'numeric', year: 'numeric' })}</span>` }),
       m.weighIns ? fitNote(shown, m.unit) : null,
       h('div.segment.metric-range', RANGES.map(([l, v]) => h('button' + (v === days ? '.on' : ''), { onclick: () => { state.settings.bodyDays = v; commit(); } }, l))));
   }
