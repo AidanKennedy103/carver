@@ -2464,3 +2464,5 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .ex-edit:active { background: var(--surface-3); }
 .ex-form-btn { margin-top: 14px; }
 .danger-soft { background: var(--red-bg); color: var(--red); }
+.goal-types .form-label { display: flex; align-items: center; }
+.goal-add-type { display: flex; align-items: center; gap: 6px; margin: 14px 0 4px; font-size: 14px; }

@@ -2,7 +2,7 @@
 // (water, steps, anything). These drive the rings on Home.
 
 import { h, fill, icon, sheet, toast, promptBox, confirmBox, push } from './ui.js';
-import { state, commit, uid, ymd, bodyDisplay, bodyFromDisplay, bodyUnit, distUnit, tabOn, DAY_SHORT, foodAim } from './store.js';
+import { state, commit, uid, ymd, bodyDisplay, bodyFromDisplay, bodyUnit, distUnit, tabOn, DAY_SHORT, foodAim, wtypes, addType } from './store.js';
 import { num } from './food-util.js';
 import { habits, MAX_HABITS } from './habits.js';
 
@@ -75,6 +75,28 @@ export function openGoals(section = 'all') {
   }
   drawWeek();
 
+  // Your own workout types (Physio…): how many times a week each, apart from the gym goal
+  const typeBox = h('div.goal-types');
+  function drawTypes() {
+    fill(typeBox,
+      wtypes().map((t) => [
+        h('label.form-label', h('i.type-dot', { style: { background: t.color } }), `${t.name} per week`),
+        h('div.segment', [1, 2, 3, 4, 5, 6, 7].map((k) => h('button' + ((t.perWeek || 3) === k ? '.on' : ''), {
+          onclick: () => { commit((st) => { const x = st.settings.wtypes.find((y) => y.id === t.id); if (x) x.perWeek = k; }); drawTypes(); },
+        }, k)))]),
+      wtypes().length ? h('p.fine', 'Counted on their own goal tiles; they don’t count toward your gym workouts.') : null,
+      h('button.link.goal-add-type', { onclick: async () => {
+        const n = (await promptBox('New workout type', '', { placeholder: 'e.g. Physio, Mobility, Core' }))?.trim();
+        if (!n) return;
+        if (wtypes().some((t) => t.name.toLowerCase() === n.toLowerCase())) { toast(`You already have ${n}`); return; }
+        addType(n); drawTypes(); drawWkLabel();
+      } }, icon('plus', 15), wtypes().length ? 'Another workout type' : 'Add a workout type (physio, mobility…)'));
+  }
+  drawTypes();
+  const wkLabel = h('label.form-label');
+  const drawWkLabel = () => { wkLabel.textContent = wtypes().length ? 'Gym workouts per week' : 'Workouts per week'; };
+  drawWkLabel();
+
   // Your aim decides how calories off target look: over is fine while building, under while cutting
   const aimSeg = h('div.segment');
   const drawAim = () => fill(aimSeg, AIMS.map((a) => h('button' + (foodAim() === a.id ? '.on' : ''), { onclick: () => { commit((st) => { st.goals.aim = a.id; }); drawAim(); } }, a.name)));
@@ -122,8 +144,9 @@ export function openGoals(section = 'all') {
   const sections = {
     workout: () => [
       h('div.goal-section', 'Workout'),
-      h('label.form-label', 'Workouts per week'), wkSeg,
-      h('label.form-label', 'Which days'), dayRow, dayHint],
+      wkLabel, wkSeg,
+      h('label.form-label', 'Which days'), dayRow, dayHint,
+      typeBox],
     nutrition: () => [
       h('div.goal-section', 'Nutrition'),
       h('label.form-label', 'Your aim'), aimSeg,
