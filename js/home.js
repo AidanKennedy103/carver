@@ -1,8 +1,8 @@
 // Home: today first (rings, workouts, food, weigh-in), then your week on the
 // calendar, your one-rep maxes, and your profile overview.
 
-import { h, fill, icon, push, sheet, toast, promptBox, fmtDate, fmtNum, fmtDurationWords, swipe, navBar, confirmBox } from './ui.js';
-import { state, commit, exercise, dayGoals, overview, HOME_SECTIONS, HOME_DEFAULT, homeSections, toDisplay, unit, bodyDisplay, bodyUnit, tabOn, ymd, addDays, dayTotals, weekStart, dayStart, dayPlan, restNote, workoutDays, DAY_SHORT, workoutStats, waterOn, addWater, kcalLook, kcalHit, gymWorkouts, isGym, typeOf } from './store.js';
+import { h, fill, icon, push, sheet, toast, promptBox, fmtDate, fmtNum, fmtDurationWords, swipe, navBar, confirmBox, actionSheet } from './ui.js';
+import { state, commit, exercise, dayGoals, overview, HOME_SECTIONS, HOME_DEFAULT, homeSections, toDisplay, unit, bodyDisplay, bodyUnit, tabOn, ymd, addDays, dayTotals, weekStart, dayStart, dayPlan, restNote, workoutDays, DAY_SHORT, workoutStats, waterOn, addWater, kcalLook, kcalHit, gymWorkouts, isGym, typeOf, wtypes } from './store.js';
 import { workoutDetail } from './workout.js';
 import { openSettings } from './settings.js';
 import { goTab } from './tabs.js';
@@ -67,14 +67,19 @@ function ringCatalog() {
     { id: 'weigh', label: 'Weigh-in', color: WEIGH_COLOR, cheer: 'Weighed in!', day: (k) => { const n = state.body.weights.some((w) => ymd(w.ts) === k) ? 1 : 0; return { value: n, goal: 1, text: n ? 'Done today' : 'Not yet today', hit: !!n }; } },
   ].filter((r) => (r.id === 'gym' ? tabOn('workout') : ['kcal', 'protein', 'water'].includes(r.id) ? tabOn('nutrition') : r.id === 'sleep' ? tabOn('recovery') : true)).concat([
     ...g.custom.map((c) => ({ id: c.id, custom: c, label: c.name, color: COLORS.custom, cheer: `${c.name}: done!`, day: (k) => { const d = isDone(c, k); return { value: d ? 1 : 0, goal: 1, text: d ? 'Done' : 'Not yet', hit: d }; } })),
+    // Your own workout types (Physio…): done today, and so many times a week
+    ...wtypes().map((t) => ({ id: 'type:' + t.id, wtype: t, label: t.name, color: t.color, cheer: `${t.name} done!`, day: (k) => {
+      const n = state.workouts.filter((w) => w.type === t.id && ymd(w.start) === k).length;
+      return { value: n ? 1 : 0, goal: 1, text: n ? 'Done today' : 'Not yet today', hit: !!n };
+    } })),
   ]);
 }
 export function ringIds() {
   const ids = new Set(ringCatalog().map((r) => r.id));
-  return (state.goals.rings || [...DEFAULT_RINGS, ...state.goals.custom.map((c) => c.id)]).filter((id) => ids.has(id)).slice(0, MAX_RINGS);
+  return (state.goals.rings || [...DEFAULT_RINGS, ...state.goals.custom.map((c) => c.id), ...wtypes().map((t) => 'type:' + t.id)]).filter((id) => ids.has(id)).slice(0, MAX_RINGS);
 }
 /** Days a week you aim to hit a daily goal (the workout ring uses workouts per week). */
-export const weekTarget = (id) => (id === 'gym' ? state.goals.workoutsPerWeek : state.goals.ringWeek?.[id] ?? 7);
+export const weekTarget = (id) => (id === 'gym' ? state.goals.workoutsPerWeek : id.startsWith('type:') ? typeOf(id.slice(5))?.perWeek ?? 3 : state.goals.ringWeek?.[id] ?? 7);
 
 /** The rings you picked, for 'day' (today) or 'week' (Monday to today). */
 export function ringGoals(view = 'day') {
@@ -86,13 +91,14 @@ export function ringGoals(view = 'day') {
     const goal = weekTarget(id);
     let value = 0;
     if (id === 'gym') value = gymWorkouts().filter((w) => w.start >= weekStart()).length;
+    else if (r.wtype) value = state.workouts.filter((w) => w.type === r.wtype.id && w.start >= weekStart()).length;
     else for (let k = ymd(weekStart()); k <= today; k = addDays(k, 1)) if (r.day(k).hit) value++;
-    const word = id === 'gym' ? 'workout' : 'day';
+    const word = id === 'gym' || r.wtype ? 'workout' : 'day';
     const next = id === 'gym' && value < goal ? nextPlanned() : '';
     return {
       ...r, view, value, goal, hit: value >= goal,
       text: (value > goal ? `${value} ${word}s this week · goal ${goal}` : `${value} of ${goal} ${word}${goal === 1 ? '' : 's'} this week`) + (next ? ` · next ${next}` : ''),
-      cheer: id === 'gym' ? 'Weekly gym goal hit!' : `${r.label}: ${goal} day${goal === 1 ? '' : 's'} this week!`,
+      cheer: id === 'gym' ? 'Weekly gym goal hit!' : `${r.label}: ${goal} ${word}${goal === 1 ? '' : 's'} this week!`,
     };
   });
 }
@@ -114,7 +120,7 @@ const n0 = (v) => fmtNum(Math.round(v));
 
 /** The short line under a tile: what's left, or how the week is going. */
 function tileSub(g) {
-  if (g.view === 'week') return `${g.value} of ${g.goal} ${g.id === 'gym' ? 'workouts' : 'days'}`;
+  if (g.view === 'week') return `${g.value} of ${g.goal} ${g.id === 'gym' || g.wtype ? 'workouts' : 'days'}`;
   if (g.rest) return 'Rest day';
   if (g.hit) return g.id === 'gym' ? g.text.replace(' today', '') : g.over ? 'Over goal' : 'Done';
   const left = Math.max(0, g.goal - g.value);
@@ -128,6 +134,7 @@ function tileSub(g) {
 
 /** What tapping a tile does. */
 function tileTap(g) {
+  if (g.wtype) return () => startType(g.wtype);
   if (g.view === 'week') return () => (g.id === 'gym' ? goTab('workout') : null);
   if (g.id === 'gym') return () => goTab('workout');
   if (g.id === 'kcal' || g.id === 'protein') return () => goTab('nutrition');
@@ -138,12 +145,20 @@ function tileTap(g) {
   return null;
 }
 
+/** Tap a workout type's tile: start its plan (or pick one, if it has a few). */
+function startType(t) {
+  const plans = state.plans.filter((p) => p.type === t.id && p.exercises.length);
+  if (!plans.length) { goTab('workout'); toast(`Make a ${t.name} plan on the Workout tab`); return; }
+  if (plans.length === 1) { import('./session.js').then((m) => m.startWorkout(plans[0])); return; }
+  actionSheet(`Start ${t.name}`, plans.map((p) => ({ label: p.name, onClick: () => import('./session.js').then((m) => m.startWorkout(p)) })));
+}
+
 function goalTiles(goals, view) {
   return h('div.gtiles' + (goals.length === 1 ? '.one' : ''), goals.map((g, i) => {
     const pct = g.goal ? Math.min(1, g.value / g.goal) : 0;
     const span = goals.length % 2 === 1 && i === goals.length - 1 && goals.length > 1;
     return h('button.gtile' + (g.hit ? '.done' : '') + (g.over ? '.over' : '') + (span ? '.wide' : ''), { onclick: tileTap(g), 'aria-label': `${g.label}: ${g.text}` },
-      h('span.gtile-top', h('span.gtile-ico', icon(g.hit ? 'check' : (TILE_ICON[g.id] || 'target'), 18)), g.id === 'water' && view === 'day' && !g.hit ? h('span.gtile-act', '+250') : null),
+      h('span.gtile-top', h('span.gtile-ico', icon(g.hit ? 'check' : (TILE_ICON[g.id] || (g.wtype ? 'activity' : 'target')), 18)), g.id === 'water' && view === 'day' && !g.hit ? h('span.gtile-act', '+250') : null),
       h('span.gtile-name', g.label),
       h('span.gtile-sub', tileSub(g)),
       g.hit ? null : h('span.gtile-bar', h('i', { style: { width: `${Math.round(pct * 100)}%` } })));
@@ -154,7 +169,12 @@ function goalTiles(goals, view) {
 function editRings() {
   let picked = ringIds();
   const box = h('div');
-  const setWeek = (id, d) => { commit((st) => { st.goals.ringWeek = { ...(st.goals.ringWeek || {}), [id]: Math.min(7, Math.max(1, weekTarget(id) + d)) }; }); draw(); };
+  const setWeek = (id, d) => {
+    const v = Math.min(7, Math.max(1, weekTarget(id) + d));
+    if (id.startsWith('type:')) commit((st) => { const t = st.settings.wtypes.find((x) => x.id === id.slice(5)); if (t) t.perWeek = v; });
+    else commit((st) => { st.goals.ringWeek = { ...(st.goals.ringWeek || {}), [id]: v }; });
+    draw();
+  };
   function draw() {
     fill(box,
       h('div.group', ringCatalog().map((r) => {

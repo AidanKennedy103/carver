@@ -229,7 +229,10 @@ export function gymWorkouts() {
 export function addType(name) {
   const used = new Set(wtypes().map((t) => t.color));
   const t = { id: 't-' + Math.random().toString(36).slice(2, 9), name, color: TYPE_COLORS.find((c) => !used.has(c)) || TYPE_COLORS[wtypes().length % TYPE_COLORS.length], perWeek: 3 };
-  commit((s) => { s.settings.wtypes = [...(s.settings.wtypes || []), t]; });
+  commit((s) => {
+    s.settings.wtypes = [...(s.settings.wtypes || []), t];
+    if (Array.isArray(s.goals.rings) && s.goals.rings.length < 6) s.goals.rings = [...s.goals.rings, 'type:' + t.id];
+  });
   return t;
 }
 
