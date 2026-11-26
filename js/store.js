@@ -120,16 +120,40 @@ export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().to
 
 // ---------- Exercises ----------
 
+/** Every exercise: yours, then the library (with any changes you've made to library ones, state.exEdits). */
 export function allExercises() {
-  return [...state.customExercises, ...LIBRARY];
+  const ed = state.exEdits || {};
+  return [...state.customExercises, ...LIBRARY.map((e) => (ed[e.id] ? { ...e, ...ed[e.id], edited: true } : e))];
 }
 const byId = new Map();
+let byRev = -1;
 export function exercise(id) {
-  if (!byId.has(id) || byId.size !== LIBRARY.length + state.customExercises.length) {
+  if (byRev !== rev || !byId.has(id) || byId.size !== LIBRARY.length + state.customExercises.length) {
+    byRev = rev;
     byId.clear();
     allExercises().forEach((e) => byId.set(e.id, e));
   }
   return byId.get(id) || { id, name: 'Unknown exercise', muscle: 'Other', equipment: 'Other', type: 'wr' };
+}
+/** Change an exercise: yours are changed in place; a library one keeps your changes on top of it. */
+export function updateExercise(id, fields) {
+  commit((s) => {
+    const c = s.customExercises.find((e) => e.id === id);
+    if (c) { Object.assign(c, fields); if (!fields.uni) delete c.uni; return; }
+    s.exEdits = { ...(s.exEdits || {}), [id]: { ...fields, uni: !!fields.uni } };
+  });
+}
+/** A library exercise back to how it came. */
+export function resetExercise(id) {
+  commit((s) => { if (s.exEdits) { const { [id]: _, ...rest } = s.exEdits; s.exEdits = rest; } });
+}
+/** How many workouts and plans use an exercise. */
+export function exerciseUse(id) {
+  const has = (x) => x.exercises?.some((e) => e.exId === id);
+  return { workouts: state.workouts.filter(has).length, plans: state.plans.filter(has).length };
+}
+export function deleteCustomExercise(id) {
+  commit((s) => { s.customExercises = s.customExercises.filter((e) => e.id !== id); });
 }
 export function addCustomExercise(ex) {
   const e = { id: 'c-' + uid(), custom: true, ...ex };

@@ -1,8 +1,8 @@
 // "Add exercises" picker: search, filter by muscle, pick several, or create your own.
 
-import { h, fill, icon, sheet, toast } from './ui.js';
+import { h, fill, icon, sheet, toast, confirmBox } from './ui.js';
 import { MUSCLES, EQUIPMENT, musclesText, searchExercises } from './exercises.js';
-import { allExercises, addCustomExercise, state, exercise } from './store.js';
+import { allExercises, addCustomExercise, state, exercise, updateExercise, resetExercise, exerciseUse, deleteCustomExercise } from './store.js';
 
 const TYPE_LABEL = { wr: 'Weight & reps', bw: 'Reps only', time: 'Duration' };
 
@@ -66,8 +66,9 @@ export function pickExercises(onPick, { single = false, title = 'Add exercises',
           },
         },
         h('span.ex-badge', e.name[0]),
-        h('span.ex-text', h('span.ex-name', e.name), h('span.ex-sub', `${musclesText(e)} · ${e.equipment}${e.uni ? ' · One side' : ''}${e.custom ? ' · Custom' : ''}`)),
-        n >= 0 ? h('span.ex-num', n + 1) : null);
+        h('span.ex-text', h('span.ex-name', e.name), h('span.ex-sub', `${musclesText(e)} · ${e.equipment}${e.uni ? ' · One side' : ''}${e.custom ? ' · Custom' : e.edited ? ' · Edited' : ''}`)),
+        n >= 0 ? h('span.ex-num', n + 1) : null,
+        h('span.ex-edit', { role: 'button', 'aria-label': `Edit ${e.name}`, onclick: (ev) => { ev.stopPropagation(); createExercise(() => draw(), '', e.id); } }, icon('edit', 15)));
       }),
       items.length ? null : h('div.empty-small', 'No exercises match. Create it below.'),
     );
@@ -85,29 +86,33 @@ export function pickExercises(onPick, { single = false, title = 'Add exercises',
   draw();
 }
 
-/** Form for a custom exercise. */
-export function createExercise(onDone, name = '') {
-  let type = 'wr', uni = false;
-  const helps = new Set();
-  const nameIn = h('input.field', { placeholder: 'Exercise name', value: name ? name[0].toUpperCase() + name.slice(1) : '' });
-  const muscleSel = h('select.field', MUSCLES.map((m) => h('option', { value: m }, m)));
-  const equipSel = h('select.field', EQUIPMENT.map((m) => h('option', { value: m }, m)));
+/** Form for a custom exercise, or (editId) for changing any exercise: yours, or one from the library. */
+export function createExercise(onDone, name = '', editId = null) {
+  const was = editId ? exercise(editId) : null;
+  let type = was?.type || 'wr', uni = !!was?.uni;
+  const helps = new Set(was?.helps || []);
+  const nameIn = h('input.field', { placeholder: 'Exercise name', value: was ? was.name : name ? name[0].toUpperCase() + name.slice(1) : '' });
+  const muscleSel = h('select.field', MUSCLES.map((m) => h('option', { value: m, selected: was?.muscle === m }, m)));
+  const equipSel = h('select.field', EQUIPMENT.map((m) => h('option', { value: m, selected: was?.equipment === m }, m)));
   const typeSeg = h('div.segment', Object.entries(TYPE_LABEL).map(([k, v]) => h('button' + (k === type ? '.on' : ''), {
     onclick: (e) => { type = k; typeSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === e.currentTarget)); },
   }, v)));
-  const helpChips = h('div.chips.tight.no-drag', MUSCLES.filter((m) => m !== 'Full body' && m !== 'Cardio').map((m) => h('button.chip', {
+  const helpChips = h('div.chips.tight.no-drag', MUSCLES.filter((m) => m !== 'Full body' && m !== 'Cardio').map((m) => h('button.chip' + (helps.has(m) ? '.on' : ''), {
     onclick: (e) => { if (helps.has(m)) helps.delete(m); else helps.add(m); e.currentTarget.classList.toggle('on', helps.has(m)); },
   }, m)));
   const uniSeg = h('div.segment', [[false, 'Both at once'], [true, 'One side at a time']].map(([v, l]) => h('button' + (v === uni ? '.on' : ''), {
     onclick: (e) => { uni = v; uniSeg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === e.currentTarget)); },
   }, l)));
+  const use = editId ? exerciseUse(editId) : null;
   const s = sheet(h('div.form',
-    h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', 'New exercise'),
+    h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', was ? 'Edit exercise' : 'New exercise'),
       h('button.link.strong', {
         onclick: () => {
           const n = nameIn.value.trim();
           if (!n) { toast('Give it a name'); return; }
-          const e = addCustomExercise({ name: n, muscle: muscleSel.value, equipment: equipSel.value, type, helps: [...helps].filter((m) => m !== muscleSel.value), ...(uni ? { uni: true } : {}) });
+          const fields = { name: n, muscle: muscleSel.value, equipment: equipSel.value, type, helps: [...helps].filter((m) => m !== muscleSel.value), ...(uni ? { uni: true } : {}) };
+          if (was) { updateExercise(editId, fields); s.close(); toast('Exercise saved'); onDone(exercise(editId)); return; }
+          const e = addCustomExercise(fields);
           s.close();
           onDone(e);
         },
@@ -118,6 +123,14 @@ export function createExercise(onDone, name = '') {
     h('label.form-label', 'Equipment'), equipSel,
     h('label.form-label', 'Arms or legs'), uniSeg,
     h('label.form-label', 'What you log'), typeSeg,
+    was && type !== was.type && use?.workouts ? h('p.fine', 'Past workouts keep the numbers they have.') : null,
+    was && use ? h('p.fine', `Used in ${use.workouts} workout${use.workouts === 1 ? '' : 's'} and ${use.plans} plan${use.plans === 1 ? '' : 's'}. Changes show everywhere.`) : null,
+    was?.edited ? h('button.btn.dark.wide.ex-form-btn', { onclick: () => { resetExercise(editId); s.close(); toast('Back to the original'); onDone(exercise(editId)); } }, 'Reset to the original') : null,
+    was?.custom ? h('button.btn.wide.danger-soft.ex-form-btn', { onclick: async () => {
+      if (use.workouts || use.plans) { toast(`It’s in ${use.workouts + use.plans} workout${use.workouts + use.plans === 1 ? '' : 's'} or plans, so it can’t be deleted. Rename it instead.`); return; }
+      if (!(await confirmBox(`Delete ${was.name}?`, null, { ok: 'Delete', danger: true }))) return;
+      deleteCustomExercise(editId); s.close(); toast('Exercise deleted'); onDone(null);
+    } }, 'Delete exercise') : null,
   ));
   setTimeout(() => nameIn.focus(), 300);
 }

@@ -2458,3 +2458,9 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .qc-row.on .qc-text b { color: var(--gold); }
 .qc .btn:disabled { opacity: .5; }
 .qc-full { display: block; margin: 12px auto 4px; font-size: 14px; }
+
+/* Edit an exercise from the picker */
+.ex-edit { flex: none; width: 34px; height: 34px; margin: -6px -6px -6px 2px; display: grid; place-items: center; border-radius: 50%; color: var(--faint); }
+.ex-edit:active { background: var(--surface-3); }
+.ex-form-btn { margin-top: 14px; }
+.danger-soft { background: var(--red-bg); color: var(--red); }
