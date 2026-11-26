@@ -2,7 +2,7 @@
 // recap of each month (photo change, weight change, lifting highlights).
 
 import { h, icon, push, navBar, sheet, toast, fmtDate, fmtNum, fmtDurationWords } from './ui.js';
-import { state, commit, exercise, workoutStats, e1rm, toDisplay, unit, ymd, dayTotals, bodyDisplay, bodyUnit, distUnit } from './store.js';
+import { state, commit, exercise, workoutStats, e1rm, toDisplay, unit, ymd, dayTotals, bodyDisplay, bodyUnit, distUnit, gymWorkouts } from './store.js';
 import { photos } from './photos.js';
 import { trend } from './body.js';
 import { compareView } from './progress.js';
@@ -47,7 +47,7 @@ export function setGoalsSheet(key = monthKey()) {
 
 export function recap(key) {
   const a = monthStart(key), b = monthEnd(key);
-  const ws = state.workouts.filter((w) => w.start >= a && w.start < b);
+  const ws = gymWorkouts().filter((w) => w.start >= a && w.start < b);
   let volume = 0, sets = 0, time = 0;
   for (const w of ws) { const st = workoutStats(w); volume += st.volume; sets += st.sets; time += st.duration; }
   const prs = ws.flatMap((w) => (w.prList || []).map((p) => ({ ...p, when: w.start })));
@@ -58,7 +58,7 @@ export function recap(key) {
   for (const id of ids) {
     if (exercise(id).type !== 'wr') continue;
     let before = 0, now = 0;
-    for (const w of state.workouts) {
+    for (const w of gymWorkouts()) {
       if (w.start >= b) continue;
       for (const e of w.exercises) {
         if (e.exId !== id) continue;

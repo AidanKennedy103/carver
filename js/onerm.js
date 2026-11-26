@@ -2,7 +2,7 @@
 // every set you log, at any rep count, shows your strength trend.
 
 import { h, fill, icon, push, navBar, fmtDate } from './ui.js';
-import { state, commit, exercise, e1rmHistory, oneRmExercises, toDisplay, unit } from './store.js';
+import { state, commit, exercise, e1rmHistory, oneRmExercises, toDisplay, unit, gymWorkouts } from './store.js';
 import { lineChart, sparkline } from './charts.js';
 import { pickExercises } from './picker.js';
 
@@ -56,8 +56,9 @@ const MEASURES = [
 function series(id, m) {
   if (m === 'orm') return e1rmHistory(id);
   const out = [];
-  for (let i = state.workouts.length - 1; i >= 0; i--) {
-    const w = state.workouts[i];
+  const gws = gymWorkouts();
+  for (let i = gws.length - 1; i >= 0; i--) {
+    const w = gws[i];
     const sets = w.exercises.filter((e) => e.exId === id).flatMap((e) => e.sets.filter((x) => x.done && x.type !== 'w' && x.weight > 0 && x.reps > 0));
     if (!sets.length) continue;
     const top = sets.reduce((a, b) => (b.weight > a.weight || (b.weight === a.weight && b.reps > a.reps) ? b : a));

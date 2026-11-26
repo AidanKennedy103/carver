@@ -3,7 +3,7 @@
 // (triceps on bench press, biceps on rows…) count half, a common way to tally it.
 
 import { h, fill, icon, push, navBar, swipeSegment } from './ui.js';
-import { state, commit, exercise, weekStart, splitPlans } from './store.js';
+import { state, commit, exercise, weekStart, splitPlans, gymWorkouts } from './store.js';
 
 export const MUSCLE_ORDER = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Forearms', 'Quads', 'Hamstrings', 'Glutes', 'Calves', 'Core'];
 // Smaller muscles: shown, but without the 10–20 set target (they mostly get work from the big lifts)
@@ -55,7 +55,7 @@ export function loggedTally(weeks = 0) {
   const from = weeks ? weekStart(now) - weeks * 7 * 864e5 : now - 7 * 864e5;
   const to = weeks ? weekStart(now) : now;
   const items = [];
-  for (const w of state.workouts) {
+  for (const w of gymWorkouts()) {
     if (w.start < from || w.start >= to) continue;
     for (const e of w.exercises) items.push({ exId: e.exId, sets: workSets(e.sets, true) / (weeks || 1) });
   }

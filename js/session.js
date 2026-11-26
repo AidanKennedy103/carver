@@ -36,7 +36,7 @@ export async function startWorkout(plan = null) {
   }
   unlockAudio();
   const w = {
-    id: uid(), name: plan ? plan.name : greeting(), planId: plan?.id || null, start: Date.now(), end: null, rest: null,
+    id: uid(), name: plan ? plan.name : greeting(), planId: plan?.id || null, ...(plan?.type ? { type: plan.type } : {}), start: Date.now(), end: null, rest: null,
     exercises: plan ? plan.exercises.map((pe) => ({
       exId: pe.exId, ...groupOf(pe), note: pe.note || '', rest: pe.rest ?? defaultRest(), ...(blockRun(plan, pe) ? { tgt: true } : {}),
       sets: (pe.sets.length ? noWarm(pe.sets) : [{}]).map((ps) => newSet(ps)),
@@ -107,7 +107,7 @@ export function logPastWorkout(plan = null) {
       : p ? p.exercises.map((pe) => ({ exId: pe.exId, ...groupOf(pe), note: pe.note || '', rest: pe.rest ?? defaultRest(), ...(blockRun(p, pe) ? { tgt: true } : {}), sets: (pe.sets.length ? noWarm(pe.sets) : [{}]).map((ps) => newSet(ps)) }))
         : [];
     commit((s) => {
-      s.active = { id: uid(), name: (p || old)?.name || greeting(start), planId: p?.id || old?.planId || null, start, end: null, rest: null, past: { dur }, exercises };
+      s.active = { id: uid(), name: (p || old)?.name || greeting(start), planId: p?.id || old?.planId || null, ...((p || old)?.type ? { type: (p || old).type } : {}), start, end: null, rest: null, past: { dur }, exercises };
     });
     openWorkout();
   });

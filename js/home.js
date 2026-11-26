@@ -2,7 +2,7 @@
 // calendar, your one-rep maxes, and your profile overview.
 
 import { h, fill, icon, push, sheet, toast, promptBox, fmtDate, fmtNum, fmtDurationWords, swipe, navBar, confirmBox } from './ui.js';
-import { state, commit, exercise, dayGoals, overview, HOME_SECTIONS, HOME_DEFAULT, homeSections, toDisplay, unit, bodyDisplay, bodyUnit, tabOn, ymd, addDays, dayTotals, weekStart, dayStart, dayPlan, restNote, workoutDays, DAY_SHORT, workoutStats, waterOn, addWater, kcalLook, kcalHit } from './store.js';
+import { state, commit, exercise, dayGoals, overview, HOME_SECTIONS, HOME_DEFAULT, homeSections, toDisplay, unit, bodyDisplay, bodyUnit, tabOn, ymd, addDays, dayTotals, weekStart, dayStart, dayPlan, restNote, workoutDays, DAY_SHORT, workoutStats, waterOn, addWater, kcalLook, kcalHit, gymWorkouts, isGym, typeOf } from './store.js';
 import { workoutDetail } from './workout.js';
 import { openSettings } from './settings.js';
 import { goTab } from './tabs.js';
@@ -55,7 +55,7 @@ function ringCatalog() {
   const g = state.goals;
   return [
     { id: 'gym', label: 'Workout', color: COLORS.gym, cheer: 'Workout done!', day: (k) => {
-      const n = state.workouts.filter((w) => ymd(w.start) === k).length;
+      const n = gymWorkouts().filter((w) => ymd(w.start) === k).length;
       if (n) return { value: n, goal: 1, text: `${n} workout${n > 1 ? 's' : ''} today`, hit: true };
       if (dayPlan(k) === 'rest') { const rn = k === ymd() ? restNote(k) : null; return rn?.tone === 'behind' ? { value: 0, goal: 1, text: 'Rest day · behind this week', hit: false } : { value: 1, goal: 1, text: 'Rest day', hit: true, rest: true }; }   // a full ring: resting is the plan, unless the week needs a workout
       return { value: 0, goal: 1, text: dayPlan(k) === 'planned' ? 'Planned today' : 'Not yet today', hit: false };
@@ -85,7 +85,7 @@ export function ringGoals(view = 'day') {
     if (view === 'day') return { ...r, ...r.day(today), view };
     const goal = weekTarget(id);
     let value = 0;
-    if (id === 'gym') value = state.workouts.filter((w) => w.start >= weekStart()).length;
+    if (id === 'gym') value = gymWorkouts().filter((w) => w.start >= weekStart()).length;
     else for (let k = ymd(weekStart()); k <= today; k = addDays(k, 1)) if (r.day(k).hit) value++;
     const word = id === 'gym' ? 'workout' : 'day';
     const next = id === 'gym' && value < goal ? nextPlanned() : '';
@@ -100,7 +100,7 @@ export function ringGoals(view = 'day') {
 /** The next planned workout day this week ('today', 'Thu'), or '' if none is left or you haven't picked days. */
 function nextPlanned() {
   const today = ymd(), sunday = addDays(ymd(weekStart()), 6);
-  const doneToday = state.workouts.some((w) => ymd(w.start) === today);
+  const doneToday = gymWorkouts().some((w) => ymd(w.start) === today);
   for (let k = doneToday ? addDays(today, 1) : today; k <= sunday; k = addDays(k, 1)) {
     if (dayPlan(k) === 'planned') return k === today ? 'today' : DAY_SHORT[(new Date(dayStart(k)).getDay() + 6) % 7];
   }
@@ -224,7 +224,10 @@ function calendar(redraw) {
   const year = m.getFullYear(), month = m.getMonth();
   const goal = state.goals.workoutsPerWeek;
   const byDay = new Map();
-  for (const w of state.workouts) { const k = ymd(w.start); byDay.set(k, [...(byDay.get(k) || []), w]); }
+  for (const w of gymWorkouts()) { const k = ymd(w.start); byDay.set(k, [...(byDay.get(k) || []), w]); }
+  // Your own types (physio…) show as a small coloured dot, and don't count toward the gold week
+  const otherDay = new Map();
+  for (const w of state.workouts) if (!isGym(w)) { const k = ymd(w.start); otherDay.set(k, [...(otherDay.get(k) || []), w]); }
 
   // Weeks start on Monday. A week turns gold when you hit your workouts-per-week goal.
   let cur = weekStart(new Date(year, month, 1).getTime());
@@ -243,11 +246,11 @@ function calendar(redraw) {
     const today = ymd();
     rows.push(h('div.cal-week' + (count >= goal ? '.gold' : ''), days.map((x) => h('button.cal-day' + (x.inMonth ? '' : '.out') + (x.ws.length ? '.did' : '') + (x.k === today ? '.today' : '') + (!x.ws.length && x.k >= today && dayPlan(x.k) === 'planned' ? '.plan' : ''), {
       'aria-label': `${fmtDate(x.d, { weekday: 'long', month: 'long', day: 'numeric' })}${x.ws.length ? `, ${x.ws.length} workout${x.ws.length > 1 ? 's' : ''}` : ''}`,
-      onclick: () => { if (x.ws.length) push(() => workoutDetail(x.ws[0])); },
-    }, h('span', x.d.getDate())))));
+      onclick: () => { const all = [...x.ws, ...(otherDay.get(x.k) || [])]; if (all.length) push(() => workoutDetail(all[0])); },
+    }, h('span', x.d.getDate()), otherDay.get(x.k) ? h('i.cal-type', { style: { background: typeOf(otherDay.get(x.k)[0].type)?.color } }) : null))));
     const next = new Date(cur); next.setDate(next.getDate() + 7); cur = weekStart(next.getTime() + 36e5 * 3);
   }
-  const thisWeek = state.workouts.filter((w) => w.start >= weekStart()).length;
+  const thisWeek = gymWorkouts().filter((w) => w.start >= weekStart()).length;
   const moveMonth = (d) => { calMonth = new Date(year, month + d, 1).getTime(); redraw(); };
   return swipe(h('section.card.cal',
     h('div.cal-head',
@@ -320,7 +323,7 @@ function nextCard() {
 /** Monday to Sunday: days trained and the weekly goal. */
 function weekCard() {
   const mon = ymd(weekStart()), today = ymd(), goal = state.goals.workoutsPerWeek;
-  const ws = state.workouts.filter((w) => w.start >= weekStart());
+  const ws = gymWorkouts().filter((w) => w.start >= weekStart());
   const did = new Set(ws.map((w) => ymd(w.start)));
   return [h('div.section-head', h('h2.section-title', 'This week'), h('span.section-count', `${ws.length} of ${goal}`)),
     h('section.card.home-week', DAY_SHORT.map((d, i) => {
@@ -467,7 +470,7 @@ export function homePage() {
     const view = state.settings.ringView === 'week' ? 'week' : 'day';
     const goals = ringGoals(view);
     const t = dayTotals(today);
-    const todayWorkouts = state.workouts.filter((w) => ymd(w.start) === today);
+    const todayWorkouts = gymWorkouts().filter((w) => ymd(w.start) === today);
     const todayActs = (state.activities || []).filter((a) => ymd(a.start) === today);
     const todayWeigh = state.body.weights.filter((w) => ymd(w.ts) === today).pop();
     const prompts = monthlyPrompts({ takePhoto: takeProgressPhoto });

@@ -211,8 +211,31 @@ export function fromDisplay(v) {
 // ---------- Plans ----------
 
 /** Your current split: the saved workouts you're running now (all of them unless you've switched some off). */
+// ---------- Workout types ----------
+// Plans are gym workouts unless you give them a type of your own (Physio, Mobility, Core…).
+// state.settings.wtypes = [{ id, name, color, perWeek }]. A workout keeps its plan's type (w.type),
+// and only gym workouts count toward your weekly gym goal, streak, PRs, 1RMs, volume and trends.
+export const TYPE_COLORS = ['#64d2ff', '#34c759', '#bf5af2', '#ff9f0a', '#ff6482', '#5e5ce6'];
+export const wtypes = () => state.settings.wtypes || [];
+export const typeOf = (id) => (id ? wtypes().find((t) => t.id === id) || null : null);
+/** Gym, unless it has a type that still exists (a deleted type's workouts count as gym again). */
+export const isGym = (x) => !typeOf(x?.type);
+let gymCache = null, gymRev = -1;
+/** Your gym workouts, newest first (everything except your own types). */
+export function gymWorkouts() {
+  if (gymRev !== rev || !gymCache) { gymCache = state.workouts.filter(isGym); gymRev = rev; }
+  return gymCache;
+}
+export function addType(name) {
+  const used = new Set(wtypes().map((t) => t.color));
+  const t = { id: 't-' + Math.random().toString(36).slice(2, 9), name, color: TYPE_COLORS.find((c) => !used.has(c)) || TYPE_COLORS[wtypes().length % TYPE_COLORS.length], perWeek: 3 };
+  commit((s) => { s.settings.wtypes = [...(s.settings.wtypes || []), t]; });
+  return t;
+}
+
 export const inSplit = (p) => p.split !== false;
-export const splitPlans = () => state.plans.filter(inSplit);
+/** Your gym split (plans of your own types sit in their own sections). */
+export const splitPlans = () => state.plans.filter((p) => inSplit(p) && isGym(p));
 export function setSplit(id, on) {
   commit((s) => { const p = s.plans.find((x) => x.id === id); if (p) p.split = !!on; });
 }
@@ -267,12 +290,13 @@ export function workoutStats(w) {
 /** Personal records set in this workout, compared with every earlier workout. */
 export function findPRs(w) {
   const prs = [];
+  if (!isGym(w)) return prs;   // physio and the like don't set lifting records
   for (const ex of w.exercises) {
     const info = exercise(ex.exId);
     if (info.type !== 'wr' && info.type !== 'bw') continue;
     let bestW = 0, best1 = 0, bestR = 0;
     for (const old of state.workouts) {
-      if (old.id === w.id || old.start >= w.start) continue;
+      if (old.id === w.id || old.start >= w.start || !isGym(old)) continue;
       for (const oe of old.exercises) {
         if (oe.exId !== ex.exId) continue;
         for (const s of oe.sets) {
@@ -305,8 +329,9 @@ export function findPRs(w) {
 /** Best estimated 1RM (kg) per workout for an exercise, oldest first. Warm-ups don't count. */
 export function e1rmHistory(exId) {
   const out = [];
-  for (let i = state.workouts.length - 1; i >= 0; i--) {
-    const w = state.workouts[i];
+  const ws = gymWorkouts();
+  for (let i = ws.length - 1; i >= 0; i--) {
+    const w = ws[i];
     let best = 0, set = null;
     for (const e of w.exercises) {
       if (e.exId !== exId) continue;
@@ -325,7 +350,7 @@ export function e1rmHistory(exId) {
 export function oneRmExercises() {
   if (Array.isArray(state.settings.oneRm)) return state.settings.oneRm;
   const count = new Map();
-  for (const w of state.workouts) for (const e of w.exercises) {
+  for (const w of gymWorkouts()) for (const e of w.exercises) {
     if (exercise(e.exId).type !== 'wr') continue;
     count.set(e.exId, (count.get(e.exId) || 0) + 1);
   }
@@ -361,9 +386,9 @@ export function dayPlan(key) {
  * tone: 'done' (weekly goal already hit), 'ok' (on track), 'behind'.
  */
 export function restNote(today = ymd()) {
-  if (dayPlan(today) !== 'rest' || state.workouts.some((w) => ymd(w.start) === today)) return null;
+  if (dayPlan(today) !== 'rest' || gymWorkouts().some((w) => ymd(w.start) === today)) return null;
   const goal = state.goals.workoutsPerWeek;
-  const n = state.workouts.filter((w) => w.start >= weekStart()).length;
+  const n = gymWorkouts().filter((w) => w.start >= weekStart()).length;
   const sunday = addDays(ymd(weekStart()), 6);
   let left = 0;
   for (let k = addDays(today, 1); k <= sunday; k = addDays(k, 1)) if (dayPlan(k) === 'planned') left++;
@@ -386,7 +411,7 @@ export function setDayCheck(k, v) {
 }
 
 export function overview() {
-  const ws = state.workouts;
+  const ws = gymWorkouts();
   const thisWeek = weekStart();
   let volume = 0, sets = 0, time = 0;
   for (const w of ws) { const st = workoutStats(w); volume += st.volume; sets += st.sets; time += st.duration; }
@@ -494,7 +519,7 @@ export function kcalHit(v, goal, key = ymd()) {
 
 /** How a day's calories look: 'hit', 'over' (red: past a maximum, or 10%+ over when maintaining), or '' (not there yet). */
 /** A training day: a workout logged that day, or one of your planned workout days. */
-export const trainingDay = (key) => state.workouts.some((w) => ymd(w.start) === key) || dayPlan(key) === 'planned';
+export const trainingDay = (key) => gymWorkouts().some((w) => ymd(w.start) === key) || dayPlan(key) === 'planned';
 /** The day's food goals: on training days, the optional extra calories (as carbs) are added. */
 export function dayGoals(key) {
   const g = state.goals, boost = g.trainBoost || 0;

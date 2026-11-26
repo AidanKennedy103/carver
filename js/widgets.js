@@ -4,7 +4,7 @@
 // the section 'w:<id>', so it moves and removes like any other.
 
 import { h, fill, sheet, toast, fmtNum } from './ui.js';
-import { state, commit, uid, ymd, addDays, exercise, e1rmHistory, toDisplay, unit, bodyDisplay, bodyUnit, dayTotals, dayGoals, waterOn, weekStart, workoutStats, homeSections } from './store.js';
+import { state, commit, uid, ymd, addDays, exercise, e1rmHistory, toDisplay, unit, bodyDisplay, bodyUnit, dayTotals, dayGoals, waterOn, weekStart, workoutStats, homeSections, gymWorkouts } from './store.js';
 import { lineChart } from './charts.js';
 import { trend, latestWeight } from './body.js';
 import { healthDay } from './health.js';
@@ -25,11 +25,11 @@ export const METRICS = [
     return { v: toDisplay(last.y), unit: unit(), sub: `${exercise(p).name} · estimated 1-rep max`, series: hist.slice(-20).map((x) => ({ x: x.x, y: +toDisplay(x.y) })) };
   } },
   { k: 'workouts', name: 'Workouts this week', group: 'Strength', tab: 'workout', value: () => {
-    const n = state.workouts.filter((w) => w.start >= weekStart()).length;
+    const n = gymWorkouts().filter((w) => w.start >= weekStart()).length;
     return { v: n, unit: `/ ${state.goals.workoutsPerWeek || 3}`, sub: 'Workouts this week', series: null };
   } },
   { k: 'volume', name: 'Weekly volume', group: 'Strength', tab: 'workout', value: () => {
-    const wk = (s) => state.workouts.filter((w) => w.start >= s && w.start < s + 7 * 864e5).reduce((n, w) => n + workoutStats(w).volume, 0);
+    const wk = (s) => gymWorkouts().filter((w) => w.start >= s && w.start < s + 7 * 864e5).reduce((n, w) => n + workoutStats(w).volume, 0);
     const series = Array.from({ length: 8 }, (_, i) => { const s = weekStart(Date.now() - (7 - i) * 7 * 864e5); return { x: s, y: +toDisplay(wk(s)) }; });
     return { v: fmtNum(series[7].y), unit: unit(), sub: 'Lifted this week', series };
   } },
@@ -103,7 +103,7 @@ export function widgetCard(sectionId, { preview = null, onOpen = null } = {}) {
 
 /** Build a widget: what to show, which lift or habit, and number or number + chart. */
 export function widgetBuilder(onSave) {
-  const lifts = [...new Set(state.workouts.flatMap((w) => w.exercises.map((e) => e.exId)))].filter((id) => exercise(id).type === 'wr' && e1rmHistory(id).length);
+  const lifts = [...new Set(gymWorkouts().flatMap((w) => w.exercises.map((e) => e.exId)))].filter((id) => exercise(id).type === 'wr' && e1rmHistory(id).length);
   const w = { id: uid(), k: lifts.length ? 'e1rm' : 'weight', p: lifts[0] || null, chart: true };
   const body = h('div');
   function draw() {

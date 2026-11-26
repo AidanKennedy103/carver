@@ -3,7 +3,7 @@
 // Also the plan editor and the workout detail screen.
 
 import { h, fill, icon, push, pop, navBar, actionSheet, confirmBox, promptBox, toast, fmtDate, fmtDurationWords, fmtNum, fmtSecs, holdToDrag, swipeRow } from './ui.js';
-import { state, commit, save, uid, exercise, savePlan, deletePlan, splitPlans, setSplit, inSplit, workoutStats, toDisplay, unit, e1rm, MAX_PLANS, ymd, addDays, dayStart, weekStart, dayPlan, workoutDays, restNote, DAY_SHORT, previousSets } from './store.js';
+import { state, commit, save, uid, exercise, savePlan, deletePlan, splitPlans, setSplit, inSplit, workoutStats, toDisplay, unit, e1rm, MAX_PLANS, ymd, addDays, dayStart, weekStart, dayPlan, workoutDays, restNote, DAY_SHORT, previousSets, gymWorkouts, wtypes, typeOf, addType, isGym } from './store.js';
 import { startWorkout, repeatWorkout, saveAsPlan, openWorkout, logPastWorkout, editWorkout } from './session.js';
 import { exerciseCard, newSet, exerciseList, groupNew } from './block.js';
 import { pickExercises } from './picker.js';
@@ -46,6 +46,7 @@ export function workoutPage() {
       splitPlans().length ? holdToDrag(h('section.card.list-card.plan-list.swipey', splitPlans().map((p) => { const r = swipeRow(planRow(p, p === next), [{ label: 'Delete', danger: true, onClick: () => removePlan(p, draw) }]); r.classList.add('dg-item'); r.dataset.id = p.id; return r; })), { onDrop: reorderSplit })
         : state.plans.length ? h('button.card.empty-plan-row', { onclick: () => push(() => coachPage({ view: 'mine' })) }, icon('plus', 18), h('span', 'Pick the workouts in your split'))
           : h('button.card.empty-plan-row', { onclick: () => push(() => planEditor()) }, icon('plus', 18), h('span', 'Make your first plan')),
+      typeSections(),
       state.plans.length || state.workouts.length ? volumeCard() : null,
 
       // 3. Build a program, then the other ways to work out
@@ -124,9 +125,9 @@ export function workoutPage() {
   /** Monday to Sunday: workouts done, days you planned, today. */
   function weekStrip() {
     const mon = ymd(weekStart()), today = ymd();
-    const n = state.workouts.filter((w) => w.start >= weekStart()).length;
+    const n = gymWorkouts().filter((w) => w.start >= weekStart()).length;
     const goal = state.goals.workoutsPerWeek;
-    const did = new Set(state.workouts.filter((w) => w.start >= weekStart()).map((w) => ymd(w.start)));
+    const did = new Set(gymWorkouts().filter((w) => w.start >= weekStart()).map((w) => ymd(w.start)));
     if (state.active) did.add(today);
     return h('section.card.wk-card',
       h('div.wk-days', DAY_SHORT.map((d, i) => {
@@ -144,6 +145,43 @@ export function workoutPage() {
       const queue = ids.map((id) => s.plans.find((p) => p.id === id)).filter(Boolean);
       s.plans = s.plans.map((p) => (ids.includes(p.id) ? queue.shift() : p));
     });
+  }
+
+  /** Your own workout types (Physio, Mobility…): each gets its own list, apart from your gym split. */
+  function typeSections() {
+    const full = () => { if (state.plans.length < MAX_PLANS) return false; toast(`You can keep ${MAX_PLANS} plans. Delete one to make room.`); return true; };
+    return [
+      wtypes().map((t) => {
+        const plans = state.plans.filter((p) => p.type === t.id);
+        return [
+          h('div.section-head.type-head',
+            h('h2.section-title', h('i.type-dot', { style: { background: t.color } }), t.name, h('span.section-count', String(plans.length))),
+            h('span.head-links',
+              h('button.link', { onclick: () => typeMenu(t) }, 'Edit'),
+              h('button.link', { onclick: () => { if (!full()) push(() => planEditor(null, { type: t.id })); } }, icon('plus', 16), 'New'))),
+          plans.length ? h('section.card.list-card.plan-list.swipey', plans.map((p) => swipeRow(planRow(p, false), [{ label: 'Delete', danger: true, onClick: () => removePlan(p, draw) }])))
+            : h('button.card.empty-plan-row', { onclick: () => { if (!full()) push(() => planEditor(null, { type: t.id })); } }, icon('plus', 18), h('span', `Make your first ${t.name} workout`)),
+        ];
+      }),
+      h('button.link.add-type', { onclick: async () => {
+        const n = (await promptBox('New workout type', '', { placeholder: 'e.g. Physio, Mobility, Core' }))?.trim();
+        if (!n) return;
+        if (wtypes().some((t) => t.name.toLowerCase() === n.toLowerCase())) { toast(`You already have ${n}`); return; }
+        const t = addType(n);
+        toast(`${t.name} added. Its workouts don’t count toward your gym stats.`);
+        if (!full()) push(() => planEditor(null, { type: t.id }));
+      } }, icon('plus', 15), wtypes().length ? 'Another workout type' : 'Add a workout type (physio, mobility, core…)'),
+    ];
+  }
+
+  function typeMenu(t) {
+    actionSheet(t.name, [
+      { label: 'Rename', onClick: async () => { const n = (await promptBox('Rename', t.name))?.trim(); if (n) commit((s) => { const x = s.settings.wtypes.find((y) => y.id === t.id); if (x) x.name = n; }); } },
+      { label: `Delete ${t.name}`, danger: true, onClick: async () => {
+        if (!(await confirmBox(`Delete ${t.name}?`, `Its plans and past workouts stay, but count as gym workouts again.`, { ok: 'Delete', danger: true }))) return;
+        commit((s) => { s.settings.wtypes = s.settings.wtypes.filter((y) => y.id !== t.id); });
+      } },
+    ]);
   }
 
   function planRow(p, isNext) {
@@ -265,7 +303,7 @@ export function historyCard(w) {
   return h('button.hist-row', { onclick: () => push(() => workoutDetail(w)) },
     h('span.hist-date-box', h('span', d.toLocaleDateString(undefined, { weekday: 'short' })), h('b', d.getDate())),
     h('span.hist-text',
-      h('span.hist-name', w.name, w.prs ? h('span.hist-pr', icon('trophy', 12), w.prs) : null),
+      h('span.hist-name', w.name, typeOf(w.type) ? h('span.type-tag', { style: { color: typeOf(w.type).color, borderColor: typeOf(w.type).color } }, typeOf(w.type).name) : null, w.prs ? h('span.hist-pr', icon('trophy', 12), w.prs) : null),
       h('span.hist-stats', [fmtDurationWords(st.duration), `${st.sets} sets`, st.volume ? `${fmtNum(+toDisplay(st.volume))} ${unit()}` : null].filter(Boolean).join(' · ')),
       h('span.hist-ex', w.exercises.map((e) => exercise(e.exId).name).join(', '))),
     h('span.card-go', '›'));
@@ -324,8 +362,8 @@ export function workoutDetail(w) {
 
 // ---------- Plan editor ----------
 
-export function planEditor(existing = null) {
-  const plan = existing ? structuredClone(existing) : { id: uid(), name: '', created: Date.now(), exercises: [] };
+export function planEditor(existing = null, { type = null } = {}) {
+  const plan = existing ? structuredClone(existing) : { id: uid(), name: '', created: Date.now(), exercises: [], ...(type ? { type } : {}) };
   // Empty sets start from what you did last time (real numbers you can keep or change)
   const fromLast = (ex) => {
     const prev = previousSets(ex.exId);
@@ -370,11 +408,25 @@ export function planEditor(existing = null) {
     toast(existing ? 'Plan saved' : 'Plan created');
   }
 
+  // Gym, or one of your own types (Physio…), which keeps it out of your gym stats
+  const typeRow = h('div.chips.type-pick');
+  const drawTypes = () => fill(typeRow,
+    [{ id: null, name: 'Gym' }, ...wtypes()].map((t) => h('button.chip' + ((plan.type && typeOf(plan.type) ? plan.type : null) === t.id ? '.on' : ''), {
+      onclick: () => { if (t.id) plan.type = t.id; else delete plan.type; touch(); drawTypes(); },
+    }, t.color ? h('i.type-dot', { style: { background: t.color } }) : null, t.name)),
+    h('button.chip.add', { onclick: async () => {
+      const n = (await promptBox('New workout type', '', { placeholder: 'e.g. Physio, Mobility, Core' }))?.trim();
+      if (!n) return;
+      plan.type = (wtypes().find((t) => t.name.toLowerCase() === n.toLowerCase()) || addType(n)).id; touch(); drawTypes();
+    } }, icon('plus', 13), 'Type'));
+  drawTypes();
+
   function draw() {
     const y = body.scrollTop;
     fill(body,
       planNote,
       nameIn,
+      typeRow,
       plan.exercises.length ? null : h('div.empty',
         h('div.empty-icon', icon('dumbbell', 40)),
         h('div.empty-title', 'Add exercises'),

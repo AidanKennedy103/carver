@@ -2,7 +2,7 @@
 // from what you eat and how your weight moves.
 
 import { h, fill, icon, navBar, fmtNum, fmtDate, swipeSegment } from './ui.js';
-import { state, ymd, dayTotals, weekStart, workoutStats, toDisplay, unit, bodyDisplay, bodyUnit, daySkipped, setDayCheck } from './store.js';
+import { state, ymd, dayTotals, weekStart, workoutStats, toDisplay, unit, bodyDisplay, bodyUnit, daySkipped, setDayCheck, gymWorkouts } from './store.js';
 import { lineChart, barChart, COLORS } from './charts.js';
 import { trend, latestWeight } from './body.js';
 import { activityKcal } from './fitness.js';
@@ -60,7 +60,7 @@ export function metabolism(days = 28) {
   const intake = logged.reduce((a, b) => a + b, 0) / logged.length;
   const tdee = intake - (dKg * KCAL_PER_KG) / span;
   const kg = latestWeight()?.kg || 75;
-  const ws = state.workouts.filter((w) => w.start >= startTs);
+  const ws = gymWorkouts().filter((w) => w.start >= startTs);
   const acts = state.activities.filter((a) => a.start >= startTs);
   // Lifting at ~5 METs, plus cardio (Health's active calories, or an estimate)
   const liftKcal = ws.reduce((n, w) => n + ((LIFT_MET - 1) * kg * workoutStats(w).duration) / 36e5, 0);
@@ -154,7 +154,7 @@ export function trendsPage() {
     // Weekly training
     const weeks = [];
     for (let w = weekStart(start); w <= now; w = weekStart(w + 8 * 864e5)) {
-      const ws = state.workouts.filter((x) => x.start >= w && x.start < w + 7 * 864e5);
+      const ws = gymWorkouts().filter((x) => x.start >= w && x.start < w + 7 * 864e5);
       weeks.push({ x: w, y: ws.length, vol: ws.reduce((n, x) => n + workoutStats(x).volume, 0) });
     }
     const weight = trend().filter((p) => p.x >= start);

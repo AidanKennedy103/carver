@@ -2436,3 +2436,14 @@ span.coach-day.done { background: var(--gold-bg); color: var(--gold); }
 .scan-unit { width: 120px; flex: none; }
 .rings-top .week-day { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
 .rings-top .week-day + .rings-edit { margin-left: 0; }
+
+/* Workout types (Physio, Mobility…): their own sections, a dot of their colour, a tag in History */
+.type-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; flex: none; }
+.type-pick { margin: 4px 0 14px; flex-wrap: wrap; }
+.type-pick .chip { display: inline-flex; align-items: center; }
+.type-pick .chip .type-dot { width: 8px; height: 8px; margin-right: 6px; }
+.type-pick .chip.add { color: var(--gold); gap: 4px; }
+.add-type { display: flex; align-items: center; gap: 6px; margin: 6px auto 18px; font-size: 14px; }
+.type-tag { margin-left: 8px; font-size: 10.5px; font-weight: 700; border: 1px solid; border-radius: 6px; padding: 0 6px; vertical-align: 2px; }
+.cal-day { position: relative; }
+.cal-type { position: absolute; bottom: 3px; left: 50%; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; }

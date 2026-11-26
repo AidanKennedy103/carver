@@ -8,7 +8,7 @@
 // Each person picks what they share with each group.
 
 import { h, fill, icon, push, navBar, sheet, toast, actionSheet, confirmBox, promptBox, fmtDate, fmtNum, fmtDurationWords, swipe } from './ui.js';
-import { state, commit, ymd, addDays, dayTotals, weekStart, workoutStats, exercise, toDisplay, unit, DAY_SHORT, kcalHit, foodAim, tabOn } from './store.js';
+import { state, commit, ymd, addDays, dayTotals, weekStart, workoutStats, exercise, toDisplay, unit, DAY_SHORT, kcalHit, foodAim, tabOn, gymWorkouts } from './store.js';
 import { client, enabled, account } from './cloud.js';
 import { signInSheet } from './account.js';
 import { activityType } from './fitness.js';
@@ -197,7 +197,7 @@ function happenings() {
   for (const day of [addDays(ymd(), -1), ymd()]) {
     for (const hb of habits()) if (isDone(hb, day)) out.push({ kind: 'habit', ref: `h:${hb.id}:${day}`, share: 'habits', data: { name: hb.name, day } });
   }
-  const n = state.workouts.filter((w) => w.start >= weekStart()).length;
+  const n = gymWorkouts().filter((w) => w.start >= weekStart()).length;
   if (n >= g.workoutsPerWeek) out.push({ kind: 'week', ref: 'wk:' + ymd(weekStart()), share: 'week', data: { n, goal: g.workoutsPerWeek } });
   return out;
 }
