@@ -177,6 +177,10 @@ export function workoutPage() {
   function typeMenu(t) {
     actionSheet(t.name, [
       { label: `Goal: ${t.perWeek || 3}× a week`, onClick: () => actionSheet(`${t.name}: times a week`, [1, 2, 3, 4, 5, 6, 7].map((n) => ({ label: `${n}× a week`, onClick: () => commit((s) => { const x = s.settings.wtypes.find((y) => y.id === t.id); if (x) x.perWeek = n; }) }))) },
+      { label: t.quick ? 'Log as sets and reps (now: quick checklist)' : 'Log as a quick checklist (now: sets and reps)', onClick: () => {
+        commit((s) => { const x = s.settings.wtypes.find((y) => y.id === t.id); if (x) x.quick = !x.quick; });
+        toast(t.quick ? `${t.name} logs sets and reps` : `${t.name} opens as a checklist: tick each exercise, then Done`);
+      } },
       { label: 'Rename', onClick: async () => { const n = (await promptBox('Rename', t.name))?.trim(); if (n) commit((s) => { const x = s.settings.wtypes.find((y) => y.id === t.id); if (x) x.name = n; }); } },
       { label: `Delete ${t.name}`, danger: true, onClick: async () => {
         if (!(await confirmBox(`Delete ${t.name}?`, `Its plans and past workouts stay, but count as gym workouts again.`, { ok: 'Delete', danger: true }))) return;

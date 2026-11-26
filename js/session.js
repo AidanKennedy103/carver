@@ -3,7 +3,7 @@
 // (or iOS killing it) never loses it.
 
 import { h, fill, icon, push, pop, navBar, confirmBox, promptBox, actionSheet, sheet, toast, fmtDuration, fmtDurationWords, fmtNum, fmtSecs } from './ui.js';
-import { state, commit, save, uid, exercise, previousSets, workoutStats, findPRs, toDisplay, unit, MAX_PLANS, savePlan } from './store.js';
+import { state, commit, save, uid, exercise, previousSets, workoutStats, findPRs, toDisplay, unit, MAX_PLANS, savePlan, typeOf } from './store.js';
 import { exerciseCard, newSet, exerciseList, groupOf, groupNew, nextInGroup, endsRound } from './block.js';
 import { pickExercises } from './picker.js';
 import { progressAfter, coachProgram } from './coach.js';
@@ -28,8 +28,9 @@ function greeting(ts = Date.now()) {
   return hr < 11 ? 'Morning workout' : hr < 17 ? 'Afternoon workout' : 'Evening workout';
 }
 
-/** Start a workout, empty or from a plan. */
-export async function startWorkout(plan = null) {
+/** Start a workout, empty or from a plan. A plan of a quick-check type (physio…) opens as a checklist. */
+export async function startWorkout(plan = null, { full = false } = {}) {
+  if (plan && !full && typeOf(plan.type)?.quick) { quickCheck(plan); return; }
   if (state.active) {
     const ok = await confirmBox('A workout is already going', 'Discard it and start a new one?', { ok: 'Start new', danger: true });
     if (!ok) { openWorkout(); return; }
@@ -453,4 +454,50 @@ export function showSummary(w, prs, changes = []) {
     h('button.btn.dark.wide.summary-plan', { onclick: () => import('./groups.js').then((m) => m.postWorkout(w)) }, icon('users', 16), 'Post to a group'),
     w.planId ? null : h('button.btn.dark.wide.summary-plan', { onclick: () => { s.close(); saveAsPlan(w); } }, 'Save as a plan to repeat it'),
   ));
+}
+
+// ---------- Quick check: tick off each exercise, no weights or reps to fill in ----------
+
+/** What a plan exercise asks for, in a few words: "3 × 10", "3 × 0:45", "2 × 8 @ 20 lb". */
+function aimText(pe) {
+  const sets = pe.sets.filter((x) => x.type !== 'w');
+  if (!sets.length) return '';
+  const s0 = sets[0], secs = s0.tSecs ?? s0.secs, reps = s0.tReps ?? s0.reps, kg = s0.tWeight ?? s0.weight;
+  const each = exercise(pe.exId).type === 'time' ? (secs ? fmtSecs(secs) : '') : reps ? String(reps) : '';
+  return `${sets.length} set${sets.length === 1 ? '' : 's'}${each ? ` × ${each}` : ''}${kg ? ` @ ${toDisplay(kg)} ${unit()}` : ''}`;
+}
+
+/** A plan as a checklist: tick each exercise as you do it, then Done logs it with the planned sets. */
+export function quickCheck(plan) {
+  const t = typeOf(plan.type);
+  const ticked = new Set();
+  const started = Date.now();
+  const list = h('div.qc-list');
+  const go = h('button.btn.gold.wide');
+  const draw = () => {
+    fill(list, plan.exercises.map((pe, i) => h('button.qc-row' + (ticked.has(i) ? '.on' : ''), {
+      onclick: () => { if (ticked.has(i)) ticked.delete(i); else { ticked.add(i); navigator.vibrate?.(10); } draw(); },
+    }, h('span.pick-check' + (ticked.has(i) ? '.on' : ''), ticked.has(i) ? icon('check', 16) : null),
+      h('span.qc-text', h('b', exercise(pe.exId).name), h('span', aimText(pe))))));
+    go.textContent = ticked.size === plan.exercises.length ? 'Done' : ticked.size ? `Done (${ticked.size} of ${plan.exercises.length})` : 'Tick what you did';
+    go.disabled = !ticked.size;
+  };
+  go.onclick = () => {
+    const exercises = plan.exercises.filter((_, i) => ticked.has(i)).map((pe) => ({
+      exId: pe.exId, ...groupOf(pe), note: pe.note || '', rest: pe.rest,
+      sets: pe.sets.map((x) => ({ id: uid(), type: x.type || 'n', weight: x.tWeight ?? x.weight ?? null, reps: x.tReps ?? x.reps ?? null, secs: x.tSecs ?? x.secs ?? null, done: true })),
+    }));
+    // Roughly how long it took: the time this was open, or a guess from the sets if you ticked it all after
+    const guess = exercises.reduce((n, e) => n + e.sets.reduce((m, x) => m + (x.secs || (x.reps || 10) * 4) * 1000 + (e.rest || 30) * 1000, 0), 0);
+    const end = Date.now(), dur = Math.max(end - started, Math.min(guess, 90 * 6e4));
+    commit((st) => { st.workouts.unshift({ id: uid(), name: plan.name, planId: plan.id, ...(plan.type ? { type: plan.type } : {}), quick: true, start: end - dur, end, rest: null, exercises }); });
+    s.close();
+    toast(`${t?.name || plan.name} logged`);
+  };
+  draw();
+  const s = sheet(h('div.form.qc',
+    h('div.sheet-head', h('button.link', { onclick: () => s.close() }, 'Cancel'), h('div.sheet-title', plan.name), h('span')),
+    h('p.fine', 'Tick each one as you do it.'),
+    list, go,
+    h('button.link.qc-full', { onclick: () => { s.close(); startWorkout(plan, { full: true }); } }, 'Log sets and reps instead')));
 }
