@@ -105,7 +105,7 @@ export function signInSheet() {
     const c = v.replace(/\D/g, '');
     if (!isLink && c.length < 6) { say('Enter the code, or paste the link, from the email.', true); return; }
     go.disabled = true; go.textContent = 'Signing in…';
-    try { await (isLink ? verifyLink(v) : verifyCode(sentTo, c)); s.close(); toast('Signed in. Your data is syncing.'); }
+    try { await (isLink ? verifyLink(v) : verifyCode(sentTo, c)); s.close(); toast('Signed in. Your data is syncing; it can take a minute the first time.'); }
     catch (err) { say(err.message || 'That code didn’t work.', true); go.textContent = 'Sign in'; }
     finally { go.disabled = false; }
   }

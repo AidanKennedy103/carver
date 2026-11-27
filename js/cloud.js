@@ -11,12 +11,28 @@ import { state, commit, onSaved, replaceState, setSharedFoods, sharedFoods } fro
 
 export const enabled = () => !!(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY);
 
+/** Give up on something that never answers (instead of spinning forever). */
+export function timeout(p, ms, msg) {
+  let t;
+  return Promise.race([p, new Promise((_, no) => { t = setTimeout(() => no(new Error(msg)), ms); })]).finally(() => clearTimeout(t));
+}
+
+// The sign-in library guards your session with the browser's Web Locks. Some Android browsers
+// leave that lock stuck (sign-in then spins forever), so it uses a simple lock inside the app instead:
+// one auth step at a time, and a stuck one can't hold the rest up for more than 30 seconds.
+let authQueue = Promise.resolve();
+const appLock = (_name, _wait, fn) => {
+  const run = authQueue.then(() => timeout(Promise.resolve().then(fn), 30000, 'Sign-in timed out'));
+  authQueue = run.catch(() => {});
+  return run;
+};
+
 let clientP = null;
 export function client() {
   if (clientP) return clientP;
   if (!enabled()) return Promise.resolve(null);
-  return (clientP = import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm')
-    .then(({ createClient }) => createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'carver.auth' } }))
+  return (clientP = timeout(import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm'), 20000, 'Couldn’t reach Carver’s servers. Check your connection and try again.')
+    .then(({ createClient }) => createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'carver.auth', lock: appLock } }))
     .catch((e) => { clientP = null; throw e; }));
 }
 
@@ -43,13 +59,13 @@ export const syncStatus = () => status;
  */
 export async function sendCode(email) {
   const db = await client();
-  const { error } = await db.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+  const { error } = await timeout(db.auth.signInWithOtp({ email, options: { shouldCreateUser: true } }), 25000, 'No answer from Carver’s servers. Check your connection and try again.');
   if (error) throw new Error(friendly(error));
 }
 
 export async function verifyCode(email, code) {
   const db = await client();
-  const { data, error } = await db.auth.verifyOtp({ email, token: code, type: 'email' });
+  const { data, error } = await timeout(db.auth.verifyOtp({ email, token: code, type: 'email' }), 25000, 'No answer from Carver’s servers. Check your connection and try again.');
   if (error) throw new Error(friendly(error));
   return signedIn(data.user);
 }
@@ -68,9 +84,9 @@ export async function verifyLink(text) {
   const db = await client();
   let res;
   if (hash.get('access_token') && hash.get('refresh_token')) {
-    res = await db.auth.setSession({ access_token: hash.get('access_token'), refresh_token: hash.get('refresh_token') });
+    res = await timeout(db.auth.setSession({ access_token: hash.get('access_token'), refresh_token: hash.get('refresh_token') }), 25000, 'No answer from Carver’s servers. Check your connection and try again.');
   } else if (q.get('token_hash') || q.get('token')) {
-    res = await db.auth.verifyOtp({ token_hash: q.get('token_hash') || q.get('token'), type: q.get('type') || 'magiclink' });
+    res = await timeout(db.auth.verifyOtp({ token_hash: q.get('token_hash') || q.get('token'), type: q.get('type') || 'magiclink' }), 25000, 'No answer from Carver’s servers. Check your connection and try again.');
   } else throw new Error('That isn’t a sign-in link. Copy the link from the Carver email.');
   if (res.error) throw new Error(/expired|invalid|token/i.test(res.error.message || '')
     ? 'That link was already used or has expired (each one works once, so don’t tap it first). Send a new one.'
@@ -81,7 +97,7 @@ export async function verifyLink(text) {
 async function signedIn(u) {
   user = u;
   tell();
-  await sync();
+  sync();   // the first sync can take a while with a long history: it runs on, the sign-in screen doesn't wait
   pullFoods();
   import('./push.js').then((m) => m.refreshPush()).catch(() => {});
   return user;
